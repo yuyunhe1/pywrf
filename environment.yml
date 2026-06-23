@@ -1,0 +1,24 @@
+name: pywrf
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - gcc_linux-64
+  - gxx_linux-64
+  - gfortran_linux-64
+  - make
+  - m4
+  - perl
+  - tcsh
+  - openmpi
+  - libnetcdf
+  - netcdf-fortran
+  - zlib
+  - libpng
+  - jasper
+  - requests
+  - numpy
+  - pandas
+  - netcdf4
+  - openpyxl
+  - matplotlib

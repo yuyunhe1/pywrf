@@ -1,0 +1,58 @@
+:root {
+  color: #eaf5ff;
+  background: #07121c;
+  font-family: Inter, "Microsoft YaHei", Arial, sans-serif;
+  font-synthesis: none;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; overflow: hidden; }
+button, input, select { font: inherit; }
+.app-shell { display: grid; grid-template-columns: 290px minmax(420px, 1fr) 320px; height: 100vh; background: #07121c; }
+.panel { position: relative; z-index: 500; overflow-y: auto; padding: 22px 20px; background: rgba(9, 24, 36, .98); border-color: #1b3448; }
+.control-panel { border-right: 1px solid #1b3448; }
+.analysis-panel { border-left: 1px solid #1b3448; }
+.wind-map { width: 100%; height: 100vh; background: #102535; }
+h1 { margin: 5px 0 8px; font-size: 23px; line-height: 1.3; }
+h2 { margin: 0 0 12px; font-size: 16px; }
+h3 { margin: 0 0 10px; color: #b9cddd; font-size: 13px; font-weight: 600; }
+section { padding: 18px 0; border-top: 1px solid #193246; }
+.eyebrow { margin: 0; color: #44d7b6; font-size: 10px; font-weight: 800; letter-spacing: .18em; }
+.subtle { margin: 7px 0 0; color: #8299aa; font-size: 12px; line-height: 1.65; }
+label { display: grid; gap: 6px; margin: 10px 0; color: #9eb2c2; font-size: 12px; }
+select, input[type=number] { width: 100%; padding: 9px 10px; color: #eaf5ff; background: #102638; border: 1px solid #28455b; border-radius: 6px; outline: none; }
+select:focus, input:focus { border-color: #44d7b6; }
+button { width: 100%; padding: 10px; color: #eaf5ff; border: 1px solid #2d5368; border-radius: 6px; cursor: pointer; }
+button:disabled { opacity: .5; cursor: wait; }
+.primary { margin-top: 7px; color: #061a1c; background: #44d7b6; border-color: #44d7b6; font-weight: 800; }
+.ghost { background: transparent; }
+.switch { display: flex; align-items: center; gap: 9px; }
+.switch input { accent-color: #44d7b6; }
+.threshold-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
+.metadata { display: grid; gap: 12px; }
+.metadata div { display: grid; gap: 4px; }
+.metadata span, .stat span { color: #8099aa; font-size: 11px; }
+.metadata strong { font-size: 12px; }
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.stat { min-height: 92px; padding: 12px; background: #102638; border: 1px solid #1f4157; border-radius: 7px; }
+.stat strong { display: inline-block; margin-top: 9px; color: #f6fbff; font-size: 25px; }
+.stat small { margin-left: 4px; color: #8099aa; }
+.stat.risk strong { color: #f4c95d; font-size: 18px; }
+.chart { width: 100%; height: 220px; }
+.legend { color: #9eb2c2; font-size: 11px; line-height: 2; }
+.legend i { display: inline-block; width: 8px; height: 8px; margin: 0 4px 0 8px; border-radius: 50%; }
+.legend i:first-child { margin-left: 0; }
+.safe { background: #28c76f; }.notice { background: #f4c95d; }.medium { background: #ff9f43; }.warning { background: #ea5455; }.danger { background: #9b51e0; }
+.error-toast { position: fixed; z-index: 1000; bottom: 25px; left: 50%; max-width: 480px; padding: 11px 16px; color: white; background: #b42336; border-radius: 7px; transform: translateX(-50%); cursor: pointer; }
+.leaflet-popup-content-wrapper, .leaflet-popup-tip { color: #eaf5ff; background: #102638; }
+.leaflet-control-layers, .leaflet-bar a { color: #142b3b; }
+.wind-heat-legend { width: 220px; padding: 9px 10px; color: #dcecf7; background: rgba(9, 24, 36, .86); border: 1px solid #29485e; border-radius: 6px; box-shadow: 0 2px 8px rgba(0, 0, 0, .28); }
+.wind-heat-legend strong { display: block; margin-bottom: 6px; font-size: 11px; }
+.wind-heat-gradient { height: 9px; background: linear-gradient(90deg, #2563eb 0%, #22c55e 20%, #facc15 40%, #f97316 53%, #ef4444 67%, #7e22ce 100%); border-radius: 3px; }
+.wind-heat-ticks { display: flex; justify-content: space-between; margin-top: 3px; color: #aec2d0; font-size: 9px; }
+
+@media (max-width: 1100px) {
+  .app-shell { grid-template-columns: 250px 1fr; }
+  .analysis-panel { position: absolute; right: 0; top: 0; width: 300px; height: 100vh; transform: translateX(calc(100% - 12px)); transition: transform .2s; }
+  .analysis-panel:hover { transform: translateX(0); }
+}

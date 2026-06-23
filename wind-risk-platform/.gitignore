@@ -1,0 +1,8 @@
+backend/.venv/
+backend/.pytest_cache/
+backend/**/__pycache__/
+frontend/node_modules/
+frontend/dist/
+backend/*-server*.log
+frontend/*-server*.log
+.DS_Store
