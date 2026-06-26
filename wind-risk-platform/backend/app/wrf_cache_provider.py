@@ -19,6 +19,7 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_CACHE_DIR = REPOSITORY_ROOT / "data" / "wrf_platform_cache"
 REMOTE_INDEX = "index.json"
 SYNC_LOCK = RLock()
+AVERAGE_LAYER = "250-350m AGL average"
 
 
 def cache_dir() -> Path:
@@ -144,12 +145,20 @@ def availability() -> dict:
         cycle: sorted({int(item["forecast_hour"]) for item in valid_times if item["cycle"] == cycle})
         for cycle in cycles
     }
+    levels = list(index.get("levels", []))
+    available_heights = [
+        float(level.lower().replace("agl", "").replace("m", "").strip())
+        for level in levels
+        if level.lower().replace("agl", "").replace("m", "").strip().replace(".", "", 1).isdigit()
+    ]
+    if available_heights and min(available_heights) <= 250 and max(available_heights) >= 350:
+        levels.append(AVERAGE_LAYER)
     return {
         "cycles": cycles,
         "forecast_hours": forecast_hours,
         "forecast_hours_by_cycle": by_cycle,
         "valid_times": sorted(valid_times, key=lambda item: item["valid_time"]),
-        "levels": index.get("levels", []),
+        "levels": levels,
     }
 
 
@@ -189,6 +198,21 @@ def _level_index(levels_m: np.ndarray, level: str) -> tuple[str, int]:
     return f"{height}m AGL", int(matches[0])
 
 
+def _average_250_350m(levels_m: np.ndarray, values: np.ndarray) -> np.ndarray:
+    """Linearly interpolate U/V at 250, 300 and 350 m then average the layer."""
+    order = np.argsort(levels_m)
+    heights = levels_m[order]
+    if heights[0] > 250 or heights[-1] < 350:
+        raise ValueError("WRF cache does not cover the 250-350m AGL average layer")
+    ordered = values[order]
+    samples = [
+        np.apply_along_axis(lambda column: np.interp(height, heights, column), 0, ordered)
+        for height in (250, 300, 350)
+    ]
+    # Simpson's rule gives the mean through the requested 100 m layer.
+    return (samples[0] + 4 * samples[1] + samples[2]) / 6
+
+
 def _crop(lons: np.ndarray, lats: np.ndarray, u: np.ndarray, v: np.ndarray, bbox):
     if not bbox:
         return lons, lats, u, v
@@ -208,9 +232,14 @@ def _get_grid_cached(record_path: str, level: str, bbox):
         lons = np.asarray(data["lons"], dtype=float)
         lats = np.asarray(data["lats"], dtype=float)
         levels_m = np.asarray(data["levels_m"], dtype=float)
-        normalized_level, index = _level_index(levels_m, level)
-        u = np.asarray(data["u"][index], dtype=float)
-        v = np.asarray(data["v"][index], dtype=float)
+        if level.strip().lower() == AVERAGE_LAYER.lower():
+            normalized_level = AVERAGE_LAYER
+            u = _average_250_350m(levels_m, np.asarray(data["u"], dtype=float))
+            v = _average_250_350m(levels_m, np.asarray(data["v"], dtype=float))
+        else:
+            normalized_level, index = _level_index(levels_m, level)
+            u = np.asarray(data["u"][index], dtype=float)
+            v = np.asarray(data["v"][index], dtype=float)
         cycle = str(data["cycle_utc"].item())
         valid_time = str(data["valid_time_utc"].item())
         forecast_hour = int(data["forecast_hour"].item())

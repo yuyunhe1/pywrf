@@ -43,3 +43,19 @@ class RouteAnalyzeRequest(BaseModel):
         if self.valid_time is None and self.forecast_hour is None:
             raise ValueError("forecast_hour is required when valid_time is not provided")
         return self
+
+
+class RoutePlanRequest(RouteAnalyzeRequest):
+    start: tuple[float, float]
+    end: tuple[float, float]
+    points: list[tuple[float, float]] = Field(default_factory=lambda: [(0, 0), (0, 0)])
+
+
+class RouteRecord(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    start: tuple[float, float]
+    end: tuple[float, float]
+    points: list[tuple[float, float]] = Field(min_length=2)
+    level: str
+    cycle: str | None = None
+    forecast_hour: int | None = None

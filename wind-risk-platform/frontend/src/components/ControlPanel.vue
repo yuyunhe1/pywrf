@@ -9,10 +9,12 @@ const props = defineProps({
   selection: { type: Object, required: true },
   layers: { type: Object, required: true },
   thresholds: { type: Object, required: true },
+  planner: { type: Object, required: true },
+  savedRoutes: { type: Array, required: true },
   loading: Boolean,
 })
 
-defineEmits(['reload', 'clear-route'])
+defineEmits(['reload', 'clear-route', 'pick-start', 'pick-end', 'plan-route', 'save-route', 'load-routes', 'delete-route'])
 </script>
 
 <template>
@@ -31,6 +33,26 @@ defineEmits(['reload', 'clear-route'])
       <p v-else class="subtle">当前没有当前整点或未来的风场时刻，请下载新的 GFS 数据。</p>
       <label>高度层<select v-model="selection.level"><option v-for="level in options.levels" :key="level">{{ level }}</option></select></label>
       <button class="primary" :disabled="loading || !options.valid_times.length" @click="$emit('reload')">{{ loading ? '加载中...' : '加载当前风场' }}</button>
+    </section>
+
+    <section>
+      <h2>智能航线规划</h2>
+      <label>航线名称<input v-model="planner.name" type="text" placeholder="默认航线 A" /></label>
+      <label>起点 [lon, lat]<input v-model="planner.startText" type="text" placeholder="点击地图选择" /></label>
+      <button class="ghost" @click="$emit('pick-start')">在地图选择起点</button>
+      <label>终点 [lon, lat]<input v-model="planner.endText" type="text" placeholder="点击地图选择" /></label>
+      <button class="ghost" @click="$emit('pick-end')">在地图选择终点</button>
+      <button class="primary" :disabled="loading || !planner.startText || !planner.endText" @click="$emit('plan-route')">规划避风航线</button>
+      <button class="ghost" :disabled="!planner.points.length" @click="$emit('save-route')">保存当前航线</button>
+    </section>
+
+    <section>
+      <h2>历史航线</h2>
+      <button class="ghost" @click="$emit('load-routes')">刷新航线列表</button>
+      <div v-for="route in savedRoutes" :key="route.route_id" class="saved-route">
+        <button class="ghost" @click="$emit('plan-route', route)">{{ route.name }}</button>
+        <button class="icon-button" title="删除" @click="$emit('delete-route', route.route_id)">×</button>
+      </div>
     </section>
 
     <section>

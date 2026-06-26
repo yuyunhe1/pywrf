@@ -12,13 +12,14 @@ const props = defineProps({
   wind: Object,
   heatmap: Object,
   layers: { type: Object, required: true },
+  thresholds: { type: Object, required: true },
   analysis: Object,
 })
-const emit = defineEmits(['point-click', 'route-created'])
+const emit = defineEmits(['point-click', 'route-created', 'zoom-changed'])
 
 let map
 let heatLayer
-let velocityLayer
+let velocityLayers = []
 let routeGroup
 let drawnGroup
 let heatLegend
@@ -36,17 +37,36 @@ const riskColor = (risk) => ({
 
 const renderWind = () => {
   if (!map) return
-  if (velocityLayer) map.removeLayer(velocityLayer)
-  velocityLayer = null
+  velocityLayers.forEach((layer) => map.removeLayer(layer))
+  velocityLayers = []
   if (props.layers.velocity && props.wind?.velocity && L.velocityLayer) {
-    velocityLayer = L.velocityLayer({
-      data: props.wind.velocity,
-      displayValues: false,
-      velocityScale: 0.007,
-      maxVelocity: 15,
-      lineWidth: 2,
-      colorScale: ['#b8f3ff', '#69d7ff', '#44d7b6', '#f4c95d'],
-    }).addTo(map)
+    const [uSource, vSource] = props.wind.velocity
+    const bands = [
+      { max: props.thresholds.safe, color: '#38bdf8', width: 1.1, density: 1 / 1250 },
+      { max: props.thresholds.notice, color: '#22c55e', width: 1.5, density: 1 / 850 },
+      { max: props.thresholds.warning, color: '#facc15', width: 2, density: 1 / 580 },
+      { max: props.thresholds.danger, color: '#fb923c', width: 2.6, density: 1 / 390 },
+      { max: Infinity, color: '#ef4444', width: 3.3, density: 1 / 250 },
+    ]
+    let minimum = -Infinity
+    bands.forEach((band) => {
+      const u = uSource.data.map((value, index) => {
+        const speed = Math.hypot(value, vSource.data[index])
+        return speed > minimum && speed <= band.max ? value : null
+      })
+      const v = vSource.data.map((value, index) => (u[index] === null ? null : value))
+      const layer = L.velocityLayer({
+        data: [{ ...uSource, data: u }, { ...vSource, data: v }],
+        displayValues: false,
+        velocityScale: 0.007,
+        maxVelocity: Math.max(band.max, props.thresholds.danger + 5),
+        lineWidth: band.width,
+        particleMultiplier: band.density,
+        colorScale: [band.color, band.color],
+      }).addTo(map)
+      velocityLayers.push(layer)
+      minimum = band.max
+    })
   }
 }
 
@@ -80,7 +100,7 @@ const clearRoute = () => {
 }
 
 defineExpose({ clearRoute })
-watch(() => [props.wind, props.layers.velocity], renderWind, { deep: true })
+watch(() => [props.wind, props.layers.velocity, props.thresholds], renderWind, { deep: true })
 watch(() => [props.heatmap, props.layers.heatmap], renderHeatmap, { deep: true })
 watch(() => [props.analysis, props.layers.route], renderRoute, { deep: true })
 
@@ -117,6 +137,7 @@ onMounted(() => {
     emit('route-created', points)
   })
   map.on('click', ({ latlng }) => emit('point-click', { lon: latlng.lng, lat: latlng.lat, map }))
+  map.on('zoomend', () => emit('zoom-changed', map.getZoom()))
   renderWind()
   renderHeatmap()
 })

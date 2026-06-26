@@ -129,7 +129,7 @@ python download_gfs_hourly_70vars_realtime.py realtime `
   --global-region --wind-map-only `
   --start-fhour 1 --end-fhour 1 --cycle-count 1
 ```
-下载全球各高空层u,v风，位势高度，气压
+下载全球各高空层u,v风，位势高度(hgt)，气压
 python download_gfs_hourly_70vars_realtime.py realtime  --output-dir .\data\gfs_hourly_windcheck  --global-region  --start-fhour 1 --end-fhour 12 --cycle-count 2
 
 完整全球 `0.25°` 网格为 `1440 x 721`，约 104 万格点。当前默认不降采样；同一

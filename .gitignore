@@ -32,6 +32,7 @@ build/
 coverage/
 *.tsbuildinfo
 npm-debug.log*
+.npm-cache/
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
@@ -80,6 +81,7 @@ gfs_dataset/
 *.hdf5
 *.csv.tmp
 *.meta.json
+routes.sqlite3
 
 # WRF/WPS third-party source trees, nested git repos, geog data, and build products
 WPS/

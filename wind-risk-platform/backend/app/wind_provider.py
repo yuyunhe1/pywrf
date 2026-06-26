@@ -23,6 +23,7 @@ LEVELS = (
     "2000m AGL",
     "3000m AGL",
 )
+AVERAGE_LAYER = "250-350m AGL average"
 DEFAULT_BBOX = (116.0, 29.0, 121.0, 34.0)
 GRID_STEP = 0.1
 
@@ -46,6 +47,8 @@ class WindGrid:
 
 def normalize_level(level: str) -> str:
     """Normalize a short level such as 100m to the public AGL label."""
+    if level.strip().lower() == AVERAGE_LAYER.lower():
+        return AVERAGE_LAYER
     normalized = level.strip().upper().replace(" AGL", "")
     candidate = f"{normalized.lower()} agl"
     for available in LEVELS:
@@ -87,6 +90,12 @@ def _valid_time(cycle: str, forecast_hour: int) -> str:
 def get_grid(cycle: str, forecast_hour: int, level: str, bbox: tuple[float, float, float, float] | None) -> WindGrid:
     """Generate and cache a deterministic mock wind field."""
     level = validate_selection(cycle, forecast_hour, level)
+    if level == AVERAGE_LAYER:
+        grids = [get_grid(cycle, forecast_hour, f"{height}m AGL", bbox) for height in (200, 300, 500)]
+        # Interpolate 250/350 m from the adjacent native layers, then average 250-350 m.
+        u250, v250 = (grids[0].u + grids[1].u) / 2, (grids[0].v + grids[1].v) / 2
+        u350, v350 = (3 * grids[1].u + grids[2].u) / 4, (3 * grids[1].v + grids[2].v) / 4
+        return WindGrid(grids[1].lons, grids[1].lats, (u250 + 4 * grids[1].u + u350) / 6, (v250 + 4 * grids[1].v + v350) / 6, cycle, forecast_hour, level, grids[1].valid_time, grids[1].source, grids[1].cycle_bj, grids[1].valid_time_bj)
     min_lon, min_lat, max_lon, max_lat = bbox or DEFAULT_BBOX
     lons = np.arange(min_lon, max_lon + GRID_STEP / 2, GRID_STEP)
     lats = np.arange(max_lat, min_lat - GRID_STEP / 2, -GRID_STEP)

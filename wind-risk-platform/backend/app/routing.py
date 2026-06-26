@@ -1,0 +1,128 @@
+"""Wind-aware A* routing on a regular lon/lat wind grid."""
+
+from __future__ import annotations
+
+import heapq
+from math import acos, degrees, hypot
+
+import numpy as np
+
+from .models import Thresholds
+from .route_service import haversine_km, risk_name
+from .wind_provider import WindGrid, point_value
+
+
+# Row points south; column points east.  State retains the previous direction so
+# turn cost is part of the graph rather than an after-the-fact cosmetic change.
+NEIGHBOURS = tuple((dr, dc) for dr in (-1, 0, 1) for dc in (-1, 0, 1) if (dr, dc) != (0, 0))
+
+
+def _nearest_index(values: np.ndarray, value: float) -> int:
+    return int(np.abs(values - value).argmin())
+
+
+def _risk_cost(speed: float, thresholds: Thresholds) -> float:
+    if speed >= thresholds.danger:
+        return float("inf")
+    if speed >= thresholds.warning:
+        return 12 + (speed - thresholds.warning) * 5
+    if speed >= thresholds.notice:
+        return 3 + (speed - thresholds.notice) * 2
+    return max(0.0, speed - thresholds.safe) * 0.25
+
+
+def _turn_cost(previous: tuple[int, int] | None, current: tuple[int, int]) -> float:
+    if previous is None:
+        return 0.0
+    dot = previous[0] * current[0] + previous[1] * current[1]
+    denominator = hypot(*previous) * hypot(*current)
+    angle = degrees(acos(float(np.clip(dot / denominator, -1, 1))))
+    # Mild changes are free; sharp turns become increasingly unattractive.
+    return max(0.0, angle - 25) / 20
+
+
+def _headwind_cost(u: float, v: float, direction: tuple[int, int]) -> float:
+    # Grid row increases southward, while v positive is northward.
+    east, north = direction[1], -direction[0]
+    length = hypot(east, north)
+    tail_component = (u * east + v * north) / length
+    return max(0.0, -tail_component) * 0.7
+
+
+def _cell_point(grid: WindGrid, row: int, col: int) -> tuple[float, float]:
+    return float(grid.lons[col]), float(grid.lats[row])
+
+
+def _segment_risk(points: list[tuple[float, float]], grid: WindGrid, thresholds: Thresholds) -> list[dict]:
+    segments = []
+    for start, end in zip(points, points[1:]):
+        midpoint = ((start[0] + end[0]) / 2, (start[1] + end[1]) / 2)
+        wind = point_value(grid, *midpoint)
+        segments.append({
+            "start": start, "end": end, "wind_speed": round(wind["wind_speed"], 2),
+            "risk": risk_name(wind["wind_speed"], thresholds),
+            "distance_km": round(haversine_km(start, end), 3),
+        })
+    return segments
+
+
+def plan_route(grid: WindGrid, start: tuple[float, float], end: tuple[float, float], thresholds: Thresholds) -> dict:
+    """Find a safe 8-neighbour path; one requested level means altitude is constant."""
+    start_node = (_nearest_index(grid.lats, start[1]), _nearest_index(grid.lons, start[0]))
+    end_node = (_nearest_index(grid.lats, end[1]), _nearest_index(grid.lons, end[0]))
+    speeds = np.hypot(grid.u, grid.v)
+    if speeds[start_node] >= thresholds.danger or speeds[end_node] >= thresholds.danger:
+        raise ValueError("start or end is inside a danger-threshold no-fly cell")
+
+    def heuristic(row: int, col: int) -> float:
+        return haversine_km(_cell_point(grid, row, col), _cell_point(grid, *end_node))
+
+    # (estimated total, cost, row, col, previous direction)
+    queue = [(heuristic(*start_node), 0.0, *start_node, None)]
+    parents: dict[tuple[int, int, tuple[int, int] | None], tuple[int, int, tuple[int, int] | None] | None] = {}
+    best: dict[tuple[int, int, tuple[int, int] | None], float] = {(start_node[0], start_node[1], None): 0.0}
+    goal_state = None
+    while queue:
+        _, cost, row, col, previous = heapq.heappop(queue)
+        state = (row, col, previous)
+        if cost != best.get(state):
+            continue
+        if (row, col) == end_node:
+            goal_state = state
+            break
+        for direction in NEIGHBOURS:
+            nr, nc = row + direction[0], col + direction[1]
+            if not (0 <= nr < len(grid.lats) and 0 <= nc < len(grid.lons)):
+                continue
+            wind_penalty = _risk_cost(float(speeds[nr, nc]), thresholds)
+            if not np.isfinite(wind_penalty):
+                continue
+            distance = haversine_km(_cell_point(grid, row, col), _cell_point(grid, nr, nc))
+            next_cost = cost + distance + wind_penalty + _headwind_cost(float(grid.u[nr, nc]), float(grid.v[nr, nc]), direction) + _turn_cost(previous, direction)
+            next_state = (nr, nc, direction)
+            if next_cost < best.get(next_state, float("inf")):
+                best[next_state] = next_cost
+                parents[next_state] = state
+                heapq.heappush(queue, (next_cost + heuristic(nr, nc), next_cost, nr, nc, direction))
+    if goal_state is None:
+        raise ValueError("no safe route found with the current danger threshold")
+    nodes = []
+    state = goal_state
+    while state is not None:
+        nodes.append((state[0], state[1]))
+        state = parents.get(state)
+    nodes.reverse()
+    # Keep only meaningful bends; grid A* often produces repeated collinear cells.
+    simplified = [nodes[0]]
+    for index in range(1, len(nodes) - 1):
+        a, b, c = simplified[-1], nodes[index], nodes[index + 1]
+        if (b[0] - a[0], b[1] - a[1]) != (c[0] - b[0], c[1] - b[1]):
+            simplified.append(b)
+    simplified.append(nodes[-1])
+    points = [_cell_point(grid, row, col) for row, col in simplified]
+    segments = _segment_risk(points, grid, thresholds)
+    return {
+        "points": points, "segments": segments, "cost": round(goal_state and best[goal_state], 3),
+        "distance_km": round(sum(item["distance_km"] for item in segments), 3),
+        "level": grid.level,
+    }

@@ -26,6 +26,9 @@ button { width: 100%; padding: 10px; color: #eaf5ff; border: 1px solid #2d5368; 
 button:disabled { opacity: .5; cursor: wait; }
 .primary { margin-top: 7px; color: #061a1c; background: #44d7b6; border-color: #44d7b6; font-weight: 800; }
 .ghost { background: transparent; }
+.saved-route { display: grid; grid-template-columns: 1fr 30px; gap: 6px; margin-top: 7px; }
+.saved-route .ghost { overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.icon-button { padding: 0; color: #ff9f43; background: transparent; }
 .switch { display: flex; align-items: center; gap: 9px; }
 .switch input { accent-color: #44d7b6; }
 .threshold-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }

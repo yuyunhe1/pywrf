@@ -1,7 +1,7 @@
 <script setup>
 import L from 'leaflet'
 import { onMounted, reactive, ref, watch } from 'vue'
-import { analyzeRoute, getHeatmap, getPoint, getTimes, getWind } from './api'
+import { analyzeRoute, deleteRoute, getHeatmap, getPoint, getTimes, getWind, listRoutes, planRoute, saveRoute } from './api'
 import AnalysisPanel from './components/AnalysisPanel.vue'
 import ControlPanel from './components/ControlPanel.vue'
 import WindMap from './components/WindMap.vue'
@@ -18,6 +18,11 @@ const loading = ref(false)
 const error = ref('')
 const mapRef = ref()
 let routePoints = []
+const planner = reactive({ name: '默认航线 A', startText: '', endText: '', points: [] })
+const savedRoutes = ref([])
+const picking = ref('')
+const ZOOM_AVERAGE_LAYER = 13
+const AVERAGE_LAYER = '250-350m AGL average'
 
 const loadWindField = async () => {
   loading.value = true
@@ -58,6 +63,55 @@ const clearRoute = () => {
   mapRef.value?.clearRoute()
 }
 
+const parsePoint = (text) => {
+  const values = text.split(',').map(Number)
+  if (values.length !== 2 || values.some((value) => !Number.isFinite(value))) throw new Error('起终点应为 lon, lat')
+  return values
+}
+
+const runPlan = async (savedRoute) => {
+  try {
+    if (savedRoute) {
+      planner.name = savedRoute.name
+      planner.startText = savedRoute.start.join(', ')
+      planner.endText = savedRoute.end.join(', ')
+      planner.points = savedRoute.points
+      analysis.value = await analyzeRoute(selection, savedRoute.points, thresholds)
+      return
+    }
+    const result = await planRoute(selection, parsePoint(planner.startText), parsePoint(planner.endText), thresholds)
+    planner.points = result.points
+    routePoints = result.points
+    analysis.value = result.analysis
+  } catch (reason) { error.value = reason.response?.data?.detail || reason.message }
+}
+
+const handleMapClick = (payload) => {
+  if (picking.value) {
+    planner[`${picking.value}Text`] = `${payload.lon.toFixed(5)}, ${payload.lat.toFixed(5)}`
+    const wasPicking = picking.value
+    picking.value = ''
+    if (wasPicking === 'end' && planner.startText) runPlan()
+    return
+  }
+  queryPoint(payload)
+}
+
+const persistRoute = async () => {
+  try {
+    await saveRoute({ name: planner.name, start: parsePoint(planner.startText), end: parsePoint(planner.endText), points: planner.points, level: selection.level, cycle: selection.cycle, forecast_hour: selection.forecastHour })
+    savedRoutes.value = await listRoutes()
+  } catch (reason) { error.value = reason.response?.data?.detail || reason.message }
+}
+const refreshRoutes = async () => { try { savedRoutes.value = await listRoutes() } catch (reason) { error.value = reason.message } }
+const removeRoute = async (id) => { await deleteRoute(id); await refreshRoutes() }
+
+const useZoomDefaultLayer = async (zoom) => {
+  if (zoom < ZOOM_AVERAGE_LAYER || !options.levels.includes(AVERAGE_LAYER) || selection.level === AVERAGE_LAYER) return
+  selection.level = AVERAGE_LAYER
+  await loadWindField()
+}
+
 const applyTimes = async ({ autoLoad = true } = {}) => {
   error.value = ''
   Object.assign(options, { cycles: [], forecast_hours: [], valid_times: [], levels: [], source: '' })
@@ -93,13 +147,14 @@ watch(() => selection.source, async () => {
 
 onMounted(async () => {
   await applyTimes()
+  await refreshRoutes()
 })
 </script>
 
 <template>
   <div class="app-shell">
-    <ControlPanel :options="options" :selection="selection" :layers="layers" :thresholds="thresholds" :loading="loading" @reload="loadWindField" @clear-route="clearRoute" />
-    <WindMap ref="mapRef" :wind="wind" :heatmap="heatmap" :layers="layers" :analysis="analysis" @point-click="queryPoint" @route-created="runRouteAnalysis" />
+    <ControlPanel :options="options" :selection="selection" :layers="layers" :thresholds="thresholds" :planner="planner" :saved-routes="savedRoutes" :loading="loading" @reload="loadWindField" @clear-route="clearRoute" @pick-start="picking = 'start'" @pick-end="picking = 'end'" @plan-route="runPlan" @save-route="persistRoute" @load-routes="refreshRoutes" @delete-route="removeRoute" />
+    <WindMap ref="mapRef" :wind="wind" :heatmap="heatmap" :layers="layers" :thresholds="thresholds" :analysis="analysis" @point-click="handleMapClick" @route-created="runRouteAnalysis" @zoom-changed="useZoomDefaultLayer" />
     <AnalysisPanel :metadata="metadata" :analysis="analysis" />
     <div v-if="error" class="error-toast" @click="error = ''">{{ error }}</div>
   </div>

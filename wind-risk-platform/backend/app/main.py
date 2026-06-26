@@ -7,7 +7,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
 from .data_provider import availability, diagnostics, get_grid, get_grid_by_valid_time, refresh
-from .models import RouteAnalyzeRequest
+from .models import RouteAnalyzeRequest, RoutePlanRequest, RouteRecord
+from .routing import plan_route
+from . import route_storage
 from .route_service import analyze_route, sample_route
 from .wind_provider import parse_bbox, point_value
 
@@ -180,3 +182,52 @@ def route_analyze(request: RouteAnalyzeRequest):
     grid = load_grid(request.cycle, request.forecast_hour, request.level, route_bbox, request.valid_time, request.source)
     samples = sample_route(request.points, grid, request.thresholds, request.sample_interval_km)
     return {**analyze_route(samples, request.thresholds), "metadata": metadata(grid)}
+
+
+@app.post("/api/route/plan")
+def route_plan(request: RoutePlanRequest):
+    """Plan a single-altitude, wind-aware A* route between two map points."""
+    lons = [request.start[0], request.end[0]]
+    lats = [request.start[1], request.end[1]]
+    route_bbox = f"{min(lons) - 0.25},{min(lats) - 0.25},{max(lons) + 0.25},{max(lats) + 0.25}"
+    grid = load_grid(request.cycle, request.forecast_hour, request.level, route_bbox, request.valid_time, request.source)
+    try:
+        result = plan_route(grid, request.start, request.end, request.thresholds)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    samples = sample_route(result["points"], grid, request.thresholds, request.sample_interval_km)
+    return {**result, "analysis": analyze_route(samples, request.thresholds), "metadata": metadata(grid)}
+
+
+@app.post("/api/routes", status_code=201)
+def create_route(record: RouteRecord):
+    return route_storage.save_route(record.model_dump())
+
+
+@app.get("/api/routes")
+def routes():
+    return route_storage.list_routes()
+
+
+@app.get("/api/routes/{route_id}")
+def route(route_id: str):
+    result = route_storage.get_route(route_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="route not found")
+    return result
+
+
+@app.put("/api/routes/{route_id}")
+def update_route(route_id: str, record: RouteRecord):
+    payload = record.model_dump()
+    payload["_update"] = True
+    result = route_storage.save_route(payload, route_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="route not found")
+    return result
+
+
+@app.delete("/api/routes/{route_id}", status_code=204)
+def delete_route(route_id: str):
+    if not route_storage.delete_route(route_id):
+        raise HTTPException(status_code=404, detail="route not found")

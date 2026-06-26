@@ -198,7 +198,7 @@ def availability() -> dict:
             cycle: sorted(set(hours)) for cycle, hours in forecast_hours_by_cycle.items()
         },
         "valid_times": sorted(valid_time_options.values(), key=lambda item: item["valid_time"]),
-        "levels": [f"{height}m AGL" for height in SUPPORTED_HEIGHTS_M],
+        "levels": [*[f"{height}m AGL" for height in SUPPORTED_HEIGHTS_M], AVERAGE_LAYER],
     }
 
 
@@ -261,6 +261,13 @@ def normalize_agl_level(level: str) -> tuple[str, int]:
     if height not in SUPPORTED_HEIGHTS_M:
         raise ValueError(f"unsupported GFS AGL level: {height}m AGL")
     return f"{height}m AGL", height
+
+
+AVERAGE_LAYER = "250-350m AGL average"
+
+
+def is_average_layer(level: str) -> bool:
+    return level.strip().lower() == AVERAGE_LAYER.lower()
 
 
 def _pick_var(dataset, candidates: list[str]):
@@ -513,10 +520,15 @@ def _get_grid_cached(
     bbox: tuple[float, float, float, float] | None,
 ) -> WindGrid:
     """Read one existing GFS file and return a normalized regular wind grid."""
-    normalized_level, height = normalize_agl_level(level)
+    average_layer = is_average_layer(level)
+    normalized_level, height = (AVERAGE_LAYER, None) if average_layer else normalize_agl_level(level)
     item = find_file(cycle, forecast_hour)
     try:
-        if height in LOW_LEVEL_HEIGHTS_M:
+        if average_layer:
+            samples = [_interpolate_to_agl(item.path, sample_height, bbox) for sample_height in (250, 300, 350)]
+            u_data = samples[0][0].copy(data=(samples[0][0].values + 4 * samples[1][0].values + samples[2][0].values) / 6)
+            v_data = samples[0][1].copy(data=(samples[0][1].values + 4 * samples[1][1].values + samples[2][1].values) / 6)
+        elif height in LOW_LEVEL_HEIGHTS_M:
             u_data = _open_height_var(item.path, height, "u")
             v_data = _open_height_var(item.path, height, "v")
         else:

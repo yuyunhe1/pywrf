@@ -49,7 +49,7 @@ def availability(source: str | None = None) -> dict:
                 cycle: sorted(set(hours)) for cycle, hours in forecast_hours_by_cycle.items()
             },
             "valid_times": sorted(valid_times, key=lambda item: (item["valid_time"], item["cycle"])),
-            "levels": list(wind_provider.LEVELS),
+            "levels": [*wind_provider.LEVELS, gfs_provider.AVERAGE_LAYER],
             "domain_bbox": wind_provider.DEFAULT_BBOX,
             "source": "GFS mock",
         }
