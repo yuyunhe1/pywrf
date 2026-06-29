@@ -23,6 +23,7 @@ const savedRoutes = ref([])
 const picking = ref('')
 const ZOOM_AVERAGE_LAYER = 13
 const AVERAGE_LAYER = '250-350m AGL average'
+let pointRequestController
 
 const loadWindField = async () => {
   loading.value = true
@@ -40,19 +41,75 @@ const loadWindField = async () => {
   }
 }
 
+const normalizeDirection = (value) => ((value % 360) + 360) % 360
+
+const loadedWindMatchesSelection = () => {
+  if (!metadata.value) return false
+  if (metadata.value.level !== selection.level) return false
+  if (selection.validTime) return metadata.value.valid_time_bj === selection.validTime || metadata.value.valid_time === selection.validTime
+  return metadata.value.cycle === selection.cycle && Number(metadata.value.forecast_hour) === Number(selection.forecastHour)
+}
+
+const pointFromLoadedWind = (lon, lat) => {
+  if (!loadedWindMatchesSelection()) return null
+  const [uSource, vSource] = wind.value?.velocity || []
+  const header = uSource?.header
+  if (!header || !Array.isArray(uSource.data) || !Array.isArray(vSource?.data)) return null
+
+  const { nx, ny, lo1, la1, dx, dy } = header
+  if (![nx, ny, lo1, la1, dx, dy].every(Number.isFinite) || nx < 1 || ny < 1 || dx <= 0 || dy <= 0) return null
+
+  const col = Math.round((lon - lo1) / dx)
+  const row = Math.round((la1 - lat) / dy)
+  if (col < 0 || col >= nx || row < 0 || row >= ny) return null
+
+  const index = row * nx + col
+  const u = Number(uSource.data[index])
+  const v = Number(vSource.data[index])
+  if (!Number.isFinite(u) || !Number.isFinite(v)) return null
+
+  const directionTo = normalizeDirection((Math.atan2(u, v) * 180) / Math.PI)
+  return {
+    lon: lo1 + col * dx,
+    lat: la1 - row * dy,
+    u,
+    v,
+    wind_speed: Math.hypot(u, v),
+    wind_direction_to: directionTo,
+    wind_direction_from: normalizeDirection(directionTo + 180),
+    level: metadata.value?.level || selection.level,
+    valid_time: metadata.value?.valid_time,
+    unit: 'm/s',
+    source: 'loaded-grid',
+  }
+}
+
+const showPointPopup = (point, lon, lat, map) => {
+  L.popup()
+    .setLatLng([lat, lon])
+    .setContent(`<strong>${point.wind_speed.toFixed(2)} m/s</strong><br>气象风向：${point.wind_direction_from.toFixed(0)}°<br>U：${point.u.toFixed(2)} m/s<br>V：${point.v.toFixed(2)} m/s<br><small>最近格点 ${point.lon.toFixed(2)}, ${point.lat.toFixed(2)}</small>`)
+    .openOn(map)
+}
+
 const runRouteAnalysis = async (points) => {
   routePoints = points
   analysis.value = await analyzeRoute(selection, points, thresholds)
 }
 
 const queryPoint = async ({ lon, lat, map }) => {
+  const localPoint = pointFromLoadedWind(lon, lat)
+  if (localPoint) {
+    showPointPopup(localPoint, lon, lat, map)
+    return
+  }
+
+  pointRequestController?.abort()
+  pointRequestController = new AbortController()
   try {
-    const point = await getPoint(selection, lon, lat)
-    L.popup()
-      .setLatLng([lat, lon])
-      .setContent(`<strong>${point.wind_speed.toFixed(2)} m/s</strong><br>气象风向：${point.wind_direction_from.toFixed(0)}°<br>U：${point.u.toFixed(2)} m/s<br>V：${point.v.toFixed(2)} m/s<br><small>最近格点 ${point.lon.toFixed(2)}, ${point.lat.toFixed(2)}</small>`)
-      .openOn(map)
+    const point = await getPoint(selection, lon, lat, { signal: pointRequestController.signal })
+    showPointPopup(point, lon, lat, map)
   } catch (reason) {
+    if (reason.code === 'ERR_CANCELED' || reason.name === 'CanceledError') return
     error.value = reason.response?.data?.detail || reason.message
   }
 }

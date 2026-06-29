@@ -10,11 +10,13 @@ const selectionParams = (selection, bbox) => ({
   ...(bbox ? { bbox: bbox.join(',') } : {}),
 })
 
+const containsPoint = (bbox, lon, lat) => bbox && lon >= bbox[0] && lon <= bbox[2] && lat >= bbox[1] && lat <= bbox[3]
+
 export const getTimes = (source = 'gfs') => api.get('/times', { params: { source } }).then(({ data }) => data)
 export const getWind = (selection, bbox = CHINA_BBOX) => api.get('/wind', { params: selectionParams(selection, bbox) }).then(({ data }) => data)
 export const getHeatmap = (selection, bbox = CHINA_BBOX) => api.get('/heatmap', { params: selectionParams(selection, bbox) }).then(({ data }) => data)
-export const getPoint = (selection, lon, lat) =>
-  api.get('/point', { params: { ...selectionParams(selection), lon, lat } }).then(({ data }) => data)
+export const getPoint = (selection, lon, lat, { bbox = CHINA_BBOX, signal } = {}) =>
+  api.get('/point', { params: { ...selectionParams(selection, containsPoint(bbox, lon, lat) ? bbox : undefined), lon, lat }, signal }).then(({ data }) => data)
 export const analyzeRoute = (selection, points, thresholds) =>
   api.post('/route/analyze', {
     points,

@@ -1,5 +1,4 @@
 import os
-from datetime import datetime, timezone
 from math import hypot
 
 os.environ["GFS_DATA_MODE"] = "mock"
@@ -26,12 +25,8 @@ def test_times_and_wind_grid():
     assert CYCLE in times["forecast_hours_by_cycle"]
     assert times["valid_times"]
     assert times["valid_times"][0]["label"].endswith("北京时间")
-    now = datetime.strptime(os.environ["GFS_NOW_UTC"], "%Y-%m-%d %H:%M UTC").replace(tzinfo=timezone.utc)
-    current_hour = now.replace(minute=0, second=0, microsecond=0)
     assert any(item["label"] == "2026-06-15 16:00 北京时间" for item in times["valid_times"])
-    for item in times["valid_times"]:
-        valid_time = datetime.strptime(item["valid_time"], "%Y-%m-%d %H:%M UTC").replace(tzinfo=timezone.utc)
-        assert valid_time >= current_hour
+    assert any(item["valid_time"] == "2026-06-15 06:00 UTC" for item in times["valid_times"])
     response = client.get("/api/wind", params={"cycle": CYCLE, "forecast_hour": 3, "level": "100m"})
     assert response.status_code == 200
     payload = response.json()

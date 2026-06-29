@@ -194,5 +194,14 @@ python run_wrf_validation_batch.py \
   --max-wall-hours 0
 ```
 
+## Wind Risk Platform
+
+The `wind-risk-platform/` directory contains a FastAPI + Vue application for
+visualizing low-altitude GFS and WRF wind fields. The backend can read historical
+GFS files already present in the repository data directories, and it can start
+`download_gfs_hourly_70vars_realtime.py` automatically when realtime GFS files
+are missing. See `wind-risk-platform/README.md` for backend/frontend startup,
+GFS auto-download options, WRF cache SFTP configuration, and API examples.
+
 ## Credit
 Copyright (c) 2020-present <a href="https://github.com/elpahlevi">Reza Pahlevi</a> and <a href="https://github.com/agungbaruna">Agung Baruna Setiawan Noor</a>.

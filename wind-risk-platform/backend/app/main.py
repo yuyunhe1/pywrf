@@ -6,7 +6,16 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
-from .data_provider import availability, diagnostics, get_grid, get_grid_by_valid_time, refresh
+from .data_provider import (
+    availability,
+    diagnostics,
+    get_grid,
+    get_grid_by_valid_time,
+    gfs_download_status,
+    maybe_start_gfs_download,
+    refresh,
+    start_gfs_download,
+)
 from .models import RouteAnalyzeRequest, RoutePlanRequest, RouteRecord
 from .routing import plan_route
 from . import route_storage
@@ -39,7 +48,18 @@ def load_grid(
         if cycle is None or forecast_hour is None:
             raise ValueError("cycle and forecast_hour are required when valid_time is not provided")
         return get_grid(cycle, forecast_hour, level, parsed_bbox, source)
-    except (ValueError, RuntimeError) as exc:
+    except ValueError as exc:
+        download = maybe_start_gfs_download(source, str(exc))
+        if download and download.get("running"):
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "message": f"{exc}. 已自动启动实时 GFS 下载，请稍后刷新。",
+                    "download": download,
+                },
+            ) from exc
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
@@ -80,11 +100,30 @@ def health(source: str | None = None):
 
 
 @app.get("/api/times")
-def times(refresh_files: bool = Query(default=False, alias="refresh"), source: str | None = None):
+def times(
+    refresh_files: bool = Query(default=False, alias="refresh"),
+    auto_download: bool = True,
+    source: str | None = None,
+):
     """Return cycles, forecast hours, and AGL levels discovered from existing GFS files."""
     if refresh_files:
         refresh(source)
-    return availability(source)
+    return availability(source, auto_download=auto_download)
+
+
+@app.post("/api/gfs/download")
+def trigger_gfs_download(force: bool = False):
+    """Start the realtime GFS downloader used by the backend."""
+    status = start_gfs_download("manual API request", force=force)
+    if not status.get("enabled") and not force:
+        raise HTTPException(status_code=400, detail=status)
+    return status
+
+
+@app.get("/api/gfs/download-status")
+def gfs_download():
+    """Return the current or most recent realtime GFS download status."""
+    return gfs_download_status()
 
 
 @app.get("/api/wind")
@@ -161,12 +200,13 @@ def point(
     cycle: str | None = None,
     forecast_hour: int | None = Query(default=None, ge=0),
     level: str = "100m AGL",
+    bbox: str | None = None,
     valid_time: str | None = None,
     source: str | None = None,
 ):
     """Query the nearest wind grid point. Inputs use longitude then latitude."""
-    point_bbox = f"{lon - 0.5},{lat - 0.5},{lon + 0.5},{lat + 0.5}"
-    grid = load_grid(cycle, forecast_hour, level, point_bbox, valid_time, source)
+    grid_bbox = bbox or f"{lon - 0.5},{lat - 0.5},{lon + 0.5},{lat + 0.5}"
+    grid = load_grid(cycle, forecast_hour, level, grid_bbox, valid_time, source)
     domain = metadata(grid)["bbox"]
     if not (domain[0] <= lon <= domain[2] and domain[1] <= lat <= domain[3]):
         raise HTTPException(status_code=400, detail="point is outside the available wind domain")

@@ -80,7 +80,7 @@ def _parse_bj_label(value: str) -> datetime:
 
 
 def _current_utc() -> datetime:
-    """Return the current UTC time, with a test override for deterministic filtering."""
+    """Return the current UTC time, with a test override for diagnostics."""
     configured = os.getenv("GFS_NOW_UTC")
     if configured:
         text = configured.strip()
@@ -94,12 +94,18 @@ def _current_utc() -> datetime:
 
 
 def selectable_valid_time_floor() -> datetime:
-    """Return the earliest valid time shown to users: the current hour floor."""
+    """Return the current-hour floor retained for diagnostics and compatibility."""
     now = _current_utc()
     return now.replace(minute=0, second=0, microsecond=0)
 
 
 def is_selectable_valid_time(valid_time: str) -> bool:
+    """Return True for every discovered time so historical files are testable."""
+    _parse_utc_label(valid_time)
+    return True
+
+
+def is_current_or_future_valid_time(valid_time: str) -> bool:
     """Return True when a UTC valid-time label is not earlier than the current hour."""
     return _parse_utc_label(valid_time) >= selectable_valid_time_floor()
 

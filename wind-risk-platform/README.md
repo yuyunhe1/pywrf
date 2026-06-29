@@ -35,7 +35,8 @@ wind-risk-platform/
 
 - Leaflet 地图、自定义 Canvas 规则网格风速热力图和 leaflet-velocity 风向粒子流
 - 起报时间、预报时效、高度层切换
-- 地图点击查询最近格点的风速、气象风向、U/V 分量
+- 地图点击查询最近格点的风速、气象风向、U/V 分量；点击位置位于已加载风场网格内时，
+  前端优先从本地网格直接取值，减少重复后端请求
 - Leaflet.draw 手绘航线并自动调用后端分析
 - 航线最大/平均风速、高风险比例、综合风险等级和分段着色
 - ECharts 航线距离—风速曲线
@@ -121,6 +122,40 @@ python -m uvicorn app.main:app --reload --port 8000
  U/V 形状为 `(ny, nx)`。默认 `GFS_MAX_GRID_POINTS=0`，保持源数据分辨率；设置为正整数时
  才会对过大网格自动等步长降采样。
 
+### 自动下载实时 GFS
+
+后端已集成仓库根目录的 `download_gfs_hourly_70vars_realtime.py`。`GET /api/times`
+会展示已发现的历史和实时 GFS 时刻；如果在 `source=gfs` 下没有发现当前或未来 GFS
+风场，会自动在后台启动实时下载；
+请求某个缺失的 GFS 风场时，后端也会触发下载并返回 `503`，提示稍后刷新。
+
+可手动启动或查看状态：
+
+```powershell
+curl -X POST "http://127.0.0.1:8000/api/gfs/download"
+curl "http://127.0.0.1:8000/api/gfs/download-status"
+```
+
+常用配置：
+
+```powershell
+$env:GFS_AUTO_DOWNLOAD="1"
+$env:GFS_REALTIME_DOWNLOAD_DIR="D:\GNSS\PyWRF-Automation\pyWRF-automation\data\gfs_hourly_windcheck"
+$env:GFS_REALTIME_GLOBAL_REGION="1"
+$env:GFS_REALTIME_START_FHOUR="1"
+$env:GFS_REALTIME_END_FHOUR="12"
+$env:GFS_REALTIME_CYCLE_COUNT="2"
+$env:GFS_REALTIME_WIND_MAP_ONLY="0"
+```
+
+默认下载全球区域、最近两个起报点的 `f001` 到 `f012`。若只做低空地图展示并希望减小
+文件体积，可设置 `GFS_REALTIME_WIND_MAP_ONLY=1`；若需要高层 AGL 插值，则保持为 `0`。
+下载日志默认写入 `data/gfs_download_logs/`。如需禁用自动下载：
+
+```powershell
+$env:GFS_AUTO_DOWNLOAD="0"
+```
+
 全球地图试验建议只下载低空 U/V，避免同时下载大量等压面变量：
 
 ```powershell
@@ -141,8 +176,9 @@ cycle/forecast hour 同时存在 point 与 global 文件时，后端优先使用
 地图打开时以安徽省合肥市中心为初始视野，显示约 `10 km x 10 km`，即约
 `100 km²` 的周边范围。
 
-时间选择以北京时间有效时刻为主，例如 `2026-06-16 15:00 北京时间`。后端会自动
-映射到对应的 GFS 起报时间和预报时效，右侧面板保留 UTC 参考信息。
+时间选择以北京时间有效时刻为主，例如 `2026-06-16 15:00 北京时间`。前端会展示
+已发现的历史和实时 GFS 时刻，便于回放测试；后端会自动映射到对应的 GFS 起报时间和
+预报时效，右侧面板保留 UTC 参考信息。
 
 高度层支持低空固定 AGL 层和高层插值层。`10/20/30/40/50/80/100m AGL` 直接读取
 GFS 固定高度层；`200/300/500/800/1000/1500/2000/3000m AGL` 使用等压面 U/V/HGT

@@ -2,7 +2,7 @@
 
 import os
 
-from . import gfs_provider, wind_provider, wrf_cache_provider
+from . import gfs_downloader, gfs_provider, wind_provider, wrf_cache_provider
 
 
 def data_mode(source: str | None = None) -> str:
@@ -21,7 +21,7 @@ def data_mode(source: str | None = None) -> str:
     return mode
 
 
-def availability(source: str | None = None) -> dict:
+def availability(source: str | None = None, auto_download: bool = False) -> dict:
     """Return available selections for the active provider."""
     mode = data_mode(source)
     if mode == "mock":
@@ -57,7 +57,14 @@ def availability(source: str | None = None) -> dict:
         result = wrf_cache_provider.availability()
         return {**result, "domain_bbox": None, "source": "WRF cache"}
     result = gfs_provider.availability()
-    return {**result, "domain_bbox": None, "source": "GFS GRIB2"}
+    download = gfs_downloader.status()
+    has_realtime = any(
+        gfs_provider.is_current_or_future_valid_time(item["valid_time"])
+        for item in result["valid_times"]
+    )
+    if auto_download and not has_realtime:
+        download = gfs_downloader.start_realtime_download("no selectable realtime GFS files")
+    return {**result, "domain_bbox": None, "source": "GFS GRIB2", "download": download}
 
 
 def get_grid(cycle: str, forecast_hour: int, level: str, bbox, source: str | None = None):
@@ -94,6 +101,22 @@ def refresh(source: str | None = None) -> None:
         wrf_cache_provider.refresh_cache()
 
 
+def maybe_start_gfs_download(source: str | None = None, reason: str = "missing GFS file") -> dict | None:
+    """Start a realtime GFS download only when the selected source is raw GFS."""
+    if data_mode(source) != "real":
+        return None
+    return gfs_downloader.start_realtime_download(reason)
+
+
+def start_gfs_download(reason: str = "manual API request", force: bool = False) -> dict:
+    """Expose manual realtime downloader startup to the API layer."""
+    return gfs_downloader.start_realtime_download(reason, force=force)
+
+
+def gfs_download_status() -> dict:
+    return gfs_downloader.status()
+
+
 def diagnostics(source: str | None = None) -> dict:
     """Return active data-provider diagnostics."""
     mode = data_mode(source)
@@ -101,4 +124,8 @@ def diagnostics(source: str | None = None) -> dict:
         return {"mode": "mock"}
     if mode == "wrf_cache":
         return wrf_cache_provider.diagnostics()
-    return {"mode": "real", "eccodes": gfs_provider.eccodes_runtime()}
+    return {
+        "mode": "real",
+        "eccodes": gfs_provider.eccodes_runtime(),
+        "download": gfs_downloader.status(),
+    }
