@@ -12,6 +12,7 @@ const props = defineProps({
   planner: { type: Object, required: true },
   savedRoutes: { type: Array, required: true },
   loading: Boolean,
+  picking: { type: String, default: '' },
 })
 
 defineEmits(['reload', 'clear-route', 'pick-start', 'pick-end', 'plan-route', 'save-route', 'load-routes', 'delete-route'])
@@ -19,63 +20,80 @@ defineEmits(['reload', 'clear-route', 'pick-start', 'pick-end', 'plan-route', 's
 
 <template>
   <aside class="panel control-panel">
-    <div>
-      <p class="eyebrow">GFS LOW-ALTITUDE WIND</p>
-      <h1>无人机航线风速风险平台</h1>
-      <p class="subtle">{{ selection.source === 'wrf' ? '当前显示服务器 WRF d02 降尺度缓存风场。' : '默认显示中国区域 73°E–135°E、18°N–54°N 的 GFS 原始风场。' }}</p>
+    <div class="panel-content">
+      <div style="margin-bottom: 12px;">
+        <p class="eyebrow">WIND RISK PLATFORM</p>
+        <h1 style="font-size: 18px;">无人机风速预警</h1>
+      </div>
+
+      <section style="padding-top: 0;">
+        <div class="grid-2">
+          <label>数据源<select v-model="selection.source"><option v-for="item in dataSources" :key="item.value" :value="item.value">{{ item.label }}</option></select></label>
+          <label>高度层<select v-model="selection.level"><option v-for="level in options.levels" :key="level">{{ level }}</option></select></label>
+        </div>
+        <label>风场时刻<select v-model="selection.validTime" :disabled="!options.valid_times.length"><option v-for="item in options.valid_times" :key="`${item.label}-${item.cycle}`" :value="item.label">{{ item.label }}</option></select></label>
+        <button class="primary" :disabled="loading || !options.valid_times.length" @click="$emit('reload')" style="margin-top: 8px;">{{ loading ? '加载中...' : '加载当前风场' }}</button>
+      </section>
+
+      <section>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <h2 style="margin:0">航线规划</h2>
+          <button class="ghost" style="width: auto; padding: 2px 8px; font-size: 11px; margin: 0; color: #ff4757; border-color: rgba(255,71,87,0.3);" @click="$emit('clear-route')">清除航线</button>
+        </div>
+        <label>航线名称<input v-model="planner.name" type="text" placeholder="默认航线 A" /></label>
+        <div style="display: grid; gap: 8px; margin-top: 8px;">
+          <label>起点
+            <div class="input-group">
+              <input v-model="planner.startText" type="text" placeholder="经度, 纬度" />
+              <button class="ghost" :class="{ 'active-pick': picking === 'start' }" @click="$emit('pick-start')" style="width: 60px;">{{ picking === 'start' ? '选点中' : '选点' }}</button>
+            </div>
+          </label>
+          <label>终点
+            <div class="input-group">
+              <input v-model="planner.endText" type="text" placeholder="经度, 纬度" />
+              <button class="ghost" :class="{ 'active-pick': picking === 'end' }" @click="$emit('pick-end')" style="width: 60px;">{{ picking === 'end' ? '选点中' : '选点' }}</button>
+            </div>
+          </label>
+        </div>
+        <div class="grid-2" style="margin-top: 10px;">
+          <button class="ghost" :disabled="!planner.points.length" @click="$emit('save-route')" style="margin: 0;">保存航线</button>
+          <button class="primary" :disabled="loading || !planner.startText || !planner.endText" @click="$emit('plan-route')" style="margin: 0;">
+            <span v-if="planner.planning" class="loading-spinner"></span>
+            生成规划航线
+          </button>
+        </div>
+      </section>
+
+      <section>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <h2 style="margin:0">图层与风级阈值</h2>
+          <label class="switch" style="margin:0; font-size: 11px;"><input v-model="layers.route" type="checkbox" /> 航线</label>
+        </div>
+        <div class="segmented-control" style="margin-bottom: 12px;">
+          <button type="button" :class="{ active: layers.velocity }" @click="layers.velocity = true; layers.heatmap = false">风向粒子流</button>
+          <button type="button" :class="{ active: layers.heatmap }" @click="layers.heatmap = true; layers.velocity = false">风速热力图</button>
+        </div>
+        <div class="threshold-grid">
+          <label>一级风<input v-model.number="thresholds.safe" type="number" min="0" step="0.5" /></label>
+          <label>二级风<input v-model.number="thresholds.notice" type="number" min="0" step="0.5" /></label>
+          <label>三级风<input v-model.number="thresholds.warning" type="number" min="0" step="0.5" /></label>
+          <label>四级风<input v-model.number="thresholds.danger" type="number" min="0" step="0.5" /></label>
+        </div>
+      </section>
+
+      <section style="padding-bottom: 0; border-bottom: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <h2 style="margin:0">历史航线</h2>
+          <button class="ghost" style="width: auto; padding: 2px 8px; font-size: 11px; margin: 0;" @click="$emit('load-routes')">刷新</button>
+        </div>
+        <div class="route-list">
+          <div v-if="!savedRoutes.length" class="subtle" style="text-align: center; margin-top: 10px;">暂无保存的航线</div>
+          <div v-for="route in savedRoutes" :key="route.route_id" class="saved-route">
+            <button class="ghost" @click="$emit('plan-route', route)">{{ route.name }}</button>
+            <button class="icon-button" title="删除" @click="$emit('delete-route', route.route_id)">×</button>
+          </div>
+        </div>
+      </section>
     </div>
-
-    <section>
-      <h2>数据选择</h2>
-      <label>数据源<select v-model="selection.source"><option v-for="item in dataSources" :key="item.value" :value="item.value">{{ item.label }}</option></select></label>
-      <label>北京时间风场时刻<select v-model="selection.validTime" :disabled="!options.valid_times.length"><option v-for="item in options.valid_times" :key="`${item.label}-${item.cycle}`" :value="item.label">{{ item.label }}</option></select></label>
-      <p v-if="options.valid_times.length" class="subtle">对应起报：{{ selection.cycle }}，预报时效 F{{ String(selection.forecastHour || 0).padStart(3, '0') }}</p>
-      <p v-else class="subtle">当前没有当前整点或未来的风场时刻，请下载新的 GFS 数据。</p>
-      <label>高度层<select v-model="selection.level"><option v-for="level in options.levels" :key="level">{{ level }}</option></select></label>
-      <button class="primary" :disabled="loading || !options.valid_times.length" @click="$emit('reload')">{{ loading ? '加载中...' : '加载当前风场' }}</button>
-    </section>
-
-    <section>
-      <h2>智能航线规划</h2>
-      <label>航线名称<input v-model="planner.name" type="text" placeholder="默认航线 A" /></label>
-      <label>起点 [lon, lat]<input v-model="planner.startText" type="text" placeholder="点击地图选择" /></label>
-      <button class="ghost" @click="$emit('pick-start')">在地图选择起点</button>
-      <label>终点 [lon, lat]<input v-model="planner.endText" type="text" placeholder="点击地图选择" /></label>
-      <button class="ghost" @click="$emit('pick-end')">在地图选择终点</button>
-      <button class="primary" :disabled="loading || !planner.startText || !planner.endText" @click="$emit('plan-route')">规划避风航线</button>
-      <button class="ghost" :disabled="!planner.points.length" @click="$emit('save-route')">保存当前航线</button>
-    </section>
-
-    <section>
-      <h2>历史航线</h2>
-      <button class="ghost" @click="$emit('load-routes')">刷新航线列表</button>
-      <div v-for="route in savedRoutes" :key="route.route_id" class="saved-route">
-        <button class="ghost" @click="$emit('plan-route', route)">{{ route.name }}</button>
-        <button class="icon-button" title="删除" @click="$emit('delete-route', route.route_id)">×</button>
-      </div>
-    </section>
-
-    <section>
-      <h2>图层显示</h2>
-      <label class="switch"><input v-model="layers.heatmap" type="checkbox" /> 风速热力图</label>
-      <label class="switch"><input v-model="layers.velocity" type="checkbox" /> 风向粒子流</label>
-      <label class="switch"><input v-model="layers.route" type="checkbox" /> 航线与风险分段</label>
-    </section>
-
-    <section>
-      <h2>风险阈值 <span>m/s</span></h2>
-      <div class="threshold-grid">
-        <label>安全<input v-model.number="thresholds.safe" type="number" min="0" step="0.5" /></label>
-        <label>注意<input v-model.number="thresholds.notice" type="number" min="0" step="0.5" /></label>
-        <label>预警<input v-model.number="thresholds.warning" type="number" min="0" step="0.5" /></label>
-        <label>危险<input v-model.number="thresholds.danger" type="number" min="0" step="0.5" /></label>
-      </div>
-    </section>
-
-    <section>
-      <h2>航线操作</h2>
-      <p class="subtle">点击地图左上角折线工具绘制航线，结束后自动分析。</p>
-      <button class="ghost" @click="$emit('clear-route')">清除航线</button>
-    </section>
   </aside>
 </template>

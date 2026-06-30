@@ -46,7 +46,7 @@ def load_grid(
         if valid_time:
             return get_grid_by_valid_time(valid_time, level, parsed_bbox, source)
         if cycle is None or forecast_hour is None:
-            raise ValueError("cycle and forecast_hour are required when valid_time is not provided")
+            raise ValueError("未提供 valid_time 时，必须提供 cycle 和 forecast_hour")
         return get_grid(cycle, forecast_hour, level, parsed_bbox, source)
     except ValueError as exc:
         download = maybe_start_gfs_download(source, str(exc))
@@ -209,7 +209,7 @@ def point(
     grid = load_grid(cycle, forecast_hour, level, grid_bbox, valid_time, source)
     domain = metadata(grid)["bbox"]
     if not (domain[0] <= lon <= domain[2] and domain[1] <= lat <= domain[3]):
-        raise HTTPException(status_code=400, detail="point is outside the available wind domain")
+        raise HTTPException(status_code=400, detail="请求的坐标点超出了可用风场数据的经纬度范围")
     return {**point_value(grid, lon, lat), "level": grid.level, "valid_time": grid.valid_time, "unit": "m/s"}
 
 
@@ -253,9 +253,8 @@ def routes():
 def route(route_id: str):
     result = route_storage.get_route(route_id)
     if result is None:
-        raise HTTPException(status_code=404, detail="route not found")
+        raise HTTPException(status_code=404, detail="未找到该航线记录")
     return result
-
 
 @app.put("/api/routes/{route_id}")
 def update_route(route_id: str, record: RouteRecord):
@@ -263,11 +262,10 @@ def update_route(route_id: str, record: RouteRecord):
     payload["_update"] = True
     result = route_storage.save_route(payload, route_id)
     if result is None:
-        raise HTTPException(status_code=404, detail="route not found")
+        raise HTTPException(status_code=404, detail="未找到该航线记录")
     return result
-
 
 @app.delete("/api/routes/{route_id}", status_code=204)
 def delete_route(route_id: str):
     if not route_storage.delete_route(route_id):
-        raise HTTPException(status_code=404, detail="route not found")
+        raise HTTPException(status_code=404, detail="未找到该航线记录")

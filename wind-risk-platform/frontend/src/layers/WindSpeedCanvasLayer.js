@@ -2,11 +2,11 @@ import L from 'leaflet'
 
 const COLOR_STOPS = [
   [0, [37, 99, 235]],
-  [3, [34, 197, 94]],
-  [6, [250, 204, 21]],
-  [8, [249, 115, 22]],
-  [10, [239, 68, 68]],
-  [15, [126, 34, 206]],
+  [1.5, [34, 197, 94]],
+  [3.3, [250, 204, 21]],
+  [5.4, [249, 115, 22]],
+  [7.9, [239, 68, 68]],
+  [10, [126, 34, 206]],
 ]
 
 const interpolateColor = (speed) => {
@@ -22,7 +22,7 @@ const interpolateColor = (speed) => {
 
 export const createWindSpeedCanvasLayer = (windSpeed, options = {}) => {
   const WindSpeedCanvasLayer = L.Layer.extend({
-    options: { pane: 'windHeatPane', opacity: 0.55, ...options },
+    options: { pane: 'windHeatPane', opacity: 0.55, filterRanges: null, ...options },
 
     initialize(data, layerOptions) {
       L.setOptions(this, layerOptions)
@@ -81,6 +81,10 @@ export const createWindSpeedCanvasLayer = (windSpeed, options = {}) => {
         for (let col = colStart; col <= colEnd; col += 1) {
           const speed = this.windSpeed.data[row * nx + col]
           if (!Number.isFinite(speed)) continue
+          if (this.options.filterRanges && this.options.filterRanges.length > 0) {
+            const inRange = this.options.filterRanges.some(([min, max]) => speed >= min && speed <= max)
+            if (!inRange) continue
+          }
           const west = westEdge + col * dx
           const east = west + dx
           const x1 = this.map.latLngToLayerPoint([la1, west]).x - topLeft.x

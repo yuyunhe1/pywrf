@@ -56,6 +56,9 @@ def _cell_point(grid: WindGrid, row: int, col: int) -> tuple[float, float]:
 def _segment_risk(points: list[tuple[float, float]], grid: WindGrid, thresholds: Thresholds) -> list[dict]:
     segments = []
     for start, end in zip(points, points[1:]):
+        # 如果起点和终点完全一致（例如被强制替换导致），可以跳过或当做极短线段
+        if start == end:
+            continue
         midpoint = ((start[0] + end[0]) / 2, (start[1] + end[1]) / 2)
         wind = point_value(grid, *midpoint)
         segments.append({
@@ -72,7 +75,7 @@ def plan_route(grid: WindGrid, start: tuple[float, float], end: tuple[float, flo
     end_node = (_nearest_index(grid.lats, end[1]), _nearest_index(grid.lons, end[0]))
     speeds = np.hypot(grid.u, grid.v)
     if speeds[start_node] >= thresholds.danger or speeds[end_node] >= thresholds.danger:
-        raise ValueError("start or end is inside a danger-threshold no-fly cell")
+        raise ValueError("起点或终点位于四级风及以上（或更高）的禁飞网格内")
 
     def heuristic(row: int, col: int) -> float:
         return haversine_km(_cell_point(grid, row, col), _cell_point(grid, *end_node))
@@ -105,7 +108,7 @@ def plan_route(grid: WindGrid, start: tuple[float, float], end: tuple[float, flo
                 parents[next_state] = state
                 heapq.heappush(queue, (next_cost + heuristic(nr, nc), next_cost, nr, nc, direction))
     if goal_state is None:
-        raise ValueError("no safe route found with the current danger threshold")
+        raise ValueError("在当前四级风及以上（或更高）的禁飞限制下，未找到安全的飞行航线")
     nodes = []
     state = goal_state
     while state is not None:
@@ -119,7 +122,12 @@ def plan_route(grid: WindGrid, start: tuple[float, float], end: tuple[float, flo
         if (b[0] - a[0], b[1] - a[1]) != (c[0] - b[0], c[1] - b[1]):
             simplified.append(b)
     simplified.append(nodes[-1])
+    
     points = [_cell_point(grid, row, col) for row, col in simplified]
+    if len(points) >= 2:
+        points.insert(0, start)
+        points.append(end)
+        
     segments = _segment_risk(points, grid, thresholds)
     return {
         "points": points, "segments": segments, "cost": round(goal_state and best[goal_state], 3),

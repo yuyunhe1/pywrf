@@ -6,10 +6,10 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 class Thresholds(BaseModel):
     """Wind risk thresholds in m/s."""
 
-    safe: float = 3
-    notice: float = 6
-    warning: float = 8
-    danger: float = 10
+    safe: float = 1.5
+    notice: float = 3.3
+    warning: float = 5.4
+    danger: float = 7.9
 
     @field_validator("notice", "warning", "danger")
     @classmethod
@@ -20,9 +20,8 @@ class Thresholds(BaseModel):
             "danger": info.data.get("warning"),
         }[info.field_name]
         if previous is not None and value <= previous:
-            raise ValueError("thresholds must be strictly increasing")
+            raise ValueError("风级阈值必须严格递增")
         return value
-
 
 class RouteAnalyzeRequest(BaseModel):
     """Route analysis request. Each route point uses [longitude, latitude]."""
@@ -39,9 +38,9 @@ class RouteAnalyzeRequest(BaseModel):
     @model_validator(mode="after")
     def validate_time_selection(self):
         if self.cycle is None and self.valid_time is None:
-            raise ValueError("cycle or valid_time is required")
+            raise ValueError("必须提供 cycle 或 valid_time")
         if self.valid_time is None and self.forecast_hour is None:
-            raise ValueError("forecast_hour is required when valid_time is not provided")
+            raise ValueError("未提供 valid_time 时，必须提供 forecast_hour")
         return self
 
 

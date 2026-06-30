@@ -239,7 +239,7 @@ def find_file(cycle: str, forecast_hour: int) -> GfsFile:
     for item in discover_files():
         if item.cycle == cycle and item.forecast_hour == forecast_hour:
             return item
-    raise ValueError(f"no GFS GRIB2 file for cycle={cycle}, forecast_hour={forecast_hour}")
+    raise ValueError(f"找不到 cycle={cycle}, forecast_hour={forecast_hour} 的 GFS GRIB2 文件")
 
 
 def find_file_by_valid_time(valid_time: str) -> GfsFile:
@@ -262,10 +262,10 @@ def normalize_agl_level(level: str) -> tuple[str, int]:
     """Normalize any supported AGL label and return (label, height_m)."""
     match = re.search(r"(\d+(?:\.\d+)?)\s*m", level.strip(), re.IGNORECASE)
     if not match:
-        raise ValueError(f"unsupported level: {level}")
+        raise ValueError(f"不支持的高度层格式: {level}")
     height = int(round(float(match.group(1))))
     if height not in SUPPORTED_HEIGHTS_M:
-        raise ValueError(f"unsupported GFS AGL level: {height}m AGL")
+        raise ValueError(f"不支持的 GFS 离地高度层: {height}m AGL")
     return f"{height}m AGL", height
 
 
@@ -282,7 +282,7 @@ def _pick_var(dataset, candidates: list[str]):
             return dataset[name]
     if len(dataset.data_vars) == 1:
         return dataset[next(iter(dataset.data_vars))]
-    raise ValueError(f"cannot identify wind variable; candidates={candidates}, actual={list(dataset.data_vars)}")
+    raise ValueError(f"无法识别风场变量；候选变量={candidates}，实际存在={list(dataset.data_vars)}")
 
 
 def _open_height_var(path: Path, height: int, kind: str):
@@ -356,9 +356,9 @@ def _open_isobaric_dataset(path: Path):
         except Exception as exc:
             errors.append(str(exc))
     raise ValueError(
-        "GRIB2 lacks isobaric U/V/HGT required for high-level AGL interpolation. "
-        "Download without --wind-map-only. "
-        f"Last error: {errors[-1] if errors else 'unknown'}"
+        "GRIB2 文件不包含用于 AGL 插值的等压面 U/V/HGT 变量；"
+        "如果使用的是轻量级 --wind-map-only 文件，则无法获取高空数据。 "
+        f"最后一次错误: {errors[-1] if errors else 'unknown'}"
     )
 
 
@@ -400,7 +400,7 @@ def normalize_grid(
     u_data = u_data.squeeze(drop=True)
     v_data = v_data.squeeze(drop=True)
     if set(u_data.dims) != {lat_name, lon_name} or set(v_data.dims) != {v_lat_name, v_lon_name}:
-        raise ValueError(f"U/V must be 2-D latitude/longitude grids; U={u_data.dims}, V={v_data.dims}")
+        raise ValueError(f"U/V 必须是 2D 的经纬度网格；U={u_data.dims}, V={v_data.dims}")
 
     u = np.asarray(u_data.transpose(lat_name, lon_name).values, dtype=float)
     v = np.asarray(v_data.transpose(v_lat_name, v_lon_name).values, dtype=float)
@@ -409,10 +409,10 @@ def normalize_grid(
     v_lats = np.asarray(v_data[v_lat_name].values, dtype=float).reshape(-1)
     v_lons = np.asarray(v_data[v_lon_name].values, dtype=float).reshape(-1)
 
-    if u.shape != v.shape or u.shape != (len(lats), len(lons)):
-        raise ValueError(f"U/V and coordinate dimensions differ: U={u.shape}, V={v.shape}, lat={len(lats)}, lon={len(lons)}")
+    if u.shape != v.shape or len(lats) != u.shape[0] or len(lons) != u.shape[1]:
+        raise ValueError(f"U/V 数据和坐标维度大小不一致: U={u.shape}, V={v.shape}, lat={len(lats)}, lon={len(lons)}")
     if not np.allclose(lats, v_lats) or not np.allclose(lons, v_lons):
-        raise ValueError("U/V latitude or longitude coordinates differ")
+        raise ValueError("U/V 的经度或纬度坐标不一致")
 
     lons = ((lons + 180.0) % 360.0) - 180.0
     lon_order = np.argsort(lons)
@@ -429,7 +429,7 @@ def normalize_grid(
         lon_mask = (lons >= min_lon) & (lons <= max_lon)
         lat_mask = (lats >= min_lat) & (lats <= max_lat)
         if not lon_mask.any() or not lat_mask.any():
-            raise ValueError("bbox does not intersect the selected GFS grid")
+            raise ValueError("查询范围(bbox)与该 GFS 网格没有交集")
         lons, lats = lons[lon_mask], lats[lat_mask]
         u, v = u[lat_mask][:, lon_mask], v[lat_mask][:, lon_mask]
 
@@ -458,7 +458,8 @@ def _crop_data_array(data_array, bbox: tuple[float, float, float, float] | None)
     lats = np.asarray(data_array[lat_name].values, dtype=float)
     selector[lat_name] = lats[(lats >= min_lat) & (lats <= max_lat)]
     if len(selector[lon_name]) == 0 or len(selector[lat_name]) == 0:
-        raise ValueError("bbox does not intersect the selected GFS grid")
+        raise ValueError("查询范围(bbox)与该 GFS 网格没有交集")
+
     return data_array.sel(selector)
 
 
@@ -466,7 +467,7 @@ def _pressure_coord(data_array) -> str:
     for name in ("isobaricInhPa", "isobaricInPa", "level"):
         if name in data_array.coords:
             return name
-    raise ValueError(f"missing isobaric pressure coordinate; coords={list(data_array.coords)}")
+    raise ValueError(f"缺少等压面高度坐标；可用坐标={list(data_array.coords)}")
 
 
 def _interpolate_to_agl(path: Path, height: int, bbox: tuple[float, float, float, float] | None):

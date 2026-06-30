@@ -54,15 +54,15 @@ def normalize_level(level: str) -> str:
     for available in LEVELS:
         if available.lower() == candidate:
             return available
-    raise ValueError(f"unsupported level: {level}")
+    raise ValueError(f"不支持的高度层: {level}")
 
 
 def validate_selection(cycle: str, forecast_hour: int, level: str) -> str:
     """Validate a requested mock dataset selection."""
     if cycle not in CYCLES:
-        raise ValueError(f"unsupported cycle: {cycle}")
+        raise ValueError(f"不支持的起报时间 (cycle): {cycle}")
     if forecast_hour not in FORECAST_HOURS:
-        raise ValueError(f"unsupported forecast hour: {forecast_hour}")
+        raise ValueError(f"不支持的预报时效 (forecast hour): {forecast_hour}")
     return normalize_level(level)
 
 
@@ -73,11 +73,11 @@ def parse_bbox(bbox: str | None) -> tuple[float, float, float, float] | None:
     try:
         min_lon, min_lat, max_lon, max_lat = map(float, bbox.split(","))
     except ValueError as exc:
-        raise ValueError("bbox must be minLon,minLat,maxLon,maxLat") from exc
+        raise ValueError("bbox 格式必须为 minLon,minLat,maxLon,maxLat") from exc
     if min_lon >= max_lon or min_lat >= max_lat:
-        raise ValueError("bbox minimums must be smaller than maximums")
+        raise ValueError("bbox 的最小值必须小于最大值")
     if not (-180 <= min_lon <= 180 and -180 <= max_lon <= 180 and -90 <= min_lat <= 90 and -90 <= max_lat <= 90):
-        raise ValueError("bbox longitude must be -180..180 and latitude must be -90..90")
+        raise ValueError("bbox 的经度范围必须在 -180 到 180 之间，纬度必须在 -90 到 90 之间")
     return min_lon, min_lat, max_lon, max_lat
 
 

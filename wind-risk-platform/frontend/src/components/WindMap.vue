@@ -5,7 +5,7 @@ import 'leaflet-draw'
 import 'leaflet-draw/dist/leaflet.draw.css'
 import 'leaflet-velocity'
 import 'leaflet-velocity/dist/leaflet-velocity.css'
-import { onBeforeUnmount, onMounted, watch } from 'vue'
+import { onBeforeUnmount, onMounted, watch, ref, computed } from 'vue'
 import { createWindSpeedCanvasLayer } from '../layers/WindSpeedCanvasLayer'
 
 const props = defineProps({
@@ -14,6 +14,7 @@ const props = defineProps({
   layers: { type: Object, required: true },
   thresholds: { type: Object, required: true },
   analysis: Object,
+  planner: Object,
 })
 const emit = defineEmits(['point-click', 'route-created', 'zoom-changed'])
 
@@ -25,14 +26,14 @@ let drawnGroup
 let heatLegend
 
 // WRF/WPS domain center near Wuhu Aerospace Industrial Park, about 10 km x 10 km.
-const WUHU_WRF_INITIAL_BOUNDS = [[31.055, 118.547], [31.145, 118.653]]
+const CHINA_INITIAL_BOUNDS = [[18.0, 73.0], [54.0, 135.0]]
 
 const riskColor = (risk) => ({
-  安全: '#28c76f',
-  注意: '#f4c95d',
-  中等风险: '#ff9f43',
-  高风险: '#ea5455',
-  危险: '#9b51e0',
+  一级风: '#28c76f',
+  二级风: '#f4c95d',
+  三级风: '#ff9f43',
+  四级风: '#ea5455',
+  大于四级: '#9b51e0',
 }[risk] || '#eaf5ff')
 
 const renderWind = () => {
@@ -42,14 +43,20 @@ const renderWind = () => {
   if (props.layers.velocity && props.wind?.velocity && L.velocityLayer) {
     const [uSource, vSource] = props.wind.velocity
     const bands = [
-      { max: props.thresholds.safe, color: '#38bdf8', width: 1.1, density: 1 / 1250 },
-      { max: props.thresholds.notice, color: '#22c55e', width: 1.5, density: 1 / 850 },
-      { max: props.thresholds.warning, color: '#facc15', width: 2, density: 1 / 580 },
-      { max: props.thresholds.danger, color: '#fb923c', width: 2.6, density: 1 / 390 },
-      { max: Infinity, color: '#ef4444', width: 3.3, density: 1 / 250 },
+      { max: props.thresholds.safe, color: '#28c76f', width: 2.0, density: 1 / 1000 },
+      { max: props.thresholds.notice, color: '#f4c95d', width: 2.4, density: 1 / 800 },
+      { max: props.thresholds.warning, color: '#ff9f43', width: 2.8, density: 1 / 600 },
+      { max: props.thresholds.danger, color: '#ea5455', width: 3.2, density: 1 / 400 },
+      { max: Infinity, color: '#9b51e0', width: 3.6, density: 1 / 250 },
     ]
     let minimum = -Infinity
-    bands.forEach((band) => {
+    bands.forEach((band, bandIndex) => {
+      // 如果 activeBlocks 不为空且当前档位不在选中列表中，则跳过渲染
+      if (activeBlocks.value.length > 0 && !activeBlocks.value.includes(bandIndex)) {
+        minimum = band.max
+        return
+      }
+      
       const u = uSource.data.map((value, index) => {
         const speed = Math.hypot(value, vSource.data[index])
         return speed > minimum && speed <= band.max ? value : null
@@ -70,24 +77,129 @@ const renderWind = () => {
   }
 }
 
+const heatBlocks = computed(() => [
+  { min: 0, max: props.thresholds.safe, color: '#28c76f', label: `0-${props.thresholds.safe}` },
+  { min: props.thresholds.safe, max: props.thresholds.notice, color: '#f4c95d', label: `${props.thresholds.safe}-${props.thresholds.notice}` },
+  { min: props.thresholds.notice, max: props.thresholds.warning, color: '#ff9f43', label: `${props.thresholds.notice}-${props.thresholds.warning}` },
+  { min: props.thresholds.warning, max: props.thresholds.danger, color: '#ea5455', label: `${props.thresholds.warning}-${props.thresholds.danger}` },
+  { min: props.thresholds.danger, max: Infinity, color: '#9b51e0', label: `${props.thresholds.danger}+` }
+])
+const activeBlocks = ref([])
+
+const toggleBlock = (i) => {
+  const index = activeBlocks.value.indexOf(i)
+  if (index > -1) {
+    activeBlocks.value.splice(index, 1)
+  } else {
+    activeBlocks.value.push(i)
+  }
+  renderHeatmap()
+  renderWind()
+}
+
 const renderHeatmap = () => {
   if (!map) return
   if (heatLayer) map.removeLayer(heatLayer)
   heatLayer = null
   if (props.layers.heatmap && props.heatmap?.wind_speed) {
-    heatLayer = createWindSpeedCanvasLayer(props.heatmap.wind_speed).addTo(map)
+    let filterRanges = null
+    if (activeBlocks.value.length > 0) {
+      filterRanges = activeBlocks.value.map(i => [heatBlocks.value[i].min, heatBlocks.value[i].max])
+    }
+    heatLayer = createWindSpeedCanvasLayer(props.heatmap.wind_speed, { filterRanges }).addTo(map)
   }
 }
 
 const renderRoute = () => {
   if (!map) return
   routeGroup.clearLayers()
+  
+  if (props.analysis?.samples) {
+    const samples = props.analysis.samples
+    if (samples.length >= 2) {
+      const start = samples[0]
+      const end = samples[samples.length - 1]
+      
+      // 添加起点标记
+      L.circleMarker([start.lat, start.lon], {
+        radius: 6,
+        fillColor: '#44d7b6',
+        color: '#fff',
+        weight: 2,
+        opacity: 1,
+        fillOpacity: 1
+      }).bindTooltip('起点', { permanent: true, direction: 'right' }).addTo(routeGroup)
+      
+      // 添加终点标记
+      L.circleMarker([end.lat, end.lon], {
+        radius: 6,
+        fillColor: '#ea5455',
+        color: '#fff',
+        weight: 2,
+        opacity: 1,
+        fillOpacity: 1
+      }).bindTooltip('终点', { permanent: true, direction: 'right' }).addTo(routeGroup)
+    }
+  } else if (props.planner?.startText || props.planner?.endText) {
+    // 即使没有规划航线，也显示已经选好的起点和终点
+    const parsePointSafely = (text) => {
+      if (!text) return null
+      const parts = text.split(',')
+      if (parts.length === 2) {
+        const lon = Number(parts[0])
+        const lat = Number(parts[1])
+        if (Number.isFinite(lon) && Number.isFinite(lat)) {
+          return { lon, lat }
+        }
+      }
+      return null
+    }
+    
+    const startPoint = parsePointSafely(props.planner?.startText)
+    const endPoint = parsePointSafely(props.planner?.endText)
+    
+    if (startPoint) {
+      L.circleMarker([startPoint.lat, startPoint.lon], {
+        radius: 6,
+        fillColor: '#44d7b6',
+        color: '#fff',
+        weight: 2,
+        opacity: 1,
+        fillOpacity: 1
+      }).bindTooltip('起点', { permanent: true, direction: 'right' }).addTo(routeGroup)
+    }
+    
+    if (endPoint) {
+      L.circleMarker([endPoint.lat, endPoint.lon], {
+        radius: 6,
+        fillColor: '#ea5455',
+        color: '#fff',
+        weight: 2,
+        opacity: 1,
+        fillOpacity: 1
+      }).bindTooltip('终点', { permanent: true, direction: 'right' }).addTo(routeGroup)
+    }
+  }
+  
   if (!props.layers.route || !props.analysis?.samples) return
+  
   const samples = props.analysis.samples
+  
+  if (samples.length >= 2) {
+    const start = samples[0]
+    const end = samples[samples.length - 1]
+    L.polyline([[start.lat, start.lon], [end.lat, end.lon]], {
+      color: 'black',
+      weight: 2,
+      dashArray: '5, 5',
+      opacity: 0.7,
+    }).addTo(routeGroup)
+  }
+
   samples.slice(0, -1).forEach((sample, index) => {
     const next = samples[index + 1]
     L.polyline([[sample.lat, sample.lon], [next.lat, next.lon]], {
-      color: riskColor(Math.abs(next.wind_speed) > Math.abs(sample.wind_speed) ? next.risk : sample.risk),
+      color: 'black',
       weight: 6,
       opacity: 0.95,
     }).addTo(routeGroup)
@@ -102,27 +214,16 @@ const clearRoute = () => {
 defineExpose({ clearRoute })
 watch(() => [props.wind, props.layers.velocity, props.thresholds], renderWind, { deep: true })
 watch(() => [props.heatmap, props.layers.heatmap], renderHeatmap, { deep: true })
-watch(() => [props.analysis, props.layers.route], renderRoute, { deep: true })
+watch(() => [props.analysis, props.layers.route, props.planner?.startText, props.planner?.endText], renderRoute, { deep: true })
 
 onMounted(() => {
-  map = L.map('wind-map', { zoomControl: true }).fitBounds(WUHU_WRF_INITIAL_BOUNDS, { padding: [12, 12] })
+  map = L.map('wind-map', { zoomControl: true }).fitBounds(CHINA_INITIAL_BOUNDS, { padding: [12, 12] })
   map.createPane('windHeatPane')
   map.getPane('windHeatPane').style.zIndex = 350
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors',
     maxZoom: 18,
   }).addTo(map)
-  heatLegend = L.control({ position: 'bottomleft' })
-  heatLegend.onAdd = () => {
-    const element = L.DomUtil.create('div', 'wind-heat-legend')
-    element.innerHTML = `
-      <strong>风速 m/s</strong>
-      <div class="wind-heat-gradient"></div>
-      <div class="wind-heat-ticks"><span>0</span><span>3</span><span>6</span><span>8</span><span>10</span><span>15+</span></div>
-    `
-    return element
-  }
-  heatLegend.addTo(map)
   routeGroup = L.featureGroup().addTo(map)
   drawnGroup = L.featureGroup().addTo(map)
   const drawControl = new L.Control.Draw({
@@ -143,9 +244,39 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  heatLegend?.remove()
   map?.remove()
 })
 </script>
 
-<template><main id="wind-map" class="wind-map"></main></template>
+<template>
+  <div style="position: relative; width: 100%; height: 100%;">
+    <main id="wind-map" class="wind-map"></main>
+    <div class="leaflet-bottom leaflet-left" style="pointer-events: none; z-index: 1000; position: absolute; bottom: 0; left: 0;">
+      <!-- 热力图多选分级图例 -->
+      <div v-if="layers.heatmap" class="leaflet-control wind-heat-legend" style="pointer-events: auto;">
+        <strong>风速 m/s (点击分级)</strong>
+        <div class="legend-blocks">
+          <div v-for="(block, i) in heatBlocks" :key="i" 
+               class="legend-block"
+               :style="{ background: block.color, opacity: activeBlocks.length === 0 || activeBlocks.includes(i) ? 1 : 0.3 }"
+               @click="toggleBlock(i)">
+            {{ ['一级风', '二级风', '三级风', '四级风', '大于四级', '大于四级'][i] }} {{ block.label }}
+          </div>
+        </div>
+      </div>
+      
+      <!-- 粒子流可点击图例 -->
+      <div v-else-if="layers.velocity" class="leaflet-control wind-heat-legend" style="pointer-events: auto;">
+        <strong>风速 m/s (点击分级)</strong>
+        <div class="legend-blocks">
+          <div v-for="(block, i) in heatBlocks.slice(0, 5)" :key="i" 
+               class="legend-block"
+               :style="{ background: block.color, opacity: activeBlocks.length === 0 || activeBlocks.includes(i) ? 1 : 0.3 }"
+               @click="toggleBlock(i)">
+            {{ ['一级风', '二级风', '三级风', '四级风', '大于四级'][i] }} {{ block.label }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>

@@ -107,7 +107,7 @@ def ensure_cache_file(relative_path: str) -> Path:
         return local_path
     if remote_configured():
         return _download_remote_file(relative_path)
-    raise ValueError(f"WRF cache file does not exist: {local_path}")
+    raise ValueError(f"WRF 降尺度缓存文件不存在: {local_path}")
 
 
 @lru_cache(maxsize=1)
@@ -116,8 +116,8 @@ def load_index() -> dict:
     if remote_configured() and not (cache_dir() / REMOTE_INDEX).exists():
         sync_index(force=True)
     path = cache_dir() / REMOTE_INDEX
-    if not path.exists():
-        raise ValueError(f"WRF cache index not found: {path}")
+    if not index_path.is_file():
+        raise ValueError(f"找不到 WRF 缓存索引文件: {path}")
     return json.loads(path.read_text(encoding="utf-8"))
 
 
@@ -171,8 +171,8 @@ def _find_record(cycle: str, forecast_hour: int) -> dict:
         item for item in _records()
         if item["cycle"] == cycle and int(item["forecast_hour"]) == int(forecast_hour)
     ]
-    if not matches:
-        raise ValueError(f"no WRF cache file for cycle={cycle}, forecast_hour={forecast_hour}")
+    if cycle not in data:
+        raise ValueError(f"找不到 cycle={cycle}, forecast_hour={forecast_hour} 的 WRF 缓存文件")
     return matches[-1]
 
 
@@ -190,11 +190,11 @@ def _find_record_by_valid_time(valid_time: str) -> dict:
 def _level_index(levels_m: np.ndarray, level: str) -> tuple[str, int]:
     text = level.strip().lower().replace("agl", "").replace(" ", "")
     if not text.endswith("m"):
-        raise ValueError(f"unsupported WRF cache level: {level}")
+        raise ValueError(f"不支持的 WRF 缓存高度层格式: {level}")
     height = int(round(float(text[:-1])))
     matches = np.where(np.isclose(levels_m.astype(float), float(height), atol=0.1))[0]
     if len(matches) == 0:
-        raise ValueError(f"WRF cache does not contain {height}m AGL")
+        raise ValueError(f"WRF 缓存数据中不包含 {height}m AGL 的高度层")
     return f"{height}m AGL", int(matches[0])
 
 
@@ -221,7 +221,7 @@ def _crop(lons: np.ndarray, lats: np.ndarray, u: np.ndarray, v: np.ndarray, bbox
     lon_mask = (lons >= min_lon - eps) & (lons <= max_lon + eps)
     lat_mask = (lats >= min_lat - eps) & (lats <= max_lat + eps)
     if not lon_mask.any() or not lat_mask.any():
-        raise ValueError("bbox does not intersect the selected WRF cache grid")
+        raise ValueError("查询范围(bbox)与该 WRF 缓存网格没有交集")
     return lons[lon_mask], lats[lat_mask], u[lat_mask][:, lon_mask], v[lat_mask][:, lon_mask]
 
 
