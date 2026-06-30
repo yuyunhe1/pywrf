@@ -32,6 +32,13 @@ def test_wrf_cache_provider_reads_npz_grid(tmp_path, monkeypatch):
                         "cycle": "2026-06-20 00:00 UTC",
                         "cycle_bj": "2026-06-20 08:00 北京时间",
                         "forecast_hour": 1,
+                    },
+                    {
+                        "label": "2026-06-20 10:00 北京时间",
+                        "valid_time": "2026-06-20 02:00 UTC",
+                        "cycle": "2026-06-20 00:00 UTC",
+                        "cycle_bj": "2026-06-20 08:00 北京时间",
+                        "forecast_hour": 2,
                     }
                 ],
                 "files": [
@@ -42,6 +49,14 @@ def test_wrf_cache_provider_reads_npz_grid(tmp_path, monkeypatch):
                         "valid_time": "2026-06-20 01:00 UTC",
                         "valid_time_bj": "2026-06-20 09:00 北京时间",
                         "path": "2026062000/wrf_d02_2026062000_f001.npz",
+                    },
+                    {
+                        "cycle": "2026-06-20 00:00 UTC",
+                        "cycle_bj": "2026-06-20 08:00 北京时间",
+                        "forecast_hour": 2,
+                        "valid_time": "2026-06-20 02:00 UTC",
+                        "valid_time_bj": "2026-06-20 10:00 北京时间",
+                        "path": "2026062000/wrf_d02_2026062000_f002.npz",
                     }
                 ],
             }
@@ -59,6 +74,7 @@ def test_wrf_cache_provider_reads_npz_grid(tmp_path, monkeypatch):
     available = wrf_cache_provider.availability()
     assert available["levels"] == ["10m AGL", "100m AGL"]
     assert available["valid_times"][0]["label"] == "2026-06-20 09:00 北京时间"
+    assert available["forecast_hours"] == [1]
 
     grid = wrf_cache_provider.get_grid_by_valid_time("2026-06-20 09:00 北京时间", "100m AGL", None)
     assert grid.source.startswith("WRF cache")
