@@ -116,7 +116,7 @@ def load_index() -> dict:
     if remote_configured() and not (cache_dir() / REMOTE_INDEX).exists():
         sync_index(force=True)
     path = cache_dir() / REMOTE_INDEX
-    if not index_path.is_file():
+    if not path.is_file():
         raise ValueError(f"找不到 WRF 缓存索引文件: {path}")
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -135,9 +135,18 @@ def availability() -> dict:
     if remote_configured() and os.getenv("WRF_CACHE_AUTO_SYNC_INDEX", "1") == "1":
         sync_index(force=True)
     index = load_index()
+    files = [
+        item for item in index.get("files", [])
+        if remote_configured() or (cache_dir() / item["path"]).is_file()
+    ]
+    available_keys = {
+        (item["valid_time"], item["cycle"], int(item["forecast_hour"]))
+        for item in files
+    }
     valid_times = [
         item for item in index.get("valid_times", [])
         if is_selectable_valid_time(item["valid_time"])
+        and (item["valid_time"], item["cycle"], int(item["forecast_hour"])) in available_keys
     ]
     cycles = sorted({item["cycle"] for item in valid_times})
     forecast_hours = sorted({int(item["forecast_hour"]) for item in valid_times})
@@ -171,7 +180,7 @@ def _find_record(cycle: str, forecast_hour: int) -> dict:
         item for item in _records()
         if item["cycle"] == cycle and int(item["forecast_hour"]) == int(forecast_hour)
     ]
-    if cycle not in data:
+    if not matches:
         raise ValueError(f"找不到 cycle={cycle}, forecast_hour={forecast_hour} 的 WRF 缓存文件")
     return matches[-1]
 

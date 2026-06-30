@@ -70,25 +70,27 @@ def availability(source: str | None = None, auto_download: bool = False) -> dict
 def get_grid(
     cycle: str, forecast_hour: int, level: str, bbox: tuple[float, float, float, float] | None = None, source: str | None = None
 ) -> wind_provider.WindGrid:
-    if source == "mock":
+    mode = data_mode(source)
+    if mode == "mock":
         return wind_provider.get_grid(cycle, forecast_hour, level, bbox)
-    if source == "wrf":
+    if mode == "wrf_cache":
         return wrf_cache_provider.get_grid(cycle, forecast_hour, level, bbox)
-    if source == "gfs" or not source:
+    if mode == "real":
         return gfs_provider.get_grid(cycle, forecast_hour, level, bbox)
     raise ValueError("source 必须是 gfs, wrf 或 mock")
 
 
 def get_grid_by_valid_time(valid_time: str, level: str, bbox: tuple[float, float, float, float] | None = None, source: str | None = None) -> wind_provider.WindGrid:
     """Find the best forecast hour for a target valid time and load its grid."""
-    if source == "mock":
+    mode = data_mode(source)
+    if mode == "mock":
         for cycle in wind_provider.CYCLES:
             for fhour in wind_provider.FORECAST_HOURS:
                 grid = wind_provider.get_grid(cycle, fhour, level, bbox)
                 if grid.valid_time == valid_time or grid.valid_time_bj == valid_time:
                     return grid
         raise ValueError(f"找不到 valid_time={valid_time} 的 mock 风场网格")
-    if source == "wrf":
+    if mode == "wrf_cache":
         return wrf_cache_provider.get_grid_by_valid_time(valid_time, level, bbox)
     return gfs_provider.get_grid_by_valid_time(valid_time, level, bbox)
 
