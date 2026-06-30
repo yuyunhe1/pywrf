@@ -244,7 +244,7 @@ onMounted(async () => {
   <div class="app-shell">
     <ControlPanel :options="options" :selection="selection" :layers="layers" :thresholds="thresholds" :planner="planner" :saved-routes="savedRoutes" :loading="loading" :picking="picking" @reload="loadWindField" @clear-route="clearRoute" @pick-start="picking = 'start'" @pick-end="picking = 'end'" @plan-route="runPlan" @save-route="persistRoute" @load-routes="refreshRoutes" @delete-route="removeRoute" />
     <WindMap ref="mapRef" :wind="wind" :heatmap="heatmap" :layers="layers" :thresholds="thresholds" :analysis="analysis" :planner="planner" @point-click="handleMapClick" @route-created="runRouteAnalysis" @zoom-changed="useZoomDefaultLayer" />
-    <AnalysisPanel :metadata="metadata" :analysis="analysis" />
+    <AnalysisPanel :metadata="metadata" :analysis="analysis" :thresholds="thresholds" />
     <div v-if="error" class="error-toast" @click="error = ''">{{ error }}</div>
   </div>
 </template>

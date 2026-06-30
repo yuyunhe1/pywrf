@@ -5,6 +5,7 @@ import { nextTick, onBeforeUnmount, ref, watch, computed } from 'vue'
 const props = defineProps({
   metadata: Object,
   analysis: Object,
+  thresholds: Object,
 })
 
 const chartEl = ref()
@@ -50,7 +51,29 @@ const renderChart = async () => {
   chart ||= echarts.init(chartEl.value)
   const samples = props.analysis?.samples || []
   chart.setOption({
-    grid: { left: 35, right: 35, top: 15, bottom: 20 },
+    grid: { left: 35, right: 35, top: 30, bottom: 20 },
+    legend: {
+      data: [
+        { name: '总风速', itemStyle: { color: '#00f3ff' } },
+        { 
+          name: '顺逆风分量', 
+          itemStyle: { 
+            color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+              { offset: 0, color: '#28c76f' },
+              { offset: 0.5, color: '#28c76f' },
+              { offset: 0.5, color: '#ea5455' },
+              { offset: 1, color: '#ea5455' }
+            ])
+          } 
+        }
+      ],
+      icon: 'circle',
+      top: 0,
+      left: 'center',
+      itemWidth: 8,
+      itemHeight: 8,
+      textStyle: { color: '#8fa6b9', fontSize: 9 }
+    },
     tooltip: { 
       trigger: 'axis',
       backgroundColor: 'rgba(10, 25, 41, 0.9)',
@@ -58,13 +81,18 @@ const renderChart = async () => {
       textStyle: { color: '#eaf5ff', fontSize: 11 },
       axisPointer: { type: 'cross', lineStyle: { color: 'rgba(0, 243, 255, 0.3)' } },
       formatter: function(params) {
-        const data = params[0].data;
+        if (!params.length) return '';
         const sample = samples[params[0].dataIndex];
         let html = `${params[0].axisValue} km<br/>`;
-        html += `${params[0].marker} 风速: <b>${data}</b> m/s<br/>`;
-        if (sample) {
-          html += `逆风分量: <b>${sample.headwind_component > 0 ? '+' : ''}${sample.headwind_component}</b> m/s`;
-        }
+        
+        params.forEach(param => {
+          if (param.seriesName === '总风速') {
+            html += `<span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:#00f3ff;"></span> 风速: <b>${param.data}</b> m/s<br/>`;
+          } else if (param.seriesName === '顺逆风分量' && sample && sample.headwind_component !== undefined) {
+            const headwindColor = sample.headwind_component > 0 ? '#ea5455' : '#28c76f';
+            html += `<span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:${headwindColor};"></span> 逆风分量: <b>${sample.headwind_component > 0 ? '+' : ''}${sample.headwind_component}</b> m/s`;
+          }
+        });
         return html;
       }
     },
@@ -86,38 +114,50 @@ const renderChart = async () => {
       },
       {
         type: 'value',
-        name: '逆风',
+        name: 'm/s',
         position: 'right',
-        axisLabel: { color: '#f4c95d', fontSize: 9 },
+        axisLabel: { color: '#8fa6b9', fontSize: 9 },
         splitLine: { show: false },
-        nameTextStyle: { color: '#f4c95d', fontSize: 9 }
+        nameTextStyle: { color: '#6b8296', fontSize: 9 }
       }
     ],
     series: [
       { 
+        name: '总风速',
         type: 'line', 
         smooth: 0.3, 
         showSymbol: false, 
         data: samples.map((item) => item.wind_speed.toFixed(2)), 
         lineStyle: { color: '#00f3ff', width: 2, shadowColor: 'rgba(0, 243, 255, 0.5)', shadowBlur: 10 }, 
-        areaStyle: { 
+        areaStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
             { offset: 0, color: 'rgba(0, 243, 255, 0.3)' },
             { offset: 1, color: 'rgba(0, 243, 255, 0.0)' }
           ])
-        } 
+        }
       },
       {
+        name: '顺逆风分量',
         type: 'bar',
         yAxisIndex: 1,
         data: samples.map((item) => item.headwind_component),
         itemStyle: {
           color: function(params) {
-            return params.data > 0 ? 'rgba(234, 84, 85, 0.6)' : 'rgba(40, 199, 111, 0.6)';
+            if (params.data > 0) {
+              return new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: 'rgba(234, 84, 85, 0.8)' },
+                { offset: 1, color: 'rgba(234, 84, 85, 0.0)' }
+              ]);
+            } else {
+              return new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: 'rgba(40, 199, 111, 0.0)' },
+                { offset: 1, color: 'rgba(40, 199, 111, 0.8)' }
+              ]);
+            }
           },
-          borderRadius: [2, 2, 0, 0]
+          borderRadius: [3, 3, 3, 3]
         },
-        barWidth: '60%'
+        barWidth: '40%'
       }
     ],
   })
@@ -127,7 +167,20 @@ const renderChart = async () => {
   chartCross ||= echarts.init(chartElCross.value)
   
   chartCross.setOption({
-    grid: { left: 35, right: 35, top: 15, bottom: 20 },
+    grid: { left: 35, right: 35, top: 30, bottom: 20 },
+    legend: {
+      data: [
+        { name: '侧风分量', itemStyle: { color: '#ff9f43' } },
+        { name: '航向角', itemStyle: { color: '#9b51e0' } },
+        { name: '气象风向', itemStyle: { color: '#38bdf8' } }
+      ],
+      icon: 'circle',
+      top: 0,
+      left: 'center',
+      itemWidth: 8,
+      itemHeight: 8,
+      textStyle: { color: '#8fa6b9', fontSize: 9 }
+    },
     tooltip: { 
       trigger: 'axis',
       backgroundColor: 'rgba(10, 25, 41, 0.9)',
@@ -135,12 +188,20 @@ const renderChart = async () => {
       textStyle: { color: '#eaf5ff', fontSize: 11 },
       axisPointer: { type: 'cross', lineStyle: { color: 'rgba(0, 243, 255, 0.3)' } },
       formatter: function(params) {
+        if (!params.length) return '';
         const sample = samples[params[0].dataIndex];
         if (!sample) return '';
         let html = `${params[0].axisValue} km<br/>`;
-        html += `<span style="display:inline-block;margin-right:5px;border-radius:10px;width:10px;height:10px;background-color:#ff9f43;"></span>侧风分量: <b>${sample.crosswind_component}</b> m/s<br/>`;
-        html += `<span style="display:inline-block;margin-right:5px;border-radius:10px;width:10px;height:10px;background-color:#9b51e0;"></span>航向角: <b>${sample.flight_heading}°</b><br/>`;
-        html += `<span style="display:inline-block;margin-right:5px;border-radius:10px;width:10px;height:10px;background-color:#38bdf8;"></span>气象风向: <b>${sample.wind_direction_from.toFixed(0)}°</b>`;
+        
+        params.forEach(param => {
+          if (param.seriesName === '侧风分量') {
+            html += `<span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:#ff9f43;"></span>侧风分量: <b>${param.data}</b> m/s<br/>`;
+          } else if (param.seriesName === '航向角') {
+            html += `<span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:#9b51e0;"></span>航向角: <b>${param.data}°</b><br/>`;
+          } else if (param.seriesName === '气象风向') {
+            html += `<span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:#38bdf8;"></span>气象风向: <b>${param.data.toFixed(0)}°</b>`;
+          }
+        });
         return html;
       }
     },
@@ -155,21 +216,21 @@ const renderChart = async () => {
     yAxis: [
       { 
         type: 'value', 
-        name: '侧风 m/s', 
+        name: 'm/s', 
         axisLabel: { color: '#8fa6b9', fontSize: 9 }, 
         splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)', type: 'dashed' } },
         nameTextStyle: { color: '#6b8296', fontSize: 9 }
       },
       {
         type: 'value',
-        name: '角度 °',
+        name: '°',
         position: 'right',
         min: 0,
         max: 360,
         interval: 90,
-        axisLabel: { color: '#9b51e0', fontSize: 9 },
+        axisLabel: { color: '#8fa6b9', fontSize: 9 },
         splitLine: { show: false },
-        nameTextStyle: { color: '#9b51e0', fontSize: 9 }
+        nameTextStyle: { color: '#6b8296', fontSize: 9 }
       }
     ],
     series: [
@@ -195,6 +256,15 @@ const renderChart = async () => {
         name: '航向角',
         data: samples.map((item) => item.flight_heading),
         lineStyle: { color: '#9b51e0', width: 1.5, type: 'dashed' }
+      },
+      {
+        type: 'line',
+        yAxisIndex: 1,
+        smooth: 0.2,
+        showSymbol: false,
+        name: '气象风向',
+        data: samples.map((item) => item.wind_direction_from),
+        lineStyle: { color: '#38bdf8', width: 1.5, type: 'dashed' }
       }
     ],
   })
@@ -239,24 +309,16 @@ onBeforeUnmount(() => {
       <section>
         <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 4px;">
           <h3 style="margin-bottom: 0;">航线风速与顺逆风分析</h3>
-          <span style="font-size: 10px; color: #8fa6b9; display: flex; align-items: center; gap: 6px;">
-            <span style="display:inline-block;width:8px;height:8px;background-color:rgba(40,199,111,0.6);border-radius:2px;"></span>顺风
-            <span style="display:inline-block;width:8px;height:8px;background-color:rgba(234,84,85,0.6);border-radius:2px;"></span>逆风
-          </span>
         </div>
-        <p class="subtle" style="margin-top: 0; font-size: 10px; margin-bottom: 4px;">曲线代表总风速，底部柱状图代表顺风(负值/绿)或逆风(正值/红)分量。</p>
+        <p class="subtle" style="margin-top: 0; font-size: 10px; margin-bottom: 4px;">点击图例筛选；蓝色曲线代表总风速，底部柱状图代表顺风(绿)或逆风(红)分量。</p>
         <div ref="chartEl" class="chart"></div>
       </section>
       
       <section>
         <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 4px;">
-          <h3 style="margin-bottom: 0;">航线侧风与航向分析</h3>
-          <span style="font-size: 10px; color: #8fa6b9; display: flex; align-items: center; gap: 6px;">
-            <span style="display:inline-block;width:12px;height:2px;background-color:#ff9f43;"></span>侧风
-            <span style="display:inline-block;width:12px;height:2px;background-color:#9b51e0;border-top:1px dashed #fff;"></span>航向
-          </span>
+          <h3 style="margin-bottom: 0;">航线侧风与风向分析</h3>
         </div>
-        <p class="subtle" style="margin-top: 0; font-size: 10px; margin-bottom: 4px;">橙色曲线代表切变横风大小，紫色虚线反映无人机实时飞行航向。</p>
+        <p class="subtle" style="margin-top: 0; font-size: 10px; margin-bottom: 4px;">点击图例筛选；橙色曲线代表切变横风大小，虚线反映气象风向和无人机飞行航向。</p>
         <div ref="chartElCross" class="chart"></div>
       </section>
     </div>
