@@ -43,11 +43,11 @@ const renderWind = () => {
   if (props.layers.velocity && props.wind?.velocity && L.velocityLayer) {
     const [uSource, vSource] = props.wind.velocity
     const bands = [
-      { max: props.thresholds.safe, color: '#28c76f', width: 2.0, density: 1 / 1000 },
-      { max: props.thresholds.notice, color: '#f4c95d', width: 2.4, density: 1 / 800 },
-      { max: props.thresholds.warning, color: '#ff9f43', width: 2.8, density: 1 / 600 },
-      { max: props.thresholds.danger, color: '#ea5455', width: 3.2, density: 1 / 400 },
-      { max: Infinity, color: '#9b51e0', width: 3.6, density: 1 / 250 },
+      { max: props.thresholds.safe, color: '#28c76f' },
+      { max: props.thresholds.notice, color: '#f4c95d' },
+      { max: props.thresholds.warning, color: '#ff9f43' },
+      { max: props.thresholds.danger, color: '#ea5455' },
+      { max: Infinity, color: '#9b51e0' },
     ]
     let minimum = -Infinity
     bands.forEach((band, bandIndex) => {
@@ -67,8 +67,8 @@ const renderWind = () => {
         displayValues: false,
         velocityScale: 0.007,
         maxVelocity: Math.max(band.max, props.thresholds.danger + 5),
-        lineWidth: band.width,
-        particleMultiplier: band.density,
+        lineWidth: 2.6,
+        particleMultiplier: 1 / 650,
         colorScale: [band.color, band.color],
       }).addTo(map)
       velocityLayers.push(layer)
@@ -184,26 +184,38 @@ const renderRoute = () => {
   if (!props.layers.route || !props.analysis?.samples) return
   
   const samples = props.analysis.samples
+  if (samples.length < 2) return
+  const routeLatLngs = samples.map((item) => [item.lat, item.lon])
   
-  if (samples.length >= 2) {
-    const start = samples[0]
-    const end = samples[samples.length - 1]
-    L.polyline([[start.lat, start.lon], [end.lat, end.lon]], {
-      color: 'black',
-      weight: 2,
-      dashArray: '5, 5',
-      opacity: 0.7,
-    }).addTo(routeGroup)
-  }
+  const start = samples[0]
+  const end = samples[samples.length - 1]
+  // 1. 直线参考线（深灰色虚线，降低存在感）
+  L.polyline([[start.lat, start.lon], [end.lat, end.lon]], {
+    color: '#64748b',
+    weight: 1.5,
+    dashArray: '4, 8',
+    opacity: 0.6,
+    lineCap: 'round',
+    lineJoin: 'round',
+  }).addTo(routeGroup)
 
-  samples.slice(0, -1).forEach((sample, index) => {
-    const next = samples[index + 1]
-    L.polyline([[sample.lat, sample.lon], [next.lat, next.lon]], {
-      color: 'black',
-      weight: 6,
-      opacity: 0.95,
-    }).addTo(routeGroup)
-  })
+  // 2. 规划航线 - 底层（极简黑色实线边缘，增强对比度）
+  L.polyline(routeLatLngs, {
+    color: '#0f172a',
+    weight: 5,
+    opacity: 0.9,
+    lineCap: 'round',
+    lineJoin: 'round',
+  }).addTo(routeGroup)
+
+  // 3. 规划航线 - 顶层（高亮青色轨迹芯，赛博朋克经典配色）
+  L.polyline(routeLatLngs, {
+    color: '#00f3ff',
+    weight: 2,
+    opacity: 1,
+    lineCap: 'round',
+    lineJoin: 'round',
+  }).addTo(routeGroup)
 }
 
 const clearRoute = () => {
@@ -211,7 +223,24 @@ const clearRoute = () => {
   routeGroup?.clearLayers()
 }
 
-defineExpose({ clearRoute })
+const focusArea = (target) => {
+  if (!map || !target) return
+  if (Array.isArray(target.bounds)) {
+    map.flyToBounds(target.bounds, {
+      padding: [30, 30],
+      maxZoom: target.maxZoom || 11,
+      duration: 0.8,
+    })
+    return
+  }
+  if (Array.isArray(target.center)) {
+    map.flyTo(target.center, target.zoom || map.getZoom(), {
+      duration: 0.8,
+    })
+  }
+}
+
+defineExpose({ clearRoute, focusArea })
 watch(() => [props.wind, props.layers.velocity, props.thresholds], renderWind, { deep: true })
 watch(() => [props.heatmap, props.layers.heatmap], renderHeatmap, { deep: true })
 watch(() => [props.analysis, props.layers.route, props.planner?.startText, props.planner?.endText], renderRoute, { deep: true })

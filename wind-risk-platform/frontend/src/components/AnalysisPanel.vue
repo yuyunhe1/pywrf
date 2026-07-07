@@ -9,9 +9,7 @@ const props = defineProps({
 })
 
 const chartEl = ref()
-const chartElCross = ref()
 let chart
-let chartCross
 
 const riskColorMap = {
   '一级风': '#28c76f',
@@ -27,6 +25,44 @@ const riskStyle = computed(() => {
   return {
     '--risk-color': color,
     borderColor: `${color}4D` // 30% 透明度
+  }
+})
+
+const navigationDecision = computed(() => {
+  if (!props.analysis) {
+    return {
+      level: '待评估',
+      color: '#00f3ff',
+      message: '生成规划航线后，系统会根据综合风级、连续高风险里程和顺逆风情况自动给出通航建议。',
+    }
+  }
+
+  const level = props.analysis.risk_level
+  if (level === '大于四级') {
+    return {
+      level: '不建议飞行',
+      color: '#ea5455',
+      message: '航线整体综合已超过四级风，存在明显失控和偏航风险，建议直接停飞或重新规划航线。',
+    }
+  }
+  if (level === '四级风') {
+    return {
+      level: '建议暂缓',
+      color: '#ff9f43',
+      message: '航线已接近通航上限，建议仅在必要任务下谨慎执行，并优先规避连续高风险路段。',
+    }
+  }
+  if (level === '三级风') {
+    return {
+      level: '谨慎通航',
+      color: '#f4c95d',
+      message: '整体可评估飞行，但需重点关注局地阵风、逆风段和续航余量，建议降低任务强度。',
+    }
+  }
+  return {
+    level: '可以通航',
+    color: '#28c76f',
+    message: '航线整体风场处于可控范围内，可按常规流程执行任务，飞行中仍需关注实时风场变化。',
   }
 })
 
@@ -162,119 +198,11 @@ const renderChart = async () => {
     ],
   })
   chart.resize()
-
-  if (!chartElCross.value) return
-  chartCross ||= echarts.init(chartElCross.value)
-  
-  chartCross.setOption({
-    grid: { left: 35, right: 35, top: 30, bottom: 20 },
-    legend: {
-      data: [
-        { name: '侧风分量', itemStyle: { color: '#ff9f43' } },
-        { name: '航向角', itemStyle: { color: '#9b51e0' } },
-        { name: '气象风向', itemStyle: { color: '#38bdf8' } }
-      ],
-      icon: 'circle',
-      top: 0,
-      left: 'center',
-      itemWidth: 8,
-      itemHeight: 8,
-      textStyle: { color: '#8fa6b9', fontSize: 9 }
-    },
-    tooltip: { 
-      trigger: 'axis',
-      backgroundColor: 'rgba(10, 25, 41, 0.9)',
-      borderColor: 'rgba(68, 215, 182, 0.3)',
-      textStyle: { color: '#eaf5ff', fontSize: 11 },
-      axisPointer: { type: 'cross', lineStyle: { color: 'rgba(0, 243, 255, 0.3)' } },
-      formatter: function(params) {
-        if (!params.length) return '';
-        const sample = samples[params[0].dataIndex];
-        if (!sample) return '';
-        let html = `${params[0].axisValue} km<br/>`;
-        
-        params.forEach(param => {
-          if (param.seriesName === '侧风分量') {
-            html += `<span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:#ff9f43;"></span>侧风分量: <b>${param.data}</b> m/s<br/>`;
-          } else if (param.seriesName === '航向角') {
-            html += `<span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:#9b51e0;"></span>航向角: <b>${param.data}°</b><br/>`;
-          } else if (param.seriesName === '气象风向') {
-            html += `<span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:#38bdf8;"></span>气象风向: <b>${param.data.toFixed(0)}°</b>`;
-          }
-        });
-        return html;
-      }
-    },
-    xAxis: { 
-      type: 'category', 
-      name: 'km', 
-      data: samples.map((item) => item.distance_km.toFixed(1)), 
-      axisLabel: { color: '#8fa6b9', fontSize: 9 },
-      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } },
-      nameTextStyle: { color: '#6b8296', fontSize: 9 }
-    },
-    yAxis: [
-      { 
-        type: 'value', 
-        name: 'm/s', 
-        axisLabel: { color: '#8fa6b9', fontSize: 9 }, 
-        splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)', type: 'dashed' } },
-        nameTextStyle: { color: '#6b8296', fontSize: 9 }
-      },
-      {
-        type: 'value',
-        name: '°',
-        position: 'right',
-        min: 0,
-        max: 360,
-        interval: 90,
-        axisLabel: { color: '#8fa6b9', fontSize: 9 },
-        splitLine: { show: false },
-        nameTextStyle: { color: '#6b8296', fontSize: 9 }
-      }
-    ],
-    series: [
-      { 
-        type: 'line', 
-        smooth: 0.3, 
-        showSymbol: false, 
-        name: '侧风分量',
-        data: samples.map((item) => Math.abs(item.crosswind_component)), 
-        lineStyle: { color: '#ff9f43', width: 2, shadowColor: 'rgba(255, 159, 67, 0.5)', shadowBlur: 10 }, 
-        areaStyle: { 
-          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: 'rgba(255, 159, 67, 0.3)' },
-            { offset: 1, color: 'rgba(255, 159, 67, 0.0)' }
-          ])
-        } 
-      },
-      {
-        type: 'line',
-        yAxisIndex: 1,
-        smooth: false,
-        showSymbol: false,
-        name: '航向角',
-        data: samples.map((item) => item.flight_heading),
-        lineStyle: { color: '#9b51e0', width: 1.5, type: 'dashed' }
-      },
-      {
-        type: 'line',
-        yAxisIndex: 1,
-        smooth: 0.2,
-        showSymbol: false,
-        name: '气象风向',
-        data: samples.map((item) => item.wind_direction_from),
-        lineStyle: { color: '#38bdf8', width: 1.5, type: 'dashed' }
-      }
-    ],
-  })
-  chartCross.resize()
 }
 
 watch(() => props.analysis, renderChart, { deep: true })
 onBeforeUnmount(() => {
   chart?.dispose()
-  chartCross?.dispose()
 })
 </script>
 
@@ -307,19 +235,21 @@ onBeforeUnmount(() => {
       </div>
 
       <section>
+        <div class="decision-card" :style="{ '--decision-color': navigationDecision.color, borderColor: `${navigationDecision.color}55`, boxShadow: `inset 0 0 18px ${navigationDecision.color}18` }">
+          <div class="decision-head">
+            <span class="decision-label">通航决策</span>
+            <strong>{{ navigationDecision.level }}</strong>
+          </div>
+          <p class="subtle" style="margin: 8px 0 0; font-size: 11px;">{{ navigationDecision.message }}</p>
+        </div>
+      </section>
+
+      <section>
         <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 4px;">
           <h3 style="margin-bottom: 0;">航线风速与顺逆风分析</h3>
         </div>
         <p class="subtle" style="margin-top: 0; font-size: 10px; margin-bottom: 4px;">点击图例筛选；蓝色曲线代表总风速，底部柱状图代表顺风(绿)或逆风(红)分量。</p>
         <div ref="chartEl" class="chart"></div>
-      </section>
-      
-      <section>
-        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 4px;">
-          <h3 style="margin-bottom: 0;">航线侧风与风向分析</h3>
-        </div>
-        <p class="subtle" style="margin-top: 0; font-size: 10px; margin-bottom: 4px;">点击图例筛选；橙色曲线代表切变横风大小，虚线反映气象风向和无人机飞行航向。</p>
-        <div ref="chartElCross" class="chart"></div>
       </section>
     </div>
   </aside>

@@ -17,6 +17,40 @@ button, input, select { font: inherit; }
 .app-shell { position: relative; width: 100vw; height: 100vh; background: #03080c; overflow: hidden; }
 .wind-map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 100; }
 
+.app-title {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  z-index: 700;
+  min-width: 520px;
+  padding: 10px 24px;
+  text-align: center;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, rgba(7, 18, 28, 0.78), rgba(7, 18, 28, 0.38));
+  border: 1px solid rgba(0, 243, 255, 0.18);
+  border-radius: 999px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), inset 0 0 24px rgba(0, 243, 255, 0.05);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  pointer-events: none;
+}
+
+.app-title h1 {
+  margin: 2px 0 0;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.app-title-eyebrow {
+  margin: 0;
+  color: #7dd3fc;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
 /* 悬浮磨砂玻璃面板 */
 .panel {
   position: absolute;
@@ -35,17 +69,23 @@ button, input, select { font: inherit; }
   transition: all 0.3s ease;
 }
 
-/* 控制内容区域滚动 */
+/* 控制内容区域滚动，并隐藏滚动条 */
 .panel-content {
   flex: 1;
   overflow-y: auto;
   padding-right: 4px;
+  /* Firefox 隐藏滚动条 */
+  scrollbar-width: none;
+  /* IE 10+ 隐藏滚动条 */
+  -ms-overflow-style: none;
 }
 
-.panel-content::-webkit-scrollbar, .route-list::-webkit-scrollbar { width: 3px; }
-.panel-content::-webkit-scrollbar-track, .route-list::-webkit-scrollbar-track { background: transparent; }
-.panel-content::-webkit-scrollbar-thumb, .route-list::-webkit-scrollbar-thumb { background: rgba(68, 215, 182, 0.2); border-radius: 3px; }
-.panel-content::-webkit-scrollbar-thumb:hover, .route-list::-webkit-scrollbar-thumb:hover { background: rgba(68, 215, 182, 0.5); }
+/* Chrome/Safari/Edge 隐藏滚动条 */
+.panel-content::-webkit-scrollbar, .route-list::-webkit-scrollbar, *::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
 
 .control-panel { left: 12px; width: 320px; }
 .analysis-panel { right: 12px; width: 320px; }
@@ -73,6 +113,133 @@ select, input[type=text], input[type=number] {
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 select:focus, input:focus { border-color: var(--glow-cyan); box-shadow: 0 0 0 1px rgba(0, 243, 255, 0.2), inset 0 2px 4px rgba(0, 0, 0, 0.2); }
+
+.el-input__wrapper {
+  background: rgba(0, 0, 0, 0.45) !important;
+  border: 1px solid rgba(68, 215, 182, 0.25) !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.25) !important;
+  border-radius: 4px !important;
+  padding: 0 10px !important;
+  transition: all 0.2s !important;
+}
+.el-input__wrapper.is-focus {
+  border-color: var(--glow-cyan) !important;
+  box-shadow: 0 0 0 1px rgba(0, 243, 255, 0.2), inset 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+}
+.el-input__inner {
+  color: #eaf5ff !important;
+  font-weight: 500 !important;
+  opacity: 1 !important;
+  font-size: 12px !important;
+  height: 28px !important;
+  line-height: 28px !important;
+}
+
+/* 恢复 element-plus 默认的文本颜色区分逻辑，仅通过 CSS 变量控制 */
+.glass-select {
+  width: 100%;
+  --el-text-color-regular: #ffffff !important; /* 选中的文字颜色 */
+  --el-text-color-placeholder: #556d82 !important; /* 占位符颜色 */
+  --el-fill-color-blank: rgba(0, 0, 0, 0.45);
+  --el-border-color: rgba(68, 215, 182, 0.25);
+  --el-border-color-hover: rgba(0, 243, 255, 0.55);
+}
+
+.glass-select .el-select__wrapper {
+  min-height: 32px;
+  padding: 5px 10px;
+  background: rgba(0, 0, 0, 0.45);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(68, 215, 182, 0.25);
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.glass-select .el-select__wrapper.is-focused,
+.glass-select .el-select__wrapper:hover {
+  border-color: rgba(0, 243, 255, 0.55);
+  box-shadow: 0 0 0 1px rgba(0, 243, 255, 0.18), inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* 修复内部 input 被全局样式污染导致出现双边框的问题 */
+.glass-select input[type=text] {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  height: 100% !important;
+}
+
+.glass-select .el-select__input {
+  color: #ffffff !important;
+  font-size: 12px !important;
+}
+
+/* --- 核心修复：区分选中值和占位符 --- */
+
+/* 1. 默认选中值：纯白 */
+.glass-select .el-select__placeholder,
+.glass-select .el-select__selected-item {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  font-weight: 400 !important;
+  font-size: 12px !important;
+  opacity: 1 !important;
+}
+
+/* 2. 真正的占位符（未选择时）：暗灰蓝 */
+.glass-select .el-select__placeholder.is-transparent,
+.glass-select .el-select__input::placeholder,
+.glass-select input::placeholder {
+  color: #556d82 !important;
+  -webkit-text-fill-color: #556d82 !important;
+  font-size: 12px !important;
+}
+
+/* -------------------------------- */
+
+.glass-select .el-select__suffix {
+  color: #8fb6c9;
+}
+
+.glass-select-popper.el-popper {
+  border: 1px solid rgba(68, 215, 182, 0.2) !important;
+  background: rgba(7, 18, 28, 0.96) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45) !important;
+}
+
+.glass-select-popper .el-select-dropdown__wrap,
+.glass-select-popper .el-scrollbar__view,
+.glass-select-popper .el-select-dropdown__list,
+.glass-select-popper .el-select-dropdown__item {
+  background: transparent !important;
+}
+
+.glass-select-popper .el-select-dropdown__item {
+  color: #dcecf7;
+  font-size: 12px;
+  border-radius: 6px;
+  margin: 2px 6px;
+}
+
+.glass-select-popper .el-select-dropdown__item.hover,
+.glass-select-popper .el-select-dropdown__item:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: #fff !important;
+}
+
+.glass-select-popper .el-select-dropdown__item.is-selected {
+  color: var(--glow-cyan) !important;
+  background: rgba(0, 243, 255, 0.1) !important;
+  font-weight: 700;
+}
+
+.glass-select-popper .el-popper__arrow::before {
+  background: rgba(7, 18, 28, 0.96) !important;
+  border-color: rgba(68, 215, 182, 0.2) !important;
+}
 
 button { width: 100%; padding: 8px; font-size: 12px; color: #eaf5ff; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); font-weight: 500; letter-spacing: 0.5px; }
 button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.3); filter: brightness(1.1); background-color: rgba(255, 255, 255, 0.05); }
@@ -107,6 +274,7 @@ button:disabled { opacity: .4; cursor: not-allowed; transform: none !important; 
 }
 
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
 .input-group { display: flex; gap: 4px; align-items: center; }
 .input-group input { flex: 1; min-width: 0; }
 .input-group button { width: 50px; margin: 0; padding: 6px 0; }
@@ -118,7 +286,10 @@ button:disabled { opacity: .4; cursor: not-allowed; transform: none !important; 
 
 .route-list { max-height: 100px; overflow-y: auto; padding-right: 4px; }
 .saved-route { display: grid; grid-template-columns: 1fr 28px; gap: 6px; margin-top: 6px; }
-.saved-route .ghost { overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: nowrap; font-family: monospace; font-size: 11px; padding: 6px; margin: 0; }
+.saved-route .ghost { margin: 0; }
+.saved-route-button { display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 8px; overflow: hidden; padding: 7px 8px; text-align: left; }
+.saved-route-name { flex: 1; min-width: 0; overflow: hidden; color: #fff; font-size: 11px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.saved-route-date { flex-shrink: 0; color: #7f95a6; font-size: 10px; font-family: monospace; }
 .icon-button { padding: 0; color: #ff4757; background: rgba(255, 71, 87, 0.1); border-color: transparent; font-size: 16px; margin: 0; }
 .icon-button:hover:not(:disabled) { background: rgba(255, 71, 87, 0.2); color: #ff6b81; }
 
@@ -142,6 +313,33 @@ button:disabled { opacity: .4; cursor: not-allowed; transform: none !important; 
 .stat.risk { border-color: var(--risk-color, rgba(244, 201, 93, 0.3)); transition: all 0.3s ease; }
 .stat.risk::before { background: var(--risk-color, #f4c95d); box-shadow: 0 0 8px var(--risk-color, #f4c95d); transition: all 0.3s ease; }
 .stat.risk strong { color: var(--risk-color, #f4c95d); font-size: 16px; text-shadow: 0 0 10px rgba(0, 0, 0, 0.8); margin-top: 8px; transition: all 0.3s ease; }
+
+.decision-card {
+  padding: 12px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(0,0,0,0.2));
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  box-shadow: inset 0 0 18px rgba(0, 243, 255, 0.08);
+}
+
+.decision-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.decision-label {
+  color: #8ea5b6;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
+.decision-head strong {
+  color: var(--decision-color, #00f3ff);
+  font-size: 15px;
+  text-shadow: 0 0 12px rgba(0, 243, 255, 0.22);
+}
 
 .chart { width: 100%; height: 160px; margin-top: 6px; background: rgba(0,0,0,0.2); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); }
 
@@ -171,6 +369,9 @@ button:disabled { opacity: .4; cursor: not-allowed; transform: none !important; 
   .app-shell { display: block; }
   .control-panel { width: 280px; }
   .wind-heat-legend { margin-left: 300px !important; }
+  .app-title { min-width: 420px; padding: 10px 18px; }
+  .app-title h1 { font-size: 18px; }
+  .grid-3 { grid-template-columns: 1fr; }
   .analysis-panel { position: absolute; right: 12px; top: 12px; bottom: 12px; width: 300px; transform: translateX(calc(100% + 24px)); transition: transform .3s cubic-bezier(0.4, 0, 0.2, 1); }
   .app-shell:hover .analysis-panel { transform: translateX(0); }
 }
