@@ -1,5 +1,8 @@
 """FastAPI entrypoint for the GFS wind-risk service."""
 
+import os
+import threading
+
 import numpy as np
 
 from fastapi import FastAPI, HTTPException, Query
@@ -8,6 +11,7 @@ from fastapi.responses import RedirectResponse
 
 from .data_provider import (
     availability,
+    data_mode,
     diagnostics,
     get_grid,
     get_grid_by_valid_time,
@@ -18,7 +22,7 @@ from .data_provider import (
 )
 from .models import RouteAnalyzeRequest, RoutePlanRequest, RouteRecord
 from .routing import plan_route
-from . import route_storage
+from . import route_storage, wrf_cache_provider
 from .route_service import analyze_route, sample_route
 from .wind_provider import parse_bbox, point_value
 
@@ -30,6 +34,30 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+def _env_enabled(name: str, default: bool = True) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() not in {"0", "false", "no", "off"}
+
+
+def _sync_wrf_cache_on_startup() -> None:
+    try:
+        status = wrf_cache_provider.sync_latest_cycle(force_index=True)
+        print(f"[WRF_CACHE] startup sync: {status}")
+    except Exception as exc:
+        print(f"[WRF_CACHE] startup sync failed: {exc}")
+
+
+@app.on_event("startup")
+def check_latest_gfs_on_startup():
+    """Check and download the latest realtime GFS cycle when the API starts."""
+    if data_mode() == "real":
+        start_gfs_download("backend startup latest GFS check")
+    if _env_enabled("WRF_CACHE_SYNC_ON_STARTUP", True) and wrf_cache_provider.remote_configured():
+        threading.Thread(target=_sync_wrf_cache_on_startup, daemon=True).start()
 
 
 def load_grid(

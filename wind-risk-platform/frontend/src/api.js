@@ -13,6 +13,7 @@ const selectionParams = (selection, bbox) => ({
 const containsPoint = (bbox, lon, lat) => bbox && lon >= bbox[0] && lon <= bbox[2] && lat >= bbox[1] && lat <= bbox[3]
 
 export const getTimes = (source = 'gfs') => api.get('/times', { params: { source } }).then(({ data }) => data)
+export const getGfsDownloadStatus = () => api.get('/gfs/download-status').then(({ data }) => data)
 export const getWind = (selection, bbox = CHINA_BBOX) => api.get('/wind', { params: selectionParams(selection, bbox) }).then(({ data }) => data)
 export const getHeatmap = (selection, bbox = CHINA_BBOX) => api.get('/heatmap', { params: selectionParams(selection, bbox) }).then(({ data }) => data)
 export const getPoint = (selection, lon, lat, { bbox = CHINA_BBOX, signal } = {}) =>

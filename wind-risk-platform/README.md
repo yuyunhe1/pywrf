@@ -53,8 +53,16 @@ cd wind-risk-platform\backend
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
+.\start_backend.bat
+```
 
+`start_backend.bat` 会在启动 FastAPI 前自动设置 GFS 实时下载相关环境变量，包括启动自动检查最新起报点、
+下载目录、日志目录、`f001` 到 `f012`、最新 1 个起报点等配置。
+
+如果需要手动启动，也可以执行：
+
+```powershell
+cd wind-risk-platform\backend
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000
 ```
 
@@ -124,10 +132,13 @@ python -m uvicorn app.main:app --reload --port 8000
 
 ### 自动下载实时 GFS
 
-后端已集成仓库根目录的 `download_gfs_hourly_70vars_realtime.py`。`GET /api/times`
-会展示已发现的历史和实时 GFS 时刻；如果在 `source=gfs` 下没有发现当前或未来 GFS
-风场，会自动在后台启动实时下载；
-请求某个缺失的 GFS 风场时，后端也会触发下载并返回 `503`，提示稍后刷新。
+后端已集成仓库根目录的 `download_gfs_hourly_70vars_realtime.py`。后端启动时会自动检查最新
+GFS 起报点，若数据已发布，会在后台下载 `f001` 到 `f012`；下载完成后会自动刷新后端文件索引，
+前端也会轮询下载状态并重新读取最新时刻。
+
+`GET /api/times` 会展示已发现的历史和实时 GFS 时刻；如果在 `source=gfs` 下没有发现当前或未来
+GFS 风场，也会自动在后台启动实时下载。请求某个缺失的 GFS 风场时，后端同样会触发下载并返回
+`503`，提示稍后刷新。
 
 可手动启动或查看状态：
 
@@ -136,19 +147,19 @@ curl -X POST "http://127.0.0.1:8000/api/gfs/download"
 curl "http://127.0.0.1:8000/api/gfs/download-status"
 ```
 
-常用配置：
+`backend\start_backend.bat` 已内置以下常用配置；如需临时覆盖，也可以在运行脚本前手动设置同名环境变量：
 
 ```powershell
 $env:GFS_AUTO_DOWNLOAD="1"
-$env:GFS_REALTIME_DOWNLOAD_DIR="D:\GNSS\PyWRF-Automation\pyWRF-automation\data\gfs_hourly_windcheck"
+$env:GFS_REALTIME_DOWNLOAD_DIR="D:\yyh\pywrf\data\gfs_hourly_windcheck"
 $env:GFS_REALTIME_GLOBAL_REGION="1"
 $env:GFS_REALTIME_START_FHOUR="1"
 $env:GFS_REALTIME_END_FHOUR="12"
-$env:GFS_REALTIME_CYCLE_COUNT="2"
+$env:GFS_REALTIME_CYCLE_COUNT="1"
 $env:GFS_REALTIME_WIND_MAP_ONLY="0"
 ```
 
-默认下载全球区域、最近两个起报点的 `f001` 到 `f012`。若只做低空地图展示并希望减小
+默认下载全球区域、最新一个起报点的 `f001` 到 `f012`。若只做低空地图展示并希望减小
 文件体积，可设置 `GFS_REALTIME_WIND_MAP_ONLY=1`；若需要高层 AGL 插值，则保持为 `0`。
 下载日志默认写入 `data/gfs_download_logs/`。如需禁用自动下载：
 
@@ -202,6 +213,20 @@ python run_realtime_wrf_platform_cache.py \
   --num-proc 4
 ```
 
+如需常驻运行，每隔 2 小时探查一次最新 GFS 起报点，发现新的可用 cycle 后自动下载 GFS、
+执行 WRF 降尺度并导出 `.npz`：
+
+```bash
+python run_realtime_wrf_platform_cache.py \
+  --base-dir /root/pyWRF-automation \
+  --gfs-dir /root/pyWRF-automation/data/gdex_gfs_0p25_global \
+  --cache-dir /root/pyWRF-automation/data/wrf_platform_cache \
+  --forecast-hours 24 \
+  --num-proc 4 \
+  --watch \
+  --interval-hours 2
+```
+
 脚本会按当前 UTC 时间寻找最近 GFS 起报点，先探测 `f001`。如果最近起报点尚未发布，
 会自动尝试前一个 6 小时起报点。由于当前 WPS/WRF 流程使用 3 小时 GFS 强迫，脚本会为
 WRF 下载 `f000/f003/.../f024`；WRF 完成后导出前端使用的 `f001-f024` 小时风场缓存。
@@ -226,21 +251,24 @@ WRF 下载 `f000/f003/.../f024`；WRF 完成后导出前端使用的 `f001-f024`
 leaflet-velocity 读取。
 
 本地平台后端读取服务器缓存时，可以不把整个后端切到 WRF 模式；前端选择 `WRF 降尺度`
-时会自动在接口参数中传入 `source=wrf`。只需配置缓存目录和远端 SFTP 信息：
+时会自动在接口参数中传入 `source=wrf`。
+
+`backend\start_backend.bat` 已内置本地 WRF cache 目录和远端 SFTP 信息：
 
 ```powershell
 cd wind-risk-platform\backend
-
-$env:WRF_CACHE_DIR="D:\GNSS\PyWRF-Automation\pyWRF-automation\data\wrf_platform_cache"
-$env:WRF_CACHE_REMOTE_HOST="10.129.59.14"
-$env:WRF_CACHE_REMOTE_PORT="22"
-$env:WRF_CACHE_REMOTE_USER="root"
-$env:WRF_CACHE_REMOTE_PASSWORD="<服务器密码>"
-$env:WRF_CACHE_REMOTE_DIR="/root/pyWRF-automation/data/wrf_platform_cache"
-
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000
+.\start_backend.bat
 ```
 
-`GET /api/times?refresh=true` 会通过 SFTP 刷新远端 `index.json`；请求某个时刻风场时，
-后端会按需下载对应 `.npz` 到本地 `WRF_CACHE_DIR` 后读取。接口仍然沿用
+启动时后端会自动刷新远端 `index.json`，并把服务器上最新一个 WRF cycle 的 `.npz`
+下载到本地 `./data/wrf_platform_cache/<cycle>/`。后续请求某个尚未同步的时刻时，也会按需下载。
+
+推荐使用 SSH key。若必须临时使用密码，可在运行 `start_backend.bat` 前手动设置：
+
+```powershell
+$env:WRF_CACHE_REMOTE_PASSWORD="<服务器密码>"
+.\start_backend.bat
+```
+
+`GET /api/times?refresh=true` 会通过 SFTP 刷新远端 `index.json`；接口仍然沿用
 `/api/wind`、`/api/heatmap`、`/api/point` 和 `/api/route/analyze`，前端无需改变操作方式。

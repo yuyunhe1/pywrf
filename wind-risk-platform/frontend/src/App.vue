@@ -1,13 +1,14 @@
 <script setup>
 import L from 'leaflet'
-import { onMounted, reactive, ref, watch } from 'vue'
-import { analyzeRoute, deleteRoute, getHeatmap, getPoint, getTimes, getWind, listRoutes, planRoute, saveRoute } from './api'
+import { onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { analyzeRoute, deleteRoute, getGfsDownloadStatus, getHeatmap, getPoint, getTimes, getWind, listRoutes, planRoute, saveRoute } from './api'
 import AnalysisPanel from './components/AnalysisPanel.vue'
 import ControlPanel from './components/ControlPanel.vue'
 import WindMap from './components/WindMap.vue'
 
 const options = reactive({ cycles: [], forecast_hours: [], valid_times: [], levels: [], source: '' })
-const selection = reactive({ source: 'gfs', cycle: '', forecastHour: 3, validTime: '', level: '100m AGL' })
+const DEFAULT_FORECAST_HOUR = 3
+const selection = reactive({ source: 'gfs', cycle: '', forecastHour: DEFAULT_FORECAST_HOUR, validTime: '', level: '100m AGL' })
 const layers = reactive({ heatmap: false, velocity: true, route: true })
 const thresholds = reactive({ safe: 1.5, notice: 3.3, warning: 5.4, danger: 7.9 })
 const wind = ref()
@@ -24,6 +25,7 @@ const picking = ref('')
 const ZOOM_AVERAGE_LAYER = 13
 const AVERAGE_LAYER = '250-350m AGL average'
 let pointRequestController
+let downloadPollTimer
 
 const areaPresets = {
   province: [
@@ -97,11 +99,61 @@ const keepUpcomingTimes = (times) => {
 
 const pickDefaultTime = (times) => {
   if (!times.length) return null
-  const target = Date.now() + 3 * 60 * 60 * 1000
+  const preferred = times.find((item) => Number(item.forecast_hour) === DEFAULT_FORECAST_HOUR)
+  if (preferred) return preferred
+  const target = Date.now() + DEFAULT_FORECAST_HOUR * 60 * 60 * 1000
   return times.find((item) => {
     const timestamp = parseSelectionTime(item)
     return Number.isFinite(timestamp) && timestamp >= target
   }) || times[0]
+}
+
+const showTemporaryError = (message) => {
+  error.value = message
+  setTimeout(() => { error.value = '' }, 3000)
+}
+
+const apiErrorMessage = (reason) => {
+  const detail = reason.response?.data?.detail
+  if (typeof detail === 'string') return detail
+  if (detail?.message) return detail.message
+  return reason.message
+}
+
+const apiDownloadStatus = (reason) => {
+  const detail = reason.response?.data?.detail
+  return detail?.download || reason.response?.data?.download
+}
+
+const stopDownloadPolling = () => {
+  if (!downloadPollTimer) return
+  clearInterval(downloadPollTimer)
+  downloadPollTimer = undefined
+}
+
+const checkDownloadStatus = async () => {
+  if (selection.source !== 'gfs') {
+    stopDownloadPolling()
+    return
+  }
+  try {
+    const status = await getGfsDownloadStatus()
+    if (status.running) return
+    stopDownloadPolling()
+    if (status.return_code === 0) {
+      await applyTimes()
+    } else if (status.return_code !== null && status.return_code !== undefined) {
+      showTemporaryError(`GFS 下载失败：${status.message || `exit ${status.return_code}`}`)
+    }
+  } catch (reason) {
+    stopDownloadPolling()
+    showTemporaryError(apiErrorMessage(reason))
+  }
+}
+
+const startDownloadPolling = () => {
+  if (selection.source !== 'gfs' || downloadPollTimer) return
+  downloadPollTimer = setInterval(checkDownloadStatus, 10000)
 }
 
 const loadWindField = async () => {
@@ -115,8 +167,8 @@ const loadWindField = async () => {
     metadata.value = windData.metadata
     if (routePoints.length) await runRouteAnalysis(routePoints)
   } catch (reason) {
-    error.value = reason.response?.data?.detail || reason.message
-    setTimeout(() => { error.value = '' }, 3000)
+    if (apiDownloadStatus(reason)?.running) startDownloadPolling()
+    showTemporaryError(apiErrorMessage(reason))
   } finally {
     loading.value = false
   }
@@ -287,6 +339,7 @@ const applyTimes = async ({ autoLoad = true } = {}) => {
   Object.assign(options, { cycles: [], forecast_hours: [], valid_times: [], levels: [], source: '' })
   try {
     const response = await getTimes(selection.source)
+    if (response.download?.running) startDownloadPolling()
     const availableTimes = keepUpcomingTimes(response.valid_times || [])
     Object.assign(options, { ...response, valid_times: availableTimes })
     const defaultTime = pickDefaultTime(options.valid_times || [])
@@ -295,6 +348,10 @@ const applyTimes = async ({ autoLoad = true } = {}) => {
       heatmap.value = undefined
       metadata.value = undefined
       analysis.value = undefined
+      if (response.download?.running) {
+        showTemporaryError('GFS 数据正在下载，完成后将自动刷新。')
+        return
+      }
       error.value = `${selection.source === 'wrf' ? 'WRF 降尺度' : 'GFS 原始'}数据源没有可用的当前整点或未来预报时刻。`
       setTimeout(() => { error.value = '' }, 3000)
       return
@@ -305,8 +362,8 @@ const applyTimes = async ({ autoLoad = true } = {}) => {
     selection.level = options.levels.includes(selection.level) ? selection.level : (options.levels.includes('100m AGL') ? '100m AGL' : options.levels.at(-1))
     if (autoLoad) await loadWindField()
   } catch (reason) {
-    error.value = reason.response?.data?.detail || reason.message
-    setTimeout(() => { error.value = '' }, 3000)
+    if (apiDownloadStatus(reason)?.running) startDownloadPolling()
+    showTemporaryError(apiErrorMessage(reason))
   }
 }
 
@@ -334,6 +391,10 @@ watch(() => selection.source, async (source) => {
 onMounted(async () => {
   await applyTimes()
   await refreshRoutes()
+})
+
+onBeforeUnmount(() => {
+  stopDownloadPolling()
 })
 </script>
 

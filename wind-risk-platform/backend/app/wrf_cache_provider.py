@@ -130,6 +130,47 @@ def refresh_cache() -> None:
         _get_grid_cached.cache_clear()
 
 
+def sync_latest_cycle(force_index: bool = True) -> dict:
+    """Download the latest remote WRF cache cycle into the local mirror directory."""
+    if not remote_configured():
+        return {"enabled": False, "message": "remote WRF cache is not configured"}
+    with SYNC_LOCK:
+        _download_remote_file(REMOTE_INDEX, force=force_index)
+        load_index.cache_clear()
+        _get_grid_cached.cache_clear()
+        index = load_index()
+        files = list(index.get("files", []))
+        if not files:
+            return {"enabled": True, "latest_cycle": None, "downloaded": 0, "skipped": 0}
+
+        latest_cycle = max(item["cycle"] for item in files)
+        latest_files = sorted(
+            (item for item in files if item.get("cycle") == latest_cycle),
+            key=lambda item: int(item.get("forecast_hour", 0)),
+        )
+        downloaded = 0
+        skipped = 0
+        for item in latest_files:
+            relative_path = item.get("path")
+            if not relative_path:
+                continue
+            local_path = cache_dir() / relative_path
+            if local_path.is_file():
+                skipped += 1
+                continue
+            _download_remote_file(relative_path, force=False)
+            downloaded += 1
+        load_index.cache_clear()
+        _get_grid_cached.cache_clear()
+        return {
+            "enabled": True,
+            "latest_cycle": latest_cycle,
+            "files": len(latest_files),
+            "downloaded": downloaded,
+            "skipped": skipped,
+        }
+
+
 def availability() -> dict:
     """Return selectable WRF cache times and levels."""
     if remote_configured() and os.getenv("WRF_CACHE_AUTO_SYNC_INDEX", "1") == "1":

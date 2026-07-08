@@ -25,6 +25,11 @@ from pathlib import Path
 import numpy as np
 
 
+for stream in (sys.stdout, sys.stderr):
+    if hasattr(stream, "reconfigure"):
+        stream.reconfigure(line_buffering=True)
+
+
 BEIJING_TZ = timezone(timedelta(hours=8))
 NOMADS_FILTER_URL = "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25_1hr.pl"
 DEFAULT_WPS_VARS = ("APCP", "HGT", "PRMSL", "SPFH", "TMP", "UGRD", "VGRD")
@@ -333,46 +338,60 @@ def find_wrf_outputs(cycle: datetime, args) -> list[Path]:
 
 def write_index(records: list[CacheRecord], args) -> None:
     args.cache_dir.mkdir(parents=True, exist_ok=True)
-    by_valid: dict[str, CacheRecord] = {}
+    by_cycle_hour: dict[tuple[str, int], dict] = {}
+    index_path = args.cache_dir / "index.json"
+    if index_path.exists():
+        try:
+            existing = json.loads(index_path.read_text(encoding="utf-8"))
+            for item in existing.get("files", []):
+                by_cycle_hour[(item["cycle"], int(item["forecast_hour"]))] = item
+        except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
+            print(f"[WARN] failed to merge existing cache index: {exc}", file=sys.stderr)
+
     for record in records:
-        by_valid[format_utc(record.valid_time)] = record
-    selected = [by_valid[key] for key in sorted(by_valid)]
+        item = {
+            "cycle": format_utc(record.cycle),
+            "cycle_bj": format_bj(record.cycle),
+            "forecast_hour": record.forecast_hour,
+            "valid_time": format_utc(record.valid_time),
+            "valid_time_bj": format_bj(record.valid_time),
+            "path": record.relative_path,
+            "bbox": record.bbox,
+        }
+        by_cycle_hour[(item["cycle"], int(item["forecast_hour"]))] = item
+
+    selected = [
+        by_cycle_hour[key]
+        for key in sorted(by_cycle_hour, key=lambda item: (item[0], item[1]))
+    ]
+    by_valid: dict[str, dict] = {}
+    for item in selected:
+        existing = by_valid.get(item["valid_time"])
+        if existing is None or item["cycle"] > existing["cycle"]:
+            by_valid[item["valid_time"]] = {
+                "label": item["valid_time_bj"],
+                "valid_time": item["valid_time"],
+                "cycle": item["cycle"],
+                "cycle_bj": item["cycle_bj"],
+                "forecast_hour": item["forecast_hour"],
+            }
+    valid_times = [by_valid[key] for key in sorted(by_valid)]
     levels = [f"{int(height)}m AGL" for height in args.heights]
     payload = {
         "source": "WRF d02 platform cache",
         "generated_at_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "levels": levels,
-        "cycles": sorted({format_utc(item.cycle) for item in selected}),
-        "forecast_hours": sorted({item.forecast_hour for item in selected}),
+        "cycles": sorted({item["cycle"] for item in selected}),
+        "forecast_hours": sorted({int(item["forecast_hour"]) for item in selected}),
         "forecast_hours_by_cycle": {
-            cycle: sorted({item.forecast_hour for item in selected if format_utc(item.cycle) == cycle})
-            for cycle in sorted({format_utc(item.cycle) for item in selected})
+            cycle: sorted({int(item["forecast_hour"]) for item in selected if item["cycle"] == cycle})
+            for cycle in sorted({item["cycle"] for item in selected})
         },
-        "valid_times": [
-            {
-                "label": format_bj(item.valid_time),
-                "valid_time": format_utc(item.valid_time),
-                "cycle": format_utc(item.cycle),
-                "cycle_bj": format_bj(item.cycle),
-                "forecast_hour": item.forecast_hour,
-            }
-            for item in selected
-        ],
-        "files": [
-            {
-                "cycle": format_utc(item.cycle),
-                "cycle_bj": format_bj(item.cycle),
-                "forecast_hour": item.forecast_hour,
-                "valid_time": format_utc(item.valid_time),
-                "valid_time_bj": format_bj(item.valid_time),
-                "path": item.relative_path,
-                "bbox": item.bbox,
-            }
-            for item in selected
-        ],
+        "valid_times": valid_times,
+        "files": selected,
     }
-    (args.cache_dir / "index.json").write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
-    print(f"[CACHE] index written: {args.cache_dir / 'index.json'}")
+    index_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+    print(f"[CACHE] index written: {index_path}")
 
 
 def export_cache(cycle: datetime, args) -> None:
@@ -382,6 +401,40 @@ def export_cache(cycle: datetime, args) -> None:
     if not records:
         raise SystemExit("No WRF time slices were exported. Check WRF history_interval and output files.")
     write_index(records, args)
+
+
+def cache_cycle_complete(cycle: datetime, args) -> bool:
+    index_path = args.cache_dir / "index.json"
+    if not index_path.exists():
+        return False
+    try:
+        payload = json.loads(index_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    cycle_label = format_utc(cycle)
+    expected_hours = set(range(args.export_start_fhour, args.forecast_hours + 1))
+    available_hours = {
+        int(item["forecast_hour"])
+        for item in payload.get("files", [])
+        if item.get("cycle") == cycle_label and (args.cache_dir / item.get("path", "")).is_file()
+    }
+    return expected_hours.issubset(available_hours)
+
+
+def run_once(args) -> bool:
+    cycle = choose_cycle(args)
+    if not args.force_rerun and not args.download_only and not args.wrf_only and cache_cycle_complete(cycle, args):
+        print(f"[SKIP] WRF platform cache already complete for cycle {cycle:%Y%m%d%H}")
+        return False
+    if not args.export_only:
+        download_wrf_forcing(cycle, args)
+    if args.download_only:
+        return True
+    if not args.export_only:
+        run_wrf(cycle, args)
+    if not args.wrf_only:
+        export_cache(cycle, args)
+    return True
 
 
 def parse_args():
@@ -414,20 +467,31 @@ def parse_args():
     parser.add_argument("--download-only", action="store_true")
     parser.add_argument("--wrf-only", action="store_true")
     parser.add_argument("--export-only", action="store_true")
+    parser.add_argument("--force-rerun", action="store_true", help="Run WRF/export even when the selected cycle is already cached.")
+    parser.add_argument("--watch", action="store_true", help="Keep running and periodically check for a newer usable GFS cycle.")
+    parser.add_argument("--interval-hours", type=float, default=2.0, help="Watch-mode polling interval in hours.")
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
-    cycle = choose_cycle(args)
-    if not args.export_only:
-        download_wrf_forcing(cycle, args)
-    if args.download_only:
+    if not args.watch:
+        run_once(args)
         return
-    if not args.export_only:
-        run_wrf(cycle, args)
-    if not args.wrf_only:
-        export_cache(cycle, args)
+
+    interval_seconds = max(60, int(args.interval_hours * 3600))
+    print(f"[WATCH] enabled, polling every {interval_seconds / 3600:.2f} hours")
+    while True:
+        try:
+            run_once(args)
+        except SystemExit as exc:
+            print(f"[WATCH] workflow skipped/failed: {exc}", file=sys.stderr)
+        except subprocess.CalledProcessError as exc:
+            print(f"[WATCH] WRF command failed with exit code {exc.returncode}: {exc}", file=sys.stderr)
+        except Exception as exc:
+            print(f"[WATCH] unexpected error: {exc}", file=sys.stderr)
+        print(f"[WATCH] sleeping {interval_seconds} seconds")
+        time.sleep(interval_seconds)
 
 
 if __name__ == "__main__":

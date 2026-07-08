@@ -85,7 +85,7 @@ def _build_command() -> list[str]:
         "--end-fhour",
         str(_env_int("GFS_REALTIME_END_FHOUR", 12)),
         "--cycle-count",
-        str(_env_int("GFS_REALTIME_CYCLE_COUNT", 2)),
+        str(_env_int("GFS_REALTIME_CYCLE_COUNT", 1)),
         "--delay-hours",
         str(_env_int("GFS_REALTIME_DELAY_HOURS", 0)),
         "--retries",
@@ -119,6 +119,13 @@ def status() -> dict[str, Any]:
         }
 
 
+def refresh_after_external_download() -> None:
+    """Refresh provider-side caches after files may have changed on disk."""
+    from . import gfs_provider
+
+    gfs_provider.refresh_file_index()
+
+
 def _finish(return_code: int | None, message: str) -> None:
     with _LOCK:
         _STATE.update(
@@ -149,9 +156,7 @@ def _run(command: list[str], log_path: Path) -> None:
             )
             return_code = process.wait()
         if return_code == 0:
-            from . import gfs_provider
-
-            gfs_provider.refresh_file_index()
+            refresh_after_external_download()
             _finish(return_code, "download completed")
         else:
             _finish(return_code, f"download failed with exit code {return_code}")
