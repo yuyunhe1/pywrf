@@ -7,8 +7,8 @@ import ControlPanel from './components/ControlPanel.vue'
 import WindMap from './components/WindMap.vue'
 
 const options = reactive({ cycles: [], forecast_hours: [], valid_times: [], levels: [], source: '' })
-const DEFAULT_FORECAST_HOUR = 3
-const selection = reactive({ source: 'gfs', cycle: '', forecastHour: DEFAULT_FORECAST_HOUR, validTime: '', level: '100m AGL' })
+const DEFAULT_LOOKAHEAD_HOURS = 3
+const selection = reactive({ source: 'gfs', cycle: '', forecastHour: DEFAULT_LOOKAHEAD_HOURS, validTime: '', level: '100m AGL' })
 const layers = reactive({ heatmap: false, velocity: true, route: true })
 const thresholds = reactive({ safe: 1.5, notice: 3.3, warning: 5.4, danger: 7.9 })
 const wind = ref()
@@ -99,9 +99,8 @@ const keepUpcomingTimes = (times) => {
 
 const pickDefaultTime = (times) => {
   if (!times.length) return null
-  const preferred = times.find((item) => Number(item.forecast_hour) === DEFAULT_FORECAST_HOUR)
-  if (preferred) return preferred
-  const target = Date.now() + DEFAULT_FORECAST_HOUR * 60 * 60 * 1000
+  const oneHour = 60 * 60 * 1000
+  const target = Math.ceil((Date.now() + DEFAULT_LOOKAHEAD_HOURS * oneHour) / oneHour) * oneHour
   return times.find((item) => {
     const timestamp = parseSelectionTime(item)
     return Number.isFinite(timestamp) && timestamp >= target

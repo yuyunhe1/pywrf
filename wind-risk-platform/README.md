@@ -53,6 +53,7 @@ cd wind-risk-platform\backend
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
+$env:WRF_CACHE_REMOTE_PASSWORD="<服务器密码>"
 .\start_backend.bat
 ```
 
