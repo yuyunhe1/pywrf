@@ -32,7 +32,23 @@ for stream in (sys.stdout, sys.stderr):
 
 BEIJING_TZ = timezone(timedelta(hours=8))
 NOMADS_FILTER_URL = "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25_1hr.pl"
-DEFAULT_WPS_VARS = ("APCP", "HGT", "PRMSL", "SPFH", "TMP", "UGRD", "VGRD")
+DEFAULT_WPS_VARS = (
+    "APCP",
+    "CAPE",
+    "CIN",
+    "GUST",
+    "HGT",
+    "HPBL",
+    "PRATE",
+    "PRES",
+    "PRMSL",
+    "RH",
+    "SPFH",
+    "TMP",
+    "UGRD",
+    "VGRD",
+    "VVEL",
+)
 DEFAULT_HEIGHTS_M = (10, 30, 50, 80, 100, 200, 300, 500, 800, 1000, 1500, 2000, 3000)
 GRAVITY = 9.81
 
@@ -263,6 +279,103 @@ def apply_mapper(values: np.ndarray, target_shape: tuple[int, int], indices: np.
     return flattened[:, indices].reshape((nz, *target_shape)).astype(np.float32)
 
 
+def apply_mapper_2d(values: np.ndarray, target_shape: tuple[int, int], indices: np.ndarray) -> np.ndarray:
+    return values.reshape(-1)[indices].reshape(target_shape).astype(np.float32)
+
+
+def interpolate_scalar_levels(heights_agl: np.ndarray, values: np.ndarray, target_heights: np.ndarray) -> np.ndarray:
+    nz, ny, nx = heights_agl.shape
+    out = np.full((len(target_heights), ny, nx), np.nan, dtype=np.float32)
+
+    for level_index, height in enumerate(target_heights):
+        above = heights_agl >= height
+        has_above = above.any(axis=0)
+        upper = above.argmax(axis=0)
+        lower = np.maximum(upper - 1, 0)
+        valid = has_above & (upper > 0)
+
+        upper3 = upper[np.newaxis, :, :]
+        lower3 = lower[np.newaxis, :, :]
+        z0 = np.take_along_axis(heights_agl, lower3, axis=0)[0]
+        z1 = np.take_along_axis(heights_agl, upper3, axis=0)[0]
+        v0 = np.take_along_axis(values, lower3, axis=0)[0]
+        v1 = np.take_along_axis(values, upper3, axis=0)[0]
+        weight = np.divide(height - z0, z1 - z0, out=np.full_like(z0, np.nan), where=np.abs(z1 - z0) > 1e-6)
+        out[level_index] = np.where(valid, v0 + weight * (v1 - v0), np.nan).astype(np.float32)
+    return out
+
+
+def find_variable(dataset, candidates: tuple[str, ...]):
+    for name in candidates:
+        if name in dataset.variables:
+            return name, dataset.variables[name]
+    return None, None
+
+
+def read_optional_2d(dataset, time_index: int, candidates: tuple[str, ...], target_shape: tuple[int, int], mapper: np.ndarray):
+    name, variable = find_variable(dataset, candidates)
+    if variable is None:
+        return None, None
+    values = read_time_slice(variable, time_index)
+    while values.ndim > 2:
+        values = values[0]
+    if values.shape != target_shape:
+        values = apply_mapper_2d(values, target_shape, mapper)
+    return name, values.astype(np.float32)
+
+
+def wrf_temperature_k(dataset, time_index: int) -> np.ndarray | None:
+    if not all(name in dataset.variables for name in ("T", "P", "PB")):
+        return None
+    theta = as_array(dataset.variables["T"][time_index]) + 300.0
+    pressure = as_array(dataset.variables["P"][time_index]) + as_array(dataset.variables["PB"][time_index])
+    return theta * np.power(np.maximum(pressure, 1.0) / 100000.0, 0.2854)
+
+
+def wrf_specific_humidity(dataset, time_index: int) -> np.ndarray | None:
+    if "QVAPOR" not in dataset.variables:
+        return None
+    qvapor = as_array(dataset.variables["QVAPOR"][time_index])
+    return qvapor / (1.0 + qvapor)
+
+
+def wrf_relative_humidity(dataset, time_index: int, temperature_k: np.ndarray | None, specific_humidity: np.ndarray | None) -> np.ndarray | None:
+    if temperature_k is None or specific_humidity is None or not all(name in dataset.variables for name in ("P", "PB")):
+        return None
+    pressure = as_array(dataset.variables["P"][time_index]) + as_array(dataset.variables["PB"][time_index])
+    qvapor = specific_humidity / np.maximum(1.0 - specific_humidity, 1e-9)
+    vapor_pressure = pressure * qvapor / (0.622 + qvapor)
+    saturation_hpa = 6.112 * np.exp(17.67 * (temperature_k - 273.15) / np.maximum(temperature_k - 29.65, 1e-6))
+    saturation_pa = saturation_hpa * 100.0
+    return np.clip(100.0 * vapor_pressure / np.maximum(saturation_pa, 1e-6), 0.0, 100.0)
+
+
+def wrf_vertical_velocity(dataset, time_index: int) -> np.ndarray | None:
+    if "VVEL" in dataset.variables:
+        values = read_time_slice(dataset.variables["VVEL"], time_index)
+        if values.ndim == 3:
+            return values
+    if "W" in dataset.variables:
+        w_stag = as_array(dataset.variables["W"][time_index])
+        return 0.5 * (w_stag[:-1] + w_stag[1:])
+    return None
+
+
+def accumulated_precip(dataset, time_index: int) -> np.ndarray | None:
+    parts = []
+    for name in ("RAINC", "RAINNC", "RAINSH"):
+        if name in dataset.variables:
+            parts.append(read_time_slice(dataset.variables[name], time_index))
+    if parts:
+        return np.sum(parts, axis=0).astype(np.float32)
+    if "APCP" in dataset.variables:
+        values = read_time_slice(dataset.variables["APCP"], time_index)
+        while values.ndim > 2:
+            values = values[0]
+        return values.astype(np.float32)
+    return None
+
+
 def export_wrf_file(path: Path, cycle: datetime, args) -> list[CacheRecord]:
     records: list[CacheRecord] = []
     heights = np.asarray(args.heights, dtype=np.float32)
@@ -302,20 +415,70 @@ def export_wrf_file(path: Path, cycle: datetime, args) -> list[CacheRecord]:
             regular_u = apply_mapper(level_u, target_shape, mapper)
             regular_v = apply_mapper(level_v, target_shape, mapper)
 
+            z_msl = 0.5 * (z_interfaces[:-1] + z_interfaces[1:])
+            temperature_k = wrf_temperature_k(dataset, time_index)
+            specific_humidity = wrf_specific_humidity(dataset, time_index)
+            relative_humidity = wrf_relative_humidity(dataset, time_index, temperature_k, specific_humidity)
+            vertical_velocity = wrf_vertical_velocity(dataset, time_index)
+
+            extra_payload: dict[str, np.ndarray] = {}
+            extra_sources: dict[str, str] = {}
+
+            for out_name, candidates in {
+                "gust_surface": ("GUST", "WSPD10MAX", "AFWA_GUST"),
+                "pblh": ("PBLH", "HPBL"),
+                "cape": ("CAPE", "MCAPE"),
+                "cin": ("CIN", "MCIN"),
+                "prate": ("PRATE",),
+            }.items():
+                source_name, values = read_optional_2d(dataset, time_index, candidates, target_shape, mapper)
+                if values is not None:
+                    extra_payload[out_name] = values
+                    extra_sources[out_name] = source_name
+
+            apcp_values = accumulated_precip(dataset, time_index)
+            if apcp_values is not None:
+                if apcp_values.shape != target_shape:
+                    apcp_values = apply_mapper_2d(apcp_values, target_shape, mapper)
+                extra_payload["apcp"] = apcp_values.astype(np.float32)
+                extra_sources["apcp"] = "RAINC+RAINNC+RAINSH" if "RAINC" in dataset.variables or "RAINNC" in dataset.variables else "APCP"
+
+            for out_name, values, source_name in (
+                ("vvel", vertical_velocity, "VVEL/W"),
+                ("rh", relative_humidity, "RH/QVAPOR+T+P+PB"),
+                ("spfh", specific_humidity, "QVAPOR"),
+                ("tmp", temperature_k, "T+P+PB"),
+                ("hgt", z_msl, "PH+PHB"),
+            ):
+                if values is None:
+                    continue
+                extra_payload[out_name] = apply_mapper(
+                    interpolate_scalar_levels(heights_agl, values, heights),
+                    target_shape,
+                    mapper,
+                )
+                extra_sources[out_name] = source_name
+
+            extra_payload["hgt_surface"] = apply_mapper_2d(hgt, target_shape, mapper)
+            extra_sources["hgt_surface"] = "HGT"
+
             rel = Path(cycle.strftime("%Y%m%d%H")) / f"wrf_d{args.domain:02d}_{cycle:%Y%m%d%H}_f{forecast_hour:03d}.npz"
             out_path = args.cache_dir / rel
             out_path.parent.mkdir(parents=True, exist_ok=True)
-            np.savez_compressed(
-                out_path,
-                lons=lons,
-                lats=lats,
-                levels_m=heights,
-                u=regular_u,
-                v=regular_v,
-                cycle_utc=np.asarray(cycle.strftime("%Y-%m-%d %H:%M UTC")),
-                valid_time_utc=np.asarray(valid_time.strftime("%Y-%m-%d %H:%M UTC")),
-                forecast_hour=np.asarray(forecast_hour, dtype=np.int16),
-            )
+            payload = {
+                "lons": lons,
+                "lats": lats,
+                "levels_m": heights,
+                "u": regular_u,
+                "v": regular_v,
+                "cycle_utc": np.asarray(cycle.strftime("%Y-%m-%d %H:%M UTC")),
+                "valid_time_utc": np.asarray(valid_time.strftime("%Y-%m-%d %H:%M UTC")),
+                "forecast_hour": np.asarray(forecast_hour, dtype=np.int16),
+                "cache_variables": np.asarray(json.dumps(sorted(extra_payload), ensure_ascii=False)),
+                "cache_variable_sources": np.asarray(json.dumps(extra_sources, ensure_ascii=False, sort_keys=True)),
+                **extra_payload,
+            }
+            np.savez_compressed(out_path, **payload)
             records.append(
                 CacheRecord(
                     cycle=cycle,
@@ -381,6 +544,22 @@ def write_index(records: list[CacheRecord], args) -> None:
         "source": "WRF d02 platform cache",
         "generated_at_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "levels": levels,
+        "cache_variables": [
+            "apcp",
+            "cape",
+            "cin",
+            "gust_surface",
+            "hgt",
+            "hgt_surface",
+            "pblh",
+            "prate",
+            "rh",
+            "spfh",
+            "tmp",
+            "u",
+            "v",
+            "vvel",
+        ],
         "cycles": sorted({item["cycle"] for item in selected}),
         "forecast_hours": sorted({int(item["forecast_hour"]) for item in selected}),
         "forecast_hours_by_cycle": {
@@ -449,8 +628,8 @@ def parse_args():
     parser.add_argument(
         "--gfs-vars",
         type=lambda text: tuple(item.strip().upper() for item in text.split(",") if item.strip()),
-        default=None,
-        help="Optional NOMADS variable subset, comma-separated. Default downloads all variables.",
+        default=DEFAULT_WPS_VARS,
+        help="Optional NOMADS variable subset, comma-separated.",
     )
     parser.add_argument("--cycle-fallback-count", type=int, default=4)
     parser.add_argument("--delay-hours", type=int, default=0)

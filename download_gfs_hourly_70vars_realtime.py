@@ -26,7 +26,22 @@ BEIJING_TZ = timezone(timedelta(hours=8))
 
 # HGT on isobaric levels is the key variable for mapping pressure levels to
 # geometric height. HGT:surface is used to convert MSL height to AGL height.
-WIND_CHECK_VARS = ["HGT", "PRES", "UGRD", "VGRD"]
+WIND_CHECK_VARS = [
+    "APCP",
+    "CAPE",
+    "CIN",
+    "GUST",
+    "HGT",
+    "HPBL",
+    "PRATE",
+    "PRES",
+    "RH",
+    "SPFH",
+    "TMP",
+    "UGRD",
+    "VGRD",
+    "VVEL",
+]
 WIND_CHECK_PRESSURE_LEVELS_HPA = [
     1000,
     975,
@@ -54,6 +69,7 @@ WIND_CHECK_PRESSURE_LEVELS_HPA = [
 WIND_CHECK_LEVELS = (
     [
         "surface",
+        "2_m_above_ground",
         "10_m_above_ground",
         "20_m_above_ground",
         "30_m_above_ground",
@@ -62,6 +78,8 @@ WIND_CHECK_LEVELS = (
         "80_m_above_ground",
         "100_m_above_ground",
         "30-0_mb_above_ground",
+        "180-0_mb_above_ground",
+        "255-0_mb_above_ground",
         "max_wind",
     ]
     + [f"{level}_mb" for level in WIND_CHECK_PRESSURE_LEVELS_HPA]

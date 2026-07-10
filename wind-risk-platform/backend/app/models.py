@@ -47,7 +47,28 @@ class RouteAnalyzeRequest(BaseModel):
 class RoutePlanRequest(RouteAnalyzeRequest):
     start: tuple[float, float]
     end: tuple[float, float]
+    planner_type: str = "wa_lpa_star"
     points: list[tuple[float, float]] = Field(default_factory=lambda: [(0, 0), (0, 0)])
+
+
+class RouteDecisionRequest(BaseModel):
+    """Navigation decision request. Each point uses [longitude, latitude]."""
+
+    start: tuple[float, float]
+    end: tuple[float, float]
+    candidate_valid_times: list[str] = Field(default_factory=list)
+    candidate_offsets_hours: list[int] = Field(default_factory=lambda: [0, 1, 2, 3, 6])
+    cycle: str | None = None
+    forecast_hour: int | None = Field(default=None, ge=0)
+    valid_time: str | None = None
+    source: str | None = None
+    level: str
+    planner_type: str = "wa_lpa_star"
+    max_wind_speed_threshold: float = 7.9
+    max_rain_threshold: float = 10.0
+    min_agl_height: float = 0.0
+    max_cumulative_cost: float | None = None
+    thresholds: Thresholds = Field(default_factory=Thresholds)
 
 
 class RouteRecord(BaseModel):

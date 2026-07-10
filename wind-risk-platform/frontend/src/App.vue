@@ -19,7 +19,7 @@ const loading = ref(false)
 const error = ref('')
 const mapRef = ref()
 let routePoints = []
-const planner = reactive({ name: '默认航线 A', startText: '', endText: '', points: [], planning: false })
+const planner = reactive({ name: '默认航线 A', algorithm: 'wa_lpa_star', startText: '', endText: '', points: [], planning: false })
 const savedRoutes = ref([])
 const picking = ref('')
 const ZOOM_AVERAGE_LAYER = 13
@@ -273,7 +273,7 @@ const runPlan = async (savedRoute) => {
       analysis.value = await analyzeRoute(selection, savedRoute.points, thresholds)
       return
     }
-    const result = await planRoute(selection, parsePoint(planner.startText), parsePoint(planner.endText), thresholds)
+    const result = await planRoute(selection, parsePoint(planner.startText), parsePoint(planner.endText), thresholds, planner.algorithm)
     planner.points = result.points
     routePoints = result.points
     analysis.value = result.analysis

@@ -20,7 +20,10 @@ from .data_provider import (
     refresh,
     start_gfs_download,
 )
-from .models import RouteAnalyzeRequest, RoutePlanRequest, RouteRecord
+from .decision_service import decide_navigation
+from .grid_planner_lpa_star import LPAStarPlanner
+from .grid_planner_wa_lpa_star import WALPAStarPlanner
+from .models import RouteAnalyzeRequest, RouteDecisionRequest, RoutePlanRequest, RouteRecord
 from .routing import plan_route
 from . import route_storage, wrf_cache_provider
 from .route_service import analyze_route, sample_route
@@ -254,17 +257,89 @@ def route_analyze(request: RouteAnalyzeRequest):
 
 @app.post("/api/route/plan")
 def route_plan(request: RoutePlanRequest):
-    """Plan a single-altitude, wind-aware A* route between two map points."""
+    """Plan a single-altitude route between two map points."""
     lons = [request.start[0], request.end[0]]
     lats = [request.start[1], request.end[1]]
     route_bbox = f"{min(lons) - 0.25},{min(lats) - 0.25},{max(lons) + 0.25},{max(lats) + 0.25}"
     grid = load_grid(request.cycle, request.forecast_hour, request.level, route_bbox, request.valid_time, request.source)
     try:
-        result = plan_route(grid, request.start, request.end, request.thresholds)
+        planner_type = request.planner_type.lower().replace("-", "_")
+        if planner_type in {"astar", "a_star"}:
+            result = plan_route(grid, request.start, request.end, request.thresholds)
+        elif planner_type in {"lpa", "lpa_star", "wa_lpa", "wa_lpa_star", "walpa", "walpa_star"}:
+            planner_class = LPAStarPlanner if planner_type in {"lpa", "lpa_star"} else WALPAStarPlanner
+            planner = planner_class(
+                grid,
+                {"lon": request.start[0], "lat": request.start[1]},
+                {"lon": request.end[0], "lat": request.end[1]},
+                thresholds=request.thresholds,
+            )
+            plan = planner.plan()
+            points = list(plan.points)
+            if not points:
+                raise ValueError("未找到可行路径")
+            if points[0] != request.start:
+                points.insert(0, request.start)
+            if points[-1] != request.end:
+                points.append(request.end)
+            result = {
+                "points": points,
+                "segments": [],
+                "cost": plan.total_cost,
+                "distance_km": plan.path_length,
+                "level": grid.level,
+                "planner_type": planner_type,
+                "planning_time_ms": plan.planning_time_ms,
+                "expanded_nodes": plan.expanded_nodes,
+            }
+        else:
+            raise ValueError("planner_type must be astar, lpa_star, or wa_lpa_star")
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     samples = sample_route(result["points"], grid, request.thresholds, request.sample_interval_km)
     return {**result, "analysis": analyze_route(samples, request.thresholds), "metadata": metadata(grid)}
+
+
+@app.post("/api/route/decision")
+def route_decision(request: RouteDecisionRequest):
+    """Evaluate current/future forecast times and return a navigation decision."""
+    lons = [request.start[0], request.end[0]]
+    lats = [request.start[1], request.end[1]]
+    route_bbox = f"{min(lons) - 0.5},{min(lats) - 0.5},{max(lons) + 0.5},{max(lats) + 0.5}"
+    try:
+        valid_times = list(dict.fromkeys(request.candidate_valid_times))
+        candidates = []
+        if valid_times:
+            for valid_time in valid_times:
+                grid = load_grid(None, None, request.level, route_bbox, valid_time, request.source)
+                candidates.append({"forecast_time": valid_time, "wind_field": grid})
+        else:
+            if request.cycle is None or request.forecast_hour is None:
+                if request.valid_time:
+                    grid = load_grid(None, None, request.level, route_bbox, request.valid_time, request.source)
+                    candidates.append({"forecast_time": request.valid_time, "wind_field": grid})
+                else:
+                    raise ValueError("必须提供 candidate_valid_times，或提供 cycle/forecast_hour，或提供 valid_time")
+            else:
+                for offset in request.candidate_offsets_hours:
+                    forecast_hour = int(request.forecast_hour) + int(offset)
+                    grid = load_grid(request.cycle, forecast_hour, request.level, route_bbox, None, request.source)
+                    candidates.append({"forecast_time": grid.valid_time, "wind_field": grid})
+
+        return decide_navigation(
+            request.start,
+            request.end,
+            candidates,
+            max_wind_speed_threshold=request.max_wind_speed_threshold,
+            max_rain_threshold=request.max_rain_threshold,
+            min_agl_height=request.min_agl_height,
+            planner_type=request.planner_type,
+            max_cumulative_cost=request.max_cumulative_cost,
+            planner_hard_max_wind_speed=7.9,
+            thresholds=request.thresholds,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.post("/api/routes", status_code=201)

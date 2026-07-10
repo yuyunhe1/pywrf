@@ -4,6 +4,12 @@ const dataSources = [
   { value: 'wrf', label: 'WRF 降尺度' },
 ]
 
+const plannerTypes = [
+  { value: 'astar', label: 'A*' },
+  { value: 'lpa_star', label: 'LPA*' },
+  { value: 'wa_lpa_star', label: 'WA-LPA*' },
+]
+
 const props = defineProps({
   options: { type: Object, required: true },
   selection: { type: Object, required: true },
@@ -49,6 +55,7 @@ const formatRouteDate = (value) => {
     hour12: false,
   }).format(date)
 }
+
 </script>
 
 <template>
@@ -134,6 +141,16 @@ const formatRouteDate = (value) => {
           <h2 style="margin:0">航线规划</h2>
           <button class="ghost" style="width: auto; padding: 2px 8px; font-size: 11px; margin: 0; color: #ff4757; border-color: rgba(255,71,87,0.3);" @click="$emit('clear-route')">清除航线</button>
         </div>
+        <label>规划算法
+          <el-select
+            v-model="planner.algorithm"
+            class="glass-select"
+            popper-class="glass-select-popper"
+            placeholder="请选择规划算法"
+          >
+            <el-option v-for="item in plannerTypes" :key="item.value" :label="item.label" :value="item.value" />
+          </el-select>
+        </label>
         <label>航线名称<input v-model="planner.name" type="text" placeholder="默认航线 A" /></label>
         <div class="grid-3" style="margin-top: 8px;">
           <label>省份选择

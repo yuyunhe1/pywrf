@@ -231,10 +231,10 @@ python run_realtime_wrf_platform_cache.py \
 脚本会按当前 UTC 时间寻找最近 GFS 起报点，先探测 `f001`。如果最近起报点尚未发布，
 会自动尝试前一个 6 小时起报点。由于当前 WPS/WRF 流程使用 3 小时 GFS 强迫，脚本会为
 WRF 下载 `f000/f003/.../f024`；WRF 完成后导出前端使用的 `f001-f024` 小时风场缓存。
-实时下载使用 NOMADS hourly 0.25° 接口
-`filter_gfs_0p25_1hr.pl`，默认使用 `all_var=on&all_lev=on` 下载所有变量和层次。
-如需临时减小文件体积，可通过 `--gfs-vars APCP,HGT,PRMSL,SPFH,TMP,UGRD,VGRD`
-指定变量子集。
+实时下载使用 NOMADS hourly 0.25° 接口 `filter_gfs_0p25_1hr.pl`。默认下载 WRF
+驱动和平台缓存扩展变量所需的变量子集：
+`APCP,CAPE,CIN,GUST,HGT,HPBL,PRATE,PRES,PRMSL,RH,SPFH,TMP,UGRD,VGRD,VVEL`。
+如需临时调整，可通过 `--gfs-vars` 指定变量子集。
 
 缓存目录结构类似：
 
@@ -248,6 +248,9 @@ WRF 下载 `f000/f003/.../f024`；WRF 完成后导出前端使用的 `f001-f024`
 ```
 
 `.npz` 内包含规则经纬度网格 `lons/lats`、高度层 `levels_m`、以及每个高度层的 `u/v`。
+新版缓存还会尽可能导出扩展变量：`gust_surface`、`pblh`、`cape`、`cin`、`vvel`、
+`rh`、`spfh`、`tmp`、`hgt`、`hgt_surface`、`apcp`、`prate`。其中部分变量依赖 WRF
+输出本身是否包含对应诊断量；不存在时会跳过，不影响基础风场缓存。
 导出时已将 WRF d02 曲线网格近邻重采样为规则 lon/lat 网格，便于 Leaflet 和
 leaflet-velocity 读取。
 

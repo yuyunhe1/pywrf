@@ -125,8 +125,10 @@ const renderChart = async () => {
           if (param.seriesName === '总风速') {
             html += `<span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:#00f3ff;"></span> 风速: <b>${param.data}</b> m/s<br/>`;
           } else if (param.seriesName === '顺逆风分量' && sample && sample.headwind_component !== undefined) {
-            const headwindColor = sample.headwind_component > 0 ? '#ea5455' : '#28c76f';
-            html += `<span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:${headwindColor};"></span> 逆风分量: <b>${sample.headwind_component > 0 ? '+' : ''}${sample.headwind_component}</b> m/s`;
+            const isTailwind = sample.headwind_component >= 0;
+            const windComponentColor = isTailwind ? '#28c76f' : '#ea5455';
+            const windComponentLabel = isTailwind ? '顺风分量' : '逆风分量';
+            html += `<span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:${windComponentColor};"></span> ${windComponentLabel}: <b>${sample.headwind_component > 0 ? '+' : ''}${sample.headwind_component}</b> m/s`;
           }
         });
         return html;
@@ -181,13 +183,13 @@ const renderChart = async () => {
           color: function(params) {
             if (params.data > 0) {
               return new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                { offset: 0, color: 'rgba(234, 84, 85, 0.8)' },
-                { offset: 1, color: 'rgba(234, 84, 85, 0.0)' }
+                { offset: 0, color: 'rgba(40, 199, 111, 0.8)' },
+                { offset: 1, color: 'rgba(40, 199, 111, 0.0)' }
               ]);
             } else {
               return new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                { offset: 0, color: 'rgba(40, 199, 111, 0.0)' },
-                { offset: 1, color: 'rgba(40, 199, 111, 0.8)' }
+                { offset: 0, color: 'rgba(234, 84, 85, 0.0)' },
+                { offset: 1, color: 'rgba(234, 84, 85, 0.8)' }
               ]);
             }
           },
