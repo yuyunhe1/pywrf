@@ -260,6 +260,91 @@ def check_rsl_success(wrf_path: str, success_message: str, executable: str):
         )
 
 
+def sanitize_wrf_initial_conditions(wrf_path: str, max_dom: int):
+    """Clamp obviously invalid real.exe soil fields before wrf.exe starts.
+
+    GFS/WPS land-water mismatches near coastlines can occasionally leave land
+    cells with non-physical Noah LSM inputs, such as soil temperature near 0 K
+    or negative soil moisture. wrf.exe may then crash early with only SIGSEGV.
+    This keeps the correction conservative: only land cells with invalid or
+    clearly out-of-range values are changed.
+    """
+    try:
+        import numpy as np
+        from netCDF4 import Dataset
+    except Exception as exc:
+        logging.warning("WARN: WRF Model - cannot sanitize wrfinput soil fields: %s", exc)
+        return
+
+    for domain in range(1, max_dom + 1):
+        path = Path(wrf_path, f"wrfinput_d{domain:02d}")
+        if not path.exists():
+            continue
+
+        with Dataset(path, "r+") as dataset:
+            if "LANDMASK" not in dataset.variables:
+                continue
+
+            land = np.asarray(dataset.variables["LANDMASK"][:], dtype=bool)
+            land_2d = land[0] if land.ndim == 3 else land
+            changes = defaultdict(int)
+
+            if "TSLB" in dataset.variables and "TSK" in dataset.variables:
+                variable = dataset.variables["TSLB"]
+                values = np.asarray(variable[:], dtype=np.float64)
+                tsk = np.asarray(dataset.variables["TSK"][:], dtype=np.float64)
+                if tsk.ndim == 3:
+                    replacement = np.broadcast_to(tsk[:, np.newaxis, :, :], values.shape)
+                else:
+                    replacement = np.full_like(values, 290.0)
+                land_mask = np.broadcast_to(land_2d, values.shape[-2:])
+                land_mask = np.broadcast_to(land_mask, values.shape)
+                bad = land_mask & (~np.isfinite(values) | (values < 200.0) | (values > 330.0))
+                changes["TSLB"] = int(np.count_nonzero(bad))
+                if changes["TSLB"]:
+                    values[bad] = replacement[bad]
+                values[land_mask] = np.clip(values[land_mask], 220.0, 330.0)
+                variable[:] = values.astype(variable.dtype)
+
+            if "SMOIS" in dataset.variables:
+                variable = dataset.variables["SMOIS"]
+                values = np.asarray(variable[:], dtype=np.float64)
+                land_mask = np.broadcast_to(land_2d, values.shape[-2:])
+                land_mask = np.broadcast_to(land_mask, values.shape)
+                bad = land_mask & (~np.isfinite(values) | (values < 0.02) | (values > 0.60))
+                changes["SMOIS"] = int(np.count_nonzero(bad))
+                if changes["SMOIS"]:
+                    values[bad & ~np.isfinite(values)] = 0.20
+                    values[bad & (values < 0.02)] = 0.20
+                    values[bad & (values > 0.60)] = 0.60
+                values[land_mask] = np.clip(values[land_mask], 0.02, 0.60)
+                variable[:] = values.astype(variable.dtype)
+
+            if "SH2O" in dataset.variables and "SMOIS" in dataset.variables:
+                variable = dataset.variables["SH2O"]
+                values = np.asarray(variable[:], dtype=np.float64)
+                smois = np.asarray(dataset.variables["SMOIS"][:], dtype=np.float64)
+                land_mask = np.broadcast_to(land_2d, values.shape[-2:])
+                land_mask = np.broadcast_to(land_mask, values.shape)
+                bad = land_mask & (
+                    ~np.isfinite(values)
+                    | (values <= 0.0)
+                    | (values > smois)
+                )
+                changes["SH2O"] = int(np.count_nonzero(bad))
+                if changes["SH2O"]:
+                    values[bad] = smois[bad]
+                values[land_mask] = np.clip(values[land_mask], 0.0, smois[land_mask])
+                variable[:] = values.astype(variable.dtype)
+
+            if changes:
+                logging.info(
+                    "INFO: WRF Model - sanitized %s soil fields: %s",
+                    path.name,
+                    ", ".join(f"{name}={count}" for name, count in sorted(changes.items())),
+                )
+
+
 def link_metgrid_files(wps_path: str, wrf_path: str):
     metgrid_files = sorted(Path(wps_path).glob("met_em.d0*.nc"))
     if not metgrid_files:
@@ -503,6 +588,7 @@ def run_wrf(wps_path: str, wrf_path: str, wrfout_path: str, namelist_input_path:
     run_checked(mpi_command(num_proc, "./real.exe"), wrf_path, "WRF Model - real.exe")
     check_rsl_success(wrf_path, "SUCCESS COMPLETE REAL_EM INIT", "real.exe")
     logging.info("INFO: WRF Model - real.exe completed successfully")
+    sanitize_wrf_initial_conditions(wrf_path, max_dom)
 
     # Execute wrf.exe only after real.exe has completed successfully.
     remove_matching_files(wrf_path, ["rsl.error.*", "rsl.out.*"])

@@ -30,9 +30,21 @@ Run a synthetic demo:
 Run on a platform cache directory:
 
     python wind-risk-platform/backend/scripts/run_spacetime_route_demo.py ^
+      --data-source wrf ^
       --cache-dir data/wrf_platform_cache ^
       --cycle "2026-07-02 18:00 UTC" ^
       --forecast-hours 1,2,3,4,5,6 ^
+      --levels 100,200,300 ^
+      --start 118.5,30.75 ^
+      --end 119.5,31.0
+
+Run on existing GFS GRIB2 files:
+
+    python wind-risk-platform/backend/scripts/run_spacetime_route_demo.py ^
+      --data-source gfs ^
+      --gfs-data-dirs data/gdex_gfs_0p25_global ^
+      --cycle "2026-07-10 00:00 UTC" ^
+      --forecast-hours 0,1,2,3 ^
       --levels 100,200,300 ^
       --start 118.5,30.75 ^
       --end 119.5,31.0
@@ -41,6 +53,7 @@ Run on a platform cache directory:
 from __future__ import annotations
 
 import argparse
+import os
 import heapq
 import json
 import math
@@ -60,6 +73,7 @@ if str(BACKEND_ROOT) not in sys.path:
 from app.cost_evaluator import calculate_edge_cost, ensure_cost_config
 from app.route_service import haversine_km
 from app.wind_provider import WindGrid
+from app import gfs_provider
 
 
 State = tuple[int, int, int, int]  # time_index, level_index, row, col
@@ -105,6 +119,30 @@ def _as_text(value: Any) -> str:
 
 def _parse_csv_numbers(text: str, cast=float) -> list:
     return [cast(item.strip()) for item in text.split(",") if item.strip()]
+
+
+def _parse_bbox(text: str | None) -> tuple[float, float, float, float] | None:
+    if not text:
+        return None
+    values = _parse_csv_numbers(text, float)
+    if len(values) != 4:
+        raise ValueError("--bbox must be min_lon,min_lat,max_lon,max_lat")
+    min_lon, min_lat, max_lon, max_lat = values
+    if min_lon >= max_lon or min_lat >= max_lat:
+        raise ValueError("--bbox must satisfy min_lon < max_lon and min_lat < max_lat")
+    return min_lon, min_lat, max_lon, max_lat
+
+
+def _route_bbox(
+    start: tuple[float, float],
+    end: tuple[float, float],
+    buffer_deg: float,
+) -> tuple[float, float, float, float]:
+    min_lon = min(start[0], end[0]) - buffer_deg
+    max_lon = max(start[0], end[0]) + buffer_deg
+    min_lat = min(start[1], end[1]) - buffer_deg
+    max_lat = max(start[1], end[1]) + buffer_deg
+    return min_lon, min_lat, max_lon, max_lat
 
 
 def _pick_array(data: np.lib.npyio.NpzFile, keys: tuple[str, ...]) -> np.ndarray | None:
@@ -184,6 +222,118 @@ def _select_cache_files(args) -> list[Path]:
     return [cache_dir / item["path"] for item in records[: args.max_times]]
 
 
+def _configure_gfs_data_dirs(args) -> None:
+    if args.gfs_data_dirs:
+        paths = [str(Path(item.strip()).expanduser().resolve()) for item in args.gfs_data_dirs.split(os.pathsep) if item.strip()]
+        os.environ["GFS_DATA_DIRS"] = os.pathsep.join(paths)
+        gfs_provider.refresh_file_index()
+
+
+def _select_gfs_files(args) -> list[gfs_provider.GfsFile]:
+    _configure_gfs_data_dirs(args)
+    if args.valid_times:
+        valid_times = [item.strip() for item in args.valid_times.split(",") if item.strip()]
+        items = [gfs_provider.find_file_by_valid_time(value) for value in valid_times]
+        return items[: args.max_times]
+
+    files = list(gfs_provider.discover_files())
+    if not files:
+        raise FileNotFoundError(
+            "No GFS GRIB2 files were discovered. Set --gfs-data-dirs or GFS_DATA_DIRS to an existing GFS directory."
+        )
+
+    cycle = args.cycle
+    if not cycle:
+        cycle = sorted({item.cycle for item in files})[-1]
+        print(f"[GFS] --cycle not provided; using latest discovered cycle: {cycle}", file=sys.stderr)
+    hours = _parse_csv_numbers(args.forecast_hours, int) if args.forecast_hours else sorted(
+        {item.forecast_hour for item in files if item.cycle == cycle}
+    )
+    items = [gfs_provider.find_file(cycle, hour) for hour in hours]
+    return items[: args.max_times]
+
+
+def _normalize_gfs_surface_height(
+    data_array,
+    bbox: tuple[float, float, float, float] | None,
+    reference_lons: np.ndarray,
+    reference_lats: np.ndarray,
+) -> np.ndarray:
+    """Normalize GFS HGT/orography to the same lon/lat grid used by WindGrid."""
+    terrain = gfs_provider._crop_data_array(data_array, bbox).load().squeeze(drop=True)
+    lat_name = gfs_provider._coord_name(terrain, ("latitude", "lat"))
+    lon_name = gfs_provider._coord_name(terrain, ("longitude", "lon"))
+    values = np.asarray(terrain.transpose(lat_name, lon_name).values, dtype=float)
+    lats = np.asarray(terrain[lat_name].values, dtype=float).reshape(-1)
+    lons = np.asarray(terrain[lon_name].values, dtype=float).reshape(-1)
+
+    lons = ((lons + 180.0) % 360.0) - 180.0
+    lon_order = np.argsort(lons)
+    lat_order = np.argsort(lats)[::-1]
+    lons, lats = lons[lon_order], lats[lat_order]
+    values = values[np.ix_(lat_order, lon_order)]
+
+    unique_lons, unique_indices = np.unique(np.round(lons, 10), return_index=True)
+    lons = unique_lons
+    values = values[:, unique_indices]
+
+    lon_indices = np.asarray([int(np.abs(lons - lon).argmin()) for lon in reference_lons])
+    lat_indices = np.asarray([int(np.abs(lats - lat).argmin()) for lat in reference_lats])
+    if not np.allclose(lons[lon_indices], reference_lons, atol=1e-6) or not np.allclose(lats[lat_indices], reference_lats, atol=1e-6):
+        raise ValueError("GFS terrain HGT grid does not align with normalized wind grid")
+    return values[np.ix_(lat_indices, lon_indices)]
+
+
+def _load_gfs_terrain(
+    item: gfs_provider.GfsFile,
+    bbox: tuple[float, float, float, float] | None,
+    reference_lons: np.ndarray,
+    reference_lats: np.ndarray,
+) -> np.ndarray:
+    terrain = gfs_provider._open_surface_height(item.path)
+    return _normalize_gfs_surface_height(terrain, bbox, reference_lons, reference_lats)
+
+
+def _load_gfs_slices(
+    args,
+    start: tuple[float, float],
+    end: tuple[float, float],
+) -> list[TimeSlice]:
+    requested_levels = _parse_csv_numbers(args.levels, float) if args.levels else [100.0, 200.0, 300.0]
+    bbox = _parse_bbox(args.bbox)
+    if bbox is None:
+        bbox = _route_bbox(start, end, args.route_buffer_deg)
+        print(f"[GFS] auto bbox={','.join(f'{value:.3f}' for value in bbox)}", file=sys.stderr)
+
+    slices: list[TimeSlice] = []
+    for item in _select_gfs_files(args):
+        grids = [
+            gfs_provider.get_grid(item.cycle, item.forecast_hour, f"{int(round(level))}m AGL", bbox)
+            for level in requested_levels
+        ]
+        reference = grids[0]
+        for grid in grids[1:]:
+            if not np.allclose(grid.lons, reference.lons) or not np.allclose(grid.lats, reference.lats):
+                raise ValueError(f"GFS grids for {item.valid_time} do not share the same lon/lat grid")
+
+        terrain = _load_gfs_terrain(item, bbox, reference.lons, reference.lats)
+        slices.append(
+            TimeSlice(
+                valid_time=item.valid_time,
+                forecast_hour=item.forecast_hour,
+                lons=reference.lons,
+                lats=reference.lats,
+                levels_m=np.asarray(requested_levels, dtype=float),
+                u=np.stack([grid.u for grid in grids]),
+                v=np.stack([grid.v for grid in grids]),
+                terrain=terrain,
+                rain=None,
+                source_path=str(item.path),
+            )
+        )
+    return slices
+
+
 def _synthetic_slices() -> list[TimeSlice]:
     lons = np.linspace(118.0, 119.0, 11)
     lats = np.linspace(31.0, 30.0, 11)
@@ -241,10 +391,17 @@ def _subset_levels(slice_: TimeSlice, requested_levels: list[float] | None) -> T
     )
 
 
-def load_slices(args) -> list[TimeSlice]:
-    slices = _synthetic_slices() if args.demo else [_load_npz_slice(path) for path in _select_cache_files(args)]
+def load_slices(args, start: tuple[float, float], end: tuple[float, float]) -> list[TimeSlice]:
+    if args.demo:
+        slices = _synthetic_slices()
+    elif args.data_source == "gfs":
+        slices = _load_gfs_slices(args, start, end)
+    else:
+        slices = [_load_npz_slice(path) for path in _select_cache_files(args)]
+
     requested_levels = _parse_csv_numbers(args.levels, float) if args.levels else None
-    slices = [_subset_levels(item, requested_levels) for item in slices]
+    if args.demo or args.data_source != "gfs":
+        slices = [_subset_levels(item, requested_levels) for item in slices]
     reference = slices[0]
     for item in slices[1:]:
         if not np.allclose(item.lons, reference.lons) or not np.allclose(item.lats, reference.lats):
@@ -484,7 +641,13 @@ class SpacetimeAStar:
 def parse_args():
     parser = argparse.ArgumentParser(description="Cross-time/cross-altitude Spacetime A* route planning demo.")
     parser.add_argument("--demo", action="store_true", help="Run on a synthetic in-memory dataset.")
+    parser.add_argument("--data-source", choices=("wrf", "gfs"), default="wrf", help="Use WRF platform npz cache or GFS GRIB2 files.")
     parser.add_argument("--cache-dir", type=Path, default=Path("data/wrf_platform_cache"))
+    parser.add_argument(
+        "--gfs-data-dirs",
+        default=None,
+        help="GFS GRIB2 search roots separated by the OS path separator; defaults to GFS_DATA_DIRS/provider defaults.",
+    )
     parser.add_argument("--cycle", default=None, help='Cycle label, e.g. "2026-07-02 18:00 UTC".')
     parser.add_argument("--forecast-hours", default="1,2,3,4,5,6", help="Comma-separated forecast hours.")
     parser.add_argument("--valid-times", default=None, help="Comma-separated UTC/BJ valid-time labels.")
@@ -492,6 +655,13 @@ def parse_args():
     parser.add_argument("--levels", default="100,200,300", help="Comma-separated AGL levels in meters.")
     parser.add_argument("--start", default="118.0,30.5", help="lon,lat")
     parser.add_argument("--end", default="119.0,30.5", help="lon,lat")
+    parser.add_argument("--bbox", default=None, help="Optional data bbox: min_lon,min_lat,max_lon,max_lat.")
+    parser.add_argument(
+        "--route-buffer-deg",
+        type=float,
+        default=0.75,
+        help="Auto bbox buffer around start/end when --data-source gfs and --bbox is omitted.",
+    )
     parser.add_argument("--cruise-speed-mps", type=float, default=10.0)
     parser.add_argument("--vertical-speed-mps", type=float, default=2.0)
     parser.add_argument("--max-wind-speed", type=float, default=7.9)
@@ -504,6 +674,11 @@ def parse_args():
 
 def main() -> None:
     args = parse_args()
+    start = tuple(_parse_csv_numbers(args.start, float))
+    end = tuple(_parse_csv_numbers(args.end, float))
+    if len(start) != 2 or len(end) != 2:
+        raise ValueError("--start and --end must be lon,lat")
+
     config = SpacetimeConfig(
         cruise_speed_mps=args.cruise_speed_mps,
         vertical_speed_mps=args.vertical_speed_mps,
@@ -512,19 +687,16 @@ def main() -> None:
         max_adjacent_msl_change_m=args.max_adjacent_msl_change_m,
         max_climb_gradient=args.max_climb_gradient,
     )
-    slices = load_slices(args)
-    start = tuple(_parse_csv_numbers(args.start, float))
-    end = tuple(_parse_csv_numbers(args.end, float))
-    if len(start) != 2 or len(end) != 2:
-        raise ValueError("--start and --end must be lon,lat")
+    slices = load_slices(args, start, end)
 
-    print(f"[DATA] time_slices={len(slices)} levels={slices[0].levels_m.tolist()}")
+    print(f"[DATA] source={'synthetic' if args.demo else args.data_source} time_slices={len(slices)} levels={slices[0].levels_m.tolist()}")
     print(f"[DATA] first_valid_time={slices[0].valid_time} terrain={'yes' if np.any(slices[0].terrain) else 'missing/zero'}")
     planner = SpacetimeAStar(slices, start, end, config)
     t0 = time.perf_counter()
     result = planner.plan()
     result["summary"]["planning_time_ms"] = round((time.perf_counter() - t0) * 1000, 3)
     result["config"] = {
+        "data_source": "synthetic" if args.demo else args.data_source,
         "cruise_speed_mps": config.cruise_speed_mps,
         "vertical_speed_mps": config.vertical_speed_mps,
         "max_wind_speed": config.max_wind_speed,

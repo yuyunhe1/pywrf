@@ -39,12 +39,15 @@ DEFAULT_WPS_VARS = (
     "GUST",
     "HGT",
     "HPBL",
+    "MSLET",
     "PRATE",
     "PRES",
     "PRMSL",
     "RH",
+    "SOILW",
     "SPFH",
     "TMP",
+    "TSOIL",
     "UGRD",
     "VGRD",
     "VVEL",
@@ -89,6 +92,13 @@ def build_gfs_url(cycle: datetime, forecast_hour: int, variables: tuple[str, ...
         params["all_var"] = "on"
     params["all_lev"] = "on"
     return f"{NOMADS_FILTER_URL}?{urllib.parse.urlencode(params)}"
+
+
+def parse_gfs_vars(text: str) -> tuple[str, ...] | None:
+    value = text.strip()
+    if not value or value.lower() in {"all", "all_var", "none", "*"}:
+        return None
+    return tuple(item.strip().upper() for item in value.split(",") if item.strip())
 
 
 def gdex_style_path(gfs_dir: Path, cycle: datetime, forecast_hour: int) -> Path:
@@ -152,7 +162,7 @@ def choose_cycle(args) -> datetime:
 
 
 def download_wrf_forcing(cycle: datetime, args) -> None:
-    # WRF/WPS in this repository is configured for 3-hour forcing. The platform
+    # WRF/WPS forcing interval follows --gfs-interval-hours. The platform
     # exports f001-f024 from the completed hourly WRF output.
     required_hours = list(range(0, args.forecast_hours + 1, args.gfs_interval_hours))
     for hour in required_hours:
@@ -170,6 +180,7 @@ def run_wrf(cycle: datetime, args) -> None:
     env["WRF_START_DATE"] = cycle.strftime("%Y-%m-%d_%H:%M:%S")
     env["GFS_CYCLE_TIME"] = cycle.strftime("%Y-%m-%d_%H:%M:%S")
     env["WRF_FORECAST_HOURS"] = str(args.forecast_hours)
+    env["WRF_GFS_INTERVAL_HOURS"] = str(args.gfs_interval_hours)
     env["WRF_NUM_PROC"] = str(args.num_proc)
     env["REUSE_GEOGRID"] = "1" if args.reuse_geogrid else "0"
     command = [sys.executable, "main.py"]
@@ -624,12 +635,15 @@ def parse_args():
     parser.add_argument("--cache-dir", type=Path, default=Path("/root/pyWRF-automation/data/wrf_platform_cache"))
     parser.add_argument("--forecast-hours", type=int, default=24)
     parser.add_argument("--export-start-fhour", type=int, default=1)
-    parser.add_argument("--gfs-interval-hours", type=int, default=3)
+    parser.add_argument("--gfs-interval-hours", type=int, default=1)
     parser.add_argument(
         "--gfs-vars",
-        type=lambda text: tuple(item.strip().upper() for item in text.split(",") if item.strip()),
-        default=DEFAULT_WPS_VARS,
-        help="Optional NOMADS variable subset, comma-separated.",
+        type=parse_gfs_vars,
+        default=None,
+        help=(
+            "NOMADS variable subset, comma-separated. "
+            "Default/all downloads all variables required by the full GFS pgrb2 file."
+        ),
     )
     parser.add_argument("--cycle-fallback-count", type=int, default=4)
     parser.add_argument("--delay-hours", type=int, default=0)

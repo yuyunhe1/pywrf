@@ -21,7 +21,12 @@ namelist_wps_file       = f"{wps_dir}/namelist.wps"         # Path to namelist.w
 namelist_wrf_file       = f"{wrf_dir}/namelist.input"       # Path to namelist.input file
 
 # WPS and WRF parameters
-gfs_interval_seconds    = 10800 # GFS input interval: 3 hours
+if os.environ.get("WRF_GFS_INTERVAL_SECONDS"):
+    gfs_interval_seconds = int(os.environ["WRF_GFS_INTERVAL_SECONDS"])
+else:
+    gfs_interval_seconds = int(float(os.environ.get("WRF_GFS_INTERVAL_HOURS", "1")) * 3600)
+if gfs_interval_seconds <= 0:
+    sys.exit("ERROR: WRF_GFS_INTERVAL_SECONDS / WRF_GFS_INTERVAL_HOURS must be greater than zero")
 max_dom                 = 2     # Maximum WPS and WRF domain
 num_proc                = int(os.environ.get("WRF_NUM_PROC", "4"))
 wrfout_saved_domain     = 2     # which wrfout file will be saved

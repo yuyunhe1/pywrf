@@ -364,7 +364,12 @@ def _open_isobaric_dataset(path: Path):
 
 def _open_surface_height(path: Path):
     errors = []
-    for filters in ({"typeOfLevel": "surface"}, {"typeOfLevel": "heightAboveGround", "level": 0}):
+    for filters in (
+        {"stepType": "instant", "typeOfLevel": "surface"},
+        {"typeOfLevel": "surface"},
+        {"stepType": "instant", "typeOfLevel": "heightAboveGround", "level": 0},
+        {"typeOfLevel": "heightAboveGround", "level": 0},
+    ):
         try:
             dataset = _open_dataset(path, filters)
             try:
