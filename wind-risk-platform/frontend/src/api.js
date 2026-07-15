@@ -35,3 +35,16 @@ export const planRoute = (selection, start, end, thresholds, plannerType = 'wa_l
 export const listRoutes = () => api.get('/routes').then(({ data }) => data)
 export const saveRoute = (route) => api.post('/routes', route).then(({ data }) => data)
 export const deleteRoute = (routeId) => api.delete(`/routes/${routeId}`)
+
+export const listExportedRoutes = async () => {
+  const { data } = await api.get('/exported-routes')
+  return data
+}
+
+export const getExportedRouteUrl = (fileName) => {
+  return `${api.defaults.baseURL}/exported-routes/${fileName}`
+}
+
+export const deleteExportedRoute = async (fileName) => {
+  await api.delete(`/exported-routes/${fileName}`)
+}

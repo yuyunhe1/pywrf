@@ -19,36 +19,43 @@ button, input, select { font: inherit; }
 
 .app-title {
   position: absolute;
-  top: 10px;
+  top: 12px;
   left: 50%;
-  z-index: 700;
-  min-width: 520px;
-  padding: 10px 24px;
-  text-align: center;
   transform: translateX(-50%);
-  background: linear-gradient(180deg, rgba(7, 18, 28, 0.78), rgba(7, 18, 28, 0.38));
-  border: 1px solid rgba(0, 243, 255, 0.18);
-  border-radius: 999px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), inset 0 0 24px rgba(0, 243, 255, 0.05);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  pointer-events: none;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 12px 24px;
+  border-radius: 8px;
+  border: 1px solid rgba(68, 215, 182, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  display: inline-flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: max-content;
 }
 
 .app-title h1 {
-  margin: 2px 0 0;
-  font-size: 24px;
-  font-weight: 800;
-  letter-spacing: 1px;
+  margin: 0 0 4px;
+  font-size: 25px;
+  line-height: 1.3;
+  color: #fff;
+  text-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
+  letter-spacing: 2px;
+  text-align: center;
+  white-space: nowrap;
 }
 
-.app-title-eyebrow {
+.app-title .en-title {
   margin: 0;
-  color: #7dd3fc;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.22em;
+  font-size: 14px;
+  color: var(--glow-cyan);
+  opacity: 0.85;
   text-transform: uppercase;
+  width: 100%;
+  text-align: center;
+  letter-spacing: 0.5px;
 }
 
 /* 悬浮磨砂玻璃面板 */
@@ -91,10 +98,31 @@ button, input, select { font: inherit; }
 .analysis-panel { right: 12px; width: 320px; }
 
 h1 { margin: 0 0 4px; font-size: 18px; line-height: 1.3; color: #fff; text-shadow: 0 0 10px rgba(0, 243, 255, 0.3); }
-h2 { margin: 0 0 10px; font-size: 14px; color: #dcecf7; display: flex; align-items: center; gap: 6px; }
-h2::before { content: ''; display: inline-block; width: 3px; height: 12px; background: var(--glow-cyan); border-radius: 2px; box-shadow: 0 0 6px var(--glow-cyan); }
+h2 { 
+  margin: 0 0 14px; 
+  padding-bottom: 6px;
+  font-size: 16px; 
+  font-weight: 700; 
+  color: #00f3ff; 
+  display: flex; 
+  align-items: center; 
+  gap: 8px; 
+  letter-spacing: 1px; 
+  text-shadow: 0 0 8px rgba(0, 243, 255, 0.4);
+  border-bottom: 1px solid rgba(0, 243, 255, 0.15);
+}
+h2::before { content: ''; display: inline-block; width: 4px; height: 16px; background: #00f3ff; border-radius: 2px; box-shadow: 0 0 10px #00f3ff; }
 h3 { margin: 0 0 8px; color: #b9cddd; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
-section { padding: 12px 0; border-top: 1px solid rgba(255, 255, 255, 0.05); flex-shrink: 0; }
+
+section { 
+  padding: 14px; 
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(68, 215, 182, 0.15);
+  border-radius: 8px;
+  margin-bottom: 14px; 
+  flex-shrink: 0;
+  box-shadow: inset 0 0 20px rgba(0,0,0,0.2);
+}
 
 .eyebrow { margin: 0; color: var(--glow-cyan); font-size: 10px; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; text-shadow: 0 0 8px rgba(0, 243, 255, 0.4); }
 .subtle { margin: 4px 0 0; color: #7890a5; font-size: 11px; line-height: 1.5; }
@@ -374,4 +402,119 @@ button:disabled { opacity: .4; cursor: not-allowed; transform: none !important; 
   .grid-3 { grid-template-columns: 1fr; }
   .analysis-panel { position: absolute; right: 12px; top: 12px; bottom: 12px; width: 300px; transform: translateX(calc(100% + 24px)); transition: transform .3s cubic-bezier(0.4, 0, 0.2, 1); }
   .app-shell:hover .analysis-panel { transform: translateX(0); }
+}
+
+/* -------------------------------------
+   Element Plus 弹窗及表格玻璃态主题定制
+------------------------------------- */
+
+/* Element Plus 对话框整体位置居中（覆盖默认行为） */
+.el-overlay-dialog {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.glass-dialog {
+  margin: 0 !important; /* 必须覆盖 element 默认的 margin-top */
+  background: rgba(7, 18, 28, 0.85) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(68, 215, 182, 0.25) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6) !important;
+}
+
+.glass-dialog .el-dialog__title {
+  color: #00f3ff !important;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+.glass-dialog .el-dialog__headerbtn .el-dialog__close {
+  color: #8fb6c9 !important;
+}
+
+.glass-dialog .el-dialog__headerbtn:hover .el-dialog__close {
+  color: #00f3ff !important;
+}
+
+.glass-dialog .el-dialog__body {
+  padding: 10px 20px 20px !important;
+}
+
+/* 表格玻璃态 */
+.glass-table {
+  background-color: transparent !important;
+  --el-table-border-color: rgba(68, 215, 182, 0.15);
+  --el-table-border: 1px solid var(--el-table-border-color);
+  --el-table-text-color: #eaf5ff;
+  --el-table-header-text-color: #00f3ff;
+  --el-table-row-hover-bg-color: rgba(0, 243, 255, 0.1);
+  --el-table-current-row-bg-color: rgba(0, 243, 255, 0.15);
+  --el-table-header-bg-color: rgba(0, 0, 0, 0.4);
+  --el-table-bg-color: transparent;
+  --el-table-tr-bg-color: transparent;
+  --el-table-expanded-cell-bg-color: transparent;
+}
+
+.glass-table th.el-table__cell {
+  background-color: rgba(0, 0, 0, 0.4) !important;
+  border-bottom: 1px solid rgba(68, 215, 182, 0.25) !important;
+  font-weight: 600;
+}
+
+.glass-table tr {
+  background-color: transparent !important;
+}
+
+.glass-table td.el-table__cell {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  background-color: transparent !important;
+}
+
+.glass-table .el-table__body tr:hover > td.el-table__cell {
+  background-color: rgba(0, 243, 255, 0.1) !important;
+}
+
+/* 修复表格固定列的背景透明问题（防止文字重叠） */
+.glass-table .el-table-fixed-column--right,
+.glass-table .el-table-fixed-column--left {
+  background-color: rgba(7, 18, 28, 0.95) !important;
+}
+
+.glass-table .el-table__empty-text {
+  color: #8fb6c9;
+}
+
+/* 覆盖全局 button 样式对 el-button 的污染 */
+.glass-table .el-button {
+  width: auto !important;
+  transform: none !important;
+  box-shadow: none !important;
+  border: none !important;
+  background-color: transparent !important;
+  padding: 4px 8px !important;
+  margin: 0 !important;
+}
+.glass-table .el-button:hover {
+  transform: none !important;
+  box-shadow: none !important;
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.glass-table-btn {
+  color: #00f3ff !important;
+  font-weight: 600 !important;
+}
+.glass-table-btn:hover {
+  color: #5be0c3 !important;
+}
+
+.glass-table .el-button--danger {
+  color: #ff4757 !important;
+  font-weight: 600 !important;
+}
+.glass-table .el-button--danger:hover {
+  color: #ff6b81 !important;
 }

@@ -29,11 +29,11 @@ let heatLegend
 const CHINA_INITIAL_BOUNDS = [[18.0, 73.0], [54.0, 135.0]]
 
 const riskColor = (risk) => ({
-  一级风: '#28c76f',
-  二级风: '#f4c95d',
-  三级风: '#ff9f43',
-  四级风: '#ea5455',
-  大于四级: '#9b51e0',
+  一级风: '#00b84b', // 加深、加重的绿色
+  二级风: '#e6a100', // 加深、加重的土黄色
+  三级风: '#e66b00', // 加深、加重的深橙色
+  四级风: '#c21e1f', // 加深、加重的暗红色
+  大于四级: '#6a1b9a', // 加深、加重的深紫色
 }[risk] || '#eaf5ff')
 
 const renderWind = () => {
@@ -43,11 +43,11 @@ const renderWind = () => {
   if (props.layers.velocity && props.wind?.velocity && L.velocityLayer) {
     const [uSource, vSource] = props.wind.velocity
     const bands = [
-      { max: props.thresholds.safe, color: '#28c76f' },
-      { max: props.thresholds.notice, color: '#f4c95d' },
-      { max: props.thresholds.warning, color: '#ff9f43' },
-      { max: props.thresholds.danger, color: '#ea5455' },
-      { max: Infinity, color: '#9b51e0' },
+      { max: props.thresholds.safe, color: '#00b84b' },
+      { max: props.thresholds.notice, color: '#e6a100' },
+      { max: props.thresholds.warning, color: '#e66b00' },
+      { max: props.thresholds.danger, color: '#c21e1f' },
+      { max: Infinity, color: '#6a1b9a' },
     ]
     let minimum = -Infinity
     bands.forEach((band, bandIndex) => {
@@ -57,6 +57,23 @@ const renderWind = () => {
         return
       }
       
+      // 动态根据风级调节粒子粗细和密度，风级越高，粒子越粗、密度越大
+      // 保持所有级别的拖尾长度（速度）一致，不再随风级变化
+      let lineWidth = 4.0
+      let particleMultiplier = 1 / 400
+      let velocityScale = 0.007 // 统一使用这个拖尾长度参数
+      
+      if (bandIndex === 2) { // 三级风
+        lineWidth = 4.0
+        particleMultiplier = 1 / 400
+      } else if (bandIndex === 3) { // 四级风
+        lineWidth = 4.0
+        particleMultiplier = 1 / 400
+      } else if (bandIndex === 4) { // 大于四级风
+        lineWidth = 4.0
+        particleMultiplier = 1 / 400
+      }
+
       const u = uSource.data.map((value, index) => {
         const speed = Math.hypot(value, vSource.data[index])
         return speed > minimum && speed <= band.max ? value : null
@@ -65,10 +82,12 @@ const renderWind = () => {
       const layer = L.velocityLayer({
         data: [{ ...uSource, data: u }, { ...vSource, data: v }],
         displayValues: false,
-        velocityScale: 0.007,
+        velocityScale: velocityScale,
         maxVelocity: Math.max(band.max, props.thresholds.danger + 5),
-        lineWidth: 2.6,
-        particleMultiplier: 1 / 650,
+        lineWidth: lineWidth,
+        particleMultiplier: particleMultiplier,
+        particleAge: 60, // 稍微恢复一点寿命，让线段不至于太碎
+        opacity: 0.98, // 【关键】极高透明度衰减系数：尾巴衰减极慢，颜色会非常重、非常实
         colorScale: [band.color, band.color],
       }).addTo(map)
       velocityLayers.push(layer)
@@ -78,11 +97,11 @@ const renderWind = () => {
 }
 
 const heatBlocks = computed(() => [
-  { min: 0, max: props.thresholds.safe, color: '#28c76f', label: `0-${props.thresholds.safe}` },
-  { min: props.thresholds.safe, max: props.thresholds.notice, color: '#f4c95d', label: `${props.thresholds.safe}-${props.thresholds.notice}` },
-  { min: props.thresholds.notice, max: props.thresholds.warning, color: '#ff9f43', label: `${props.thresholds.notice}-${props.thresholds.warning}` },
-  { min: props.thresholds.warning, max: props.thresholds.danger, color: '#ea5455', label: `${props.thresholds.warning}-${props.thresholds.danger}` },
-  { min: props.thresholds.danger, max: Infinity, color: '#9b51e0', label: `${props.thresholds.danger}+` }
+  { min: 0, max: props.thresholds.safe, color: '#00b84b', label: `0-${props.thresholds.safe}` },
+  { min: props.thresholds.safe, max: props.thresholds.notice, color: '#e6a100', label: `${props.thresholds.safe}-${props.thresholds.notice}` },
+  { min: props.thresholds.notice, max: props.thresholds.warning, color: '#e66b00', label: `${props.thresholds.notice}-${props.thresholds.warning}` },
+  { min: props.thresholds.warning, max: props.thresholds.danger, color: '#c21e1f', label: `${props.thresholds.warning}-${props.thresholds.danger}` },
+  { min: props.thresholds.danger, max: Infinity, color: '#6a1b9a', label: `${props.thresholds.danger}+` }
 ])
 const activeBlocks = ref([])
 

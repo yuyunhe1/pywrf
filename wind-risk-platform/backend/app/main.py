@@ -7,7 +7,36 @@ import numpy as np
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, FileResponse
+import json
+from datetime import datetime
+from pathlib import Path
+from .models import RouteAnalyzeRequest, RouteDecisionRequest, RoutePlanRequest, RouteRecord
+
+EXPORT_DIR = Path("data/exported_routes")
+EXPORT_DIR.mkdir(parents=True, exist_ok=True)
+
+def export_route_to_json(record: RouteRecord):
+    waypoints = []
+    for idx, point in enumerate(record.points):
+        lon = point[0]
+        lat = point[1]
+        ele = point[2] if len(point) > 2 else 0
+        waypoints.append({
+            "point_index": idx + 1,
+            "lon": lon,
+            "lat": lat,
+            "ele": ele
+        })
+    
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    # Sanitize name to avoid invalid filename characters
+    safe_name = "".join(c for c in record.name if c.isalnum() or c in (' ', '-', '_')).strip()
+    file_name = f"{safe_name}_{timestamp}.json"
+    file_path = EXPORT_DIR / file_name
+    
+    with open(file_path, "w", encoding="utf-8") as f:
+        json.dump(waypoints, f, ensure_ascii=False, indent=2)
 
 from .data_provider import (
     availability,
@@ -23,7 +52,6 @@ from .data_provider import (
 from .decision_service import decide_navigation
 from .grid_planner_lpa_star import LPAStarPlanner
 from .grid_planner_wa_lpa_star import WALPAStarPlanner
-from .models import RouteAnalyzeRequest, RouteDecisionRequest, RoutePlanRequest, RouteRecord
 from .routing import plan_route
 from . import route_storage, wrf_cache_provider
 from .route_service import analyze_route, sample_route
@@ -344,6 +372,7 @@ def route_decision(request: RouteDecisionRequest):
 
 @app.post("/api/routes", status_code=201)
 def create_route(record: RouteRecord):
+    export_route_to_json(record)
     return route_storage.save_route(record.model_dump())
 
 
@@ -361,6 +390,7 @@ def route(route_id: str):
 
 @app.put("/api/routes/{route_id}")
 def update_route(route_id: str, record: RouteRecord):
+    export_route_to_json(record)
     payload = record.model_dump()
     payload["_update"] = True
     result = route_storage.save_route(payload, route_id)
@@ -372,3 +402,42 @@ def update_route(route_id: str, record: RouteRecord):
 def delete_route(route_id: str):
     if not route_storage.delete_route(route_id):
         raise HTTPException(status_code=404, detail="未找到该航线记录")
+
+@app.get("/api/exported-routes")
+def list_exported_routes():
+    files = []
+    if EXPORT_DIR.exists():
+        for file in EXPORT_DIR.glob("*.json"):
+            parts = file.stem.rsplit("_", 1)
+            name = parts[0] if len(parts) > 1 else file.stem
+            time_str = parts[1] if len(parts) > 1 else ""
+            
+            try:
+                dt = datetime.strptime(time_str, "%Y%m%d%H%M%S")
+                formatted_time = dt.strftime("%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                formatted_time = time_str
+                
+            files.append({
+                "file_name": file.name,
+                "route_name": name,
+                "time": formatted_time,
+                "timestamp": file.stat().st_mtime
+            })
+    files.sort(key=lambda x: x["timestamp"], reverse=True)
+    return files
+
+@app.get("/api/exported-routes/{file_name}")
+def get_exported_route(file_name: str):
+    file_path = EXPORT_DIR / file_name
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="文件不存在")
+    return FileResponse(file_path, media_type="application/json", filename=file_name)
+
+@app.delete("/api/exported-routes/{file_name}", status_code=204)
+def delete_exported_route(file_name: str):
+    file_path = EXPORT_DIR / file_name
+    if file_path.exists():
+        file_path.unlink()
+    else:
+        raise HTTPException(status_code=404, detail="文件不存在")

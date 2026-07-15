@@ -1,7 +1,7 @@
 <script setup>
 import L from 'leaflet'
 import { onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import { analyzeRoute, deleteRoute, getGfsDownloadStatus, getHeatmap, getPoint, getTimes, getWind, listRoutes, planRoute, saveRoute } from './api'
+import { analyzeRoute, deleteRoute, getGfsDownloadStatus, getHeatmap, getPoint, getTimes, getWind, listRoutes, planRoute, saveRoute, deleteExportedRoute, listExportedRoutes } from './api'
 import AnalysisPanel from './components/AnalysisPanel.vue'
 import ControlPanel from './components/ControlPanel.vue'
 import WindMap from './components/WindMap.vue'
@@ -314,6 +314,20 @@ const refreshRoutes = async () => {
 const removeRoute = async (id) => { 
   const deletedRoute = savedRoutes.value.find(r => r.route_id === id);
   await deleteRoute(id); 
+  
+  // 删除对应的 JSON 文件
+  if (deletedRoute) {
+    try {
+      const jsonFiles = await listExportedRoutes()
+      const targetJson = jsonFiles.find(f => f.route_name === deletedRoute.name)
+      if (targetJson) {
+        await deleteExportedRoute(targetJson.file_name)
+      }
+    } catch (e) {
+      console.error('删除对应的 JSON 文件失败:', e)
+    }
+  }
+
   await refreshRoutes();
   if (deletedRoute && planner.name === deletedRoute.name) {
     clearRoute();
@@ -400,8 +414,8 @@ onBeforeUnmount(() => {
 <template>
   <div class="app-shell">
     <header class="app-title">
-      <p class="app-title-eyebrow">WIND FORECAST FOR LOW-ALTITUDE DECISION</p>
       <h1>面向低空无人机通航决策的风场预报平台</h1>
+      <p class="en-title">LOW-ALTITUDE UAV FLIGHT DECISION WIND FORECAST PLATFORM</p>
     </header>
     <ControlPanel :options="options" :selection="selection" :layers="layers" :thresholds="thresholds" :planner="planner" :saved-routes="savedRoutes" :area-selection="areaSelection" :area-presets="areaPresets" :loading="loading" :picking="picking" @reload="loadWindField" @clear-route="clearRoute" @pick-start="picking = 'start'" @pick-end="picking = 'end'" @plan-route="runPlan" @save-route="persistRoute" @load-routes="refreshRoutes" @delete-route="removeRoute" @focus-area="focusArea" />
     <WindMap ref="mapRef" :wind="wind" :heatmap="heatmap" :layers="layers" :thresholds="thresholds" :analysis="analysis" :planner="planner" @point-click="handleMapClick" @route-created="runRouteAnalysis" @zoom-changed="useZoomDefaultLayer" />
