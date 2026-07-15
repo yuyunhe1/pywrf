@@ -26,7 +26,7 @@ class Thresholds(BaseModel):
 class RouteAnalyzeRequest(BaseModel):
     """Route analysis request. Each route point uses [longitude, latitude]."""
 
-    points: list[tuple[float, float]] = Field(min_length=2)
+    points: list[tuple[float, ...]] = Field(min_length=2)
     cycle: str | None = None
     forecast_hour: int | None = Field(default=None, ge=0)
     valid_time: str | None = None
@@ -49,8 +49,8 @@ class RoutePlanRequest(RouteAnalyzeRequest):
     end: tuple[float, float]
     planner_type: str = "wa_lpa_star"
     aircraft_model: str = "fixed_wing"
-    planning_strategy: str = "distance_priority"
-    points: list[tuple[float, float]] = Field(default_factory=lambda: [(0, 0), (0, 0)])
+    planning_strategy: str = "wind_avoidance"
+    points: list[tuple[float, ...]] = Field(default_factory=lambda: [(0, 0), (0, 0)])
 
 
 class RouteDecisionRequest(BaseModel):
@@ -77,7 +77,12 @@ class RouteRecord(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     start: tuple[float, float]
     end: tuple[float, float]
-    points: list[tuple[float, float]] = Field(min_length=2)
+    points: list[tuple[float, ...]] = Field(min_length=2)
     level: str
     cycle: str | None = None
     forecast_hour: int | None = None
+
+
+class ExportedRouteRenameRequest(BaseModel):
+    route_name: str | None = Field(default=None, min_length=1, max_length=120)
+    file_name: str | None = Field(default=None, min_length=1, max_length=180)

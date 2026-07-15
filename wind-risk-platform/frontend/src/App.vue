@@ -1,7 +1,7 @@
 <script setup>
 import L from 'leaflet'
 import { onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import { analyzeRoute, deleteRoute, getGfsDownloadStatus, getHeatmap, getPoint, getTimes, getWind, listRoutes, planRoute, saveRoute, deleteExportedRoute, listExportedRoutes } from './api'
+import { analyzeRoute, deleteRoute, getExportedRouteUrl, getGfsDownloadStatus, getHeatmap, getPoint, getTimes, getWind, listRoutes, planRoute, saveRoute } from './api'
 import AnalysisPanel from './components/AnalysisPanel.vue'
 import ControlPanel from './components/ControlPanel.vue'
 import WindMap from './components/WindMap.vue'
@@ -18,12 +18,13 @@ const metadata = ref()
 const loading = ref(false)
 const error = ref('')
 const mapRef = ref()
+const controlPanelRef = ref()
 let routePoints = []
 const planner = reactive({
   name: '默认航线 A',
   algorithm: 'wa_lpa_star',
   aircraftModel: 'fixed_wing',
-  strategy: 'distance_priority',
+  strategy: 'wind_avoidance',
   startText: '',
   endText: '',
   points: [],
@@ -266,20 +267,92 @@ const clearRoute = () => {
 }
 
 const parsePoint = (text) => {
-  const values = text.split(',').map(Number)
-  if (values.length !== 2 || values.some((value) => !Number.isFinite(value))) throw new Error('起终点应为 lon, lat')
-  return values
+  const values = text.split(',').map((value) => Number(value.trim()))
+  if (values.length < 2 || values.slice(0, 2).some((value) => !Number.isFinite(value))) throw new Error('起终点应为 lon, lat')
+  return values.slice(0, 2)
+}
+
+const lonLatPair = (point) => {
+  if (!Array.isArray(point) || point.length < 2) return null
+  const lon = Number(point[0])
+  const lat = Number(point[1])
+  return Number.isFinite(lon) && Number.isFinite(lat) ? [lon, lat] : null
+}
+
+const normalizeRoutePoints = (points) => {
+  if (!Array.isArray(points)) return []
+  return points.map((point) => {
+    if (Array.isArray(point)) {
+      const result = [Number(point[0]), Number(point[1])]
+      point.slice(2).map(Number).forEach((value) => {
+        if (Number.isFinite(value)) result.push(value)
+      })
+      return result
+    }
+    if (point && typeof point === 'object') {
+      const lon = Number(point.lon ?? point.longitude ?? point.lng)
+      const lat = Number(point.lat ?? point.latitude)
+      const altitudeAmsl = Number(point.altitude_amsl_m ?? point.altitude_m ?? point.ele)
+      const altitudeAgl = Number(point.altitude_agl_m ?? point.agl_m)
+      const terrain = Number(point.terrain_height_m ?? point.terrain_alt_m ?? point.hgt_surface_m)
+      const result = [lon, lat]
+      if (Number.isFinite(altitudeAmsl)) result.push(altitudeAmsl)
+      else if (Number.isFinite(altitudeAgl) && Number.isFinite(terrain)) result.push(altitudeAgl + terrain)
+      if (Number.isFinite(altitudeAgl)) result.push(altitudeAgl)
+      if (Number.isFinite(terrain)) result.push(terrain)
+      return result
+    }
+    return [Number.NaN, Number.NaN]
+  }).filter(([lon, lat]) => Number.isFinite(lon) && Number.isFinite(lat))
+}
+
+const applyRouteToPlanner = async (name, points, { persist = false } = {}) => {
+  const normalizedPoints = normalizeRoutePoints(points)
+  if (normalizedPoints.length < 2) throw new Error('导入的 JSON 至少需要包含 2 个有效航点')
+  const start = lonLatPair(normalizedPoints[0])
+  const end = lonLatPair(normalizedPoints[normalizedPoints.length - 1])
+  if (!start || !end) throw new Error('导入的 JSON 航点缺少有效经纬度')
+  planner.name = name || '导入航线'
+  planner.startText = start.join(', ')
+  planner.endText = end.join(', ')
+  planner.points = normalizedPoints
+  routePoints = normalizedPoints
+  try {
+    analysis.value = await analyzeRoute(selection, normalizedPoints, thresholds)
+  } catch (reason) {
+    console.warn('导入航线分析失败:', reason)
+    analysis.value = undefined
+  }
+  if (persist) {
+    await saveRoute({
+      name: planner.name,
+      start,
+      end,
+      points: normalizedPoints,
+      level: selection.level,
+      cycle: selection.cycle || null,
+      forecast_hour: selection.forecastHour,
+    })
+    savedRoutes.value = await listRoutes()
+  }
+}
+
+const downloadExportedJson = (fileName) => {
+  if (!fileName) return
+  const link = document.createElement('a')
+  link.href = getExportedRouteUrl(fileName)
+  link.download = fileName
+  link.style.display = 'none'
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
 }
 
 const runPlan = async (savedRoute) => {
   try {
     planner.planning = true
     if (savedRoute && Array.isArray(savedRoute.points)) {
-      planner.name = savedRoute.name || '默认航线 A'
-      planner.startText = Array.isArray(savedRoute.start) ? savedRoute.start.join(', ') : ''
-      planner.endText = Array.isArray(savedRoute.end) ? savedRoute.end.join(', ') : ''
-      planner.points = savedRoute.points
-      analysis.value = await analyzeRoute(selection, savedRoute.points, thresholds)
+      await applyRouteToPlanner(savedRoute.name || '默认航线 A', savedRoute.points)
       return
     }
     const result = await planRoute(
@@ -313,11 +386,24 @@ const handleMapClick = (payload) => {
 
 const persistRoute = async () => {
   try {
-    await saveRoute({ name: planner.name, start: parsePoint(planner.startText), end: parsePoint(planner.endText), points: planner.points, level: selection.level, cycle: selection.cycle, forecast_hour: selection.forecastHour })
+    const points = normalizeRoutePoints(planner.points)
+    const start = lonLatPair(points[0]) || parsePoint(planner.startText)
+    const end = lonLatPair(points[points.length - 1]) || parsePoint(planner.endText)
+    const saved = await saveRoute({ name: planner.name, start, end, points, level: selection.level, cycle: selection.cycle, forecast_hour: selection.forecastHour })
     savedRoutes.value = await listRoutes()
+    downloadExportedJson(saved.exported_json?.file_name)
   } catch (reason) { 
     error.value = reason.response?.data?.detail || reason.message
     setTimeout(() => { error.value = '' }, 3000)
+  }
+}
+
+const importJsonRoute = async ({ name, points }) => {
+  try {
+    await applyRouteToPlanner(name, points, { persist: true })
+  } catch (reason) {
+    error.value = reason.response?.data?.detail || reason.message
+    setTimeout(() => { error.value = '' }, 4000)
   }
 }
 const refreshRoutes = async () => { 
@@ -331,21 +417,9 @@ const refreshRoutes = async () => {
 const removeRoute = async (id) => { 
   const deletedRoute = savedRoutes.value.find(r => r.route_id === id);
   await deleteRoute(id); 
-  
-  // 删除对应的 JSON 文件
-  if (deletedRoute) {
-    try {
-      const jsonFiles = await listExportedRoutes()
-      const targetJson = jsonFiles.find(f => f.route_name === deletedRoute.name)
-      if (targetJson) {
-        await deleteExportedRoute(targetJson.file_name)
-      }
-    } catch (e) {
-      console.error('删除对应的 JSON 文件失败:', e)
-    }
-  }
 
   await refreshRoutes();
+  controlPanelRef.value?.refreshJsonDialog?.()
   if (deletedRoute && planner.name === deletedRoute.name) {
     clearRoute();
   }
@@ -434,7 +508,7 @@ onBeforeUnmount(() => {
       <h1>面向低空无人机通航决策的风场预报平台</h1>
       <p class="en-title">LOW-ALTITUDE UAV FLIGHT DECISION WIND FORECAST PLATFORM</p>
     </header>
-    <ControlPanel :options="options" :selection="selection" :layers="layers" :thresholds="thresholds" :planner="planner" :saved-routes="savedRoutes" :area-selection="areaSelection" :area-presets="areaPresets" :loading="loading" :picking="picking" @reload="loadWindField" @clear-route="clearRoute" @pick-start="picking = 'start'" @pick-end="picking = 'end'" @plan-route="runPlan" @save-route="persistRoute" @load-routes="refreshRoutes" @delete-route="removeRoute" @focus-area="focusArea" />
+    <ControlPanel ref="controlPanelRef" :options="options" :selection="selection" :layers="layers" :thresholds="thresholds" :planner="planner" :saved-routes="savedRoutes" :area-selection="areaSelection" :area-presets="areaPresets" :loading="loading" :picking="picking" @reload="loadWindField" @clear-route="clearRoute" @pick-start="picking = 'start'" @pick-end="picking = 'end'" @plan-route="runPlan" @save-route="persistRoute" @load-routes="refreshRoutes" @delete-route="removeRoute" @focus-area="focusArea" @import-json-route="importJsonRoute" />
     <WindMap ref="mapRef" :wind="wind" :heatmap="heatmap" :layers="layers" :thresholds="thresholds" :analysis="analysis" :planner="planner" @point-click="handleMapClick" @route-created="runRouteAnalysis" @zoom-changed="useZoomDefaultLayer" />
     <AnalysisPanel :metadata="metadata" :analysis="analysis" :thresholds="thresholds" />
     <div v-if="error" class="error-toast" @click="error = ''">{{ error }}</div>

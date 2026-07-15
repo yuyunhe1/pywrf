@@ -12,7 +12,7 @@ EARTH_RADIUS_KM = 6371.0
 
 def haversine_km(start: tuple[float, float], end: tuple[float, float]) -> float:
     """Calculate great-circle distance for [lon, lat] points."""
-    lon1, lat1, lon2, lat2 = map(radians, (*start, *end))
+    lon1, lat1, lon2, lat2 = map(radians, (start[0], start[1], end[0], end[1]))
     dlon, dlat = lon2 - lon1, lat2 - lat1
     value = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
     return 2 * EARTH_RADIUS_KM * asin(sqrt(value))

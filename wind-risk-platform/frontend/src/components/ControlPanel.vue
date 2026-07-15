@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import { listExportedRoutes, getExportedRouteUrl, deleteExportedRoute } from '../api'
+import { listExportedRoutes, getExportedRouteUrl, deleteExportedRoute, renameExportedRouteFile, renameExportedRouteName } from '../api'
 
 const dataSources = [
   { value: 'gfs', label: 'GFS 原始数据' },
@@ -36,7 +36,7 @@ const props = defineProps({
   picking: { type: String, default: '' },
 })
 
-const emit = defineEmits(['reload', 'clear-route', 'pick-start', 'pick-end', 'plan-route', 'save-route', 'load-routes', 'delete-route', 'focus-area'])
+const emit = defineEmits(['reload', 'clear-route', 'pick-start', 'pick-end', 'plan-route', 'save-route', 'load-routes', 'delete-route', 'focus-area', 'import-json-route'])
 
 const handleAreaChange = (kind, value) => {
   emit('focus-area', { kind, value })
@@ -71,9 +71,18 @@ const formatRouteDate = (value) => {
 
 const showJsonDialog = ref(false)
 const jsonFiles = ref([])
+const jsonImportInput = ref()
+const editingJsonFile = ref('')
+const editingJsonFileName = ref('')
+const editingJsonRouteFile = ref('')
+const editingJsonRouteName = ref('')
 
 const openJsonDialog = async () => {
   showJsonDialog.value = true
+  await refreshJsonDialog()
+}
+
+const refreshJsonDialog = async () => {
   try {
     jsonFiles.value = await listExportedRoutes()
   } catch (error) {
@@ -85,23 +94,154 @@ const viewJsonFile = (fileName) => {
   window.open(getExportedRouteUrl(fileName), '_blank')
 }
 
+const triggerJsonImport = () => {
+  jsonImportInput.value?.click()
+}
+
+const nameFromJsonFile = (fileName) => {
+  return fileName.replace(/\.json$/i, '').replace(/_\d{14}$/, '') || '导入航线'
+}
+
+const extractRoutePoints = (payload) => {
+  const candidates = Array.isArray(payload)
+    ? payload
+    : payload?.points || payload?.waypoints || payload?.route || payload?.coordinates || []
+  if (!Array.isArray(candidates)) return []
+  return candidates.map((point) => {
+    if (Array.isArray(point)) {
+      const result = [Number(point[0]), Number(point[1])]
+      point.slice(2).map(Number).forEach((value) => {
+        if (Number.isFinite(value)) result.push(value)
+      })
+      return result
+    }
+    if (point && typeof point === 'object') {
+      const lon = Number(point.lon ?? point.longitude ?? point.lng)
+      const lat = Number(point.lat ?? point.latitude)
+      const altitudeAmsl = Number(point.altitude_amsl_m ?? point.altitude_m ?? point.ele)
+      const altitudeAgl = Number(point.altitude_agl_m ?? point.agl_m)
+      const terrain = Number(point.terrain_height_m ?? point.terrain_alt_m ?? point.hgt_surface_m)
+      const result = [lon, lat]
+      if (Number.isFinite(altitudeAmsl)) result.push(altitudeAmsl)
+      else if (Number.isFinite(altitudeAgl) && Number.isFinite(terrain)) result.push(altitudeAgl + terrain)
+      if (Number.isFinite(altitudeAgl)) result.push(altitudeAgl)
+      if (Number.isFinite(terrain)) result.push(terrain)
+      return result
+    }
+    return [Number.NaN, Number.NaN]
+  }).filter(([lon, lat]) => Number.isFinite(lon) && Number.isFinite(lat))
+}
+
+const handleJsonImport = async (event) => {
+  const file = event.target.files?.[0]
+  if (!file) return
+  try {
+    const payload = JSON.parse(await file.text())
+    const points = extractRoutePoints(payload)
+    if (points.length < 2) throw new Error('JSON 至少需要包含 2 个有效航点')
+    const name = payload?.mission_name || payload?.name || payload?.route_name || nameFromJsonFile(file.name)
+    emit('import-json-route', { name, points, raw: payload })
+    showJsonDialog.value = false
+  } catch (error) {
+    console.error('导入 JSON 航线失败', error)
+    window.alert(error.message || '导入 JSON 航线失败')
+  } finally {
+    event.target.value = ''
+  }
+}
+
+const startRenameJsonRoute = (row) => {
+  editingJsonFile.value = row.file_name
+  editingJsonFileName.value = row.file_name || ''
+}
+
+const confirmRenameJsonFile = async (row) => {
+  if (editingJsonFile.value !== row.file_name) return
+  const fileName = editingJsonFileName.value.trim()
+  if (!fileName) {
+    editingJsonFile.value = ''
+    return
+  }
+  try {
+    const updated = await renameExportedRouteFile(row.file_name, fileName)
+    jsonFiles.value = jsonFiles.value.map((item) => item.file_name === row.file_name ? updated : item)
+  } catch (error) {
+    console.error('重命名 JSON 文件失败', error)
+    window.alert(error.response?.data?.detail || error.message || '重命名 JSON 文件失败')
+  } finally {
+    editingJsonFile.value = ''
+    editingJsonFileName.value = ''
+  }
+}
+
+const startRenameJsonRouteName = (row) => {
+  editingJsonRouteFile.value = row.file_name
+  editingJsonRouteName.value = row.route_name || ''
+}
+
+const confirmRenameJsonRouteName = async (row) => {
+  if (editingJsonRouteFile.value !== row.file_name) return
+  const routeName = editingJsonRouteName.value.trim()
+  if (!routeName) {
+    editingJsonRouteFile.value = ''
+    return
+  }
+  try {
+    const updated = await renameExportedRouteName(row.file_name, routeName)
+    jsonFiles.value = jsonFiles.value.map((item) => item.file_name === row.file_name ? updated : item)
+    emit('load-routes')
+  } catch (error) {
+    console.error('重命名历史航线失败', error)
+    window.alert(error.response?.data?.detail || error.message || '重命名历史航线失败')
+  } finally {
+    editingJsonRouteFile.value = ''
+    editingJsonRouteName.value = ''
+  }
+}
+
 const removeJsonFile = async (fileName) => {
   try {
     await deleteExportedRoute(fileName)
     // 刷新列表
     jsonFiles.value = await listExportedRoutes()
+    emit('load-routes')
   } catch (error) {
     console.error('删除JSON文件失败', error)
   }
 }
 
+defineExpose({ refreshJsonDialog })
+
 </script>
 
 <template>
-  <el-dialog v-model="showJsonDialog" title="导出航线 JSON 列表" width="40%" class="glass-dialog" destroy-on-close>
+  <el-dialog v-model="showJsonDialog" title="导出历史航线 JSON 列表" width="40%" class="glass-dialog" destroy-on-close>
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px;">
+      <span class="subtle">双击航线名称可同步修改历史航线；双击文件名称可修改 JSON 文件名</span>
+    </div>
     <el-table :data="jsonFiles" class="glass-table" style="width: 100%" height="400">
-      <el-table-column prop="route_name" label="航线名称" min-width="120" />
-      <el-table-column prop="file_name" label="文件名称" min-width="200" />
+      <el-table-column prop="route_name" label="航线名称" min-width="150">
+        <template #default="scope">
+          <el-input v-if="editingJsonRouteFile === scope.row.file_name" v-model="editingJsonRouteName" size="small"
+            autofocus @keyup.enter="confirmRenameJsonRouteName(scope.row)"
+            @blur="confirmRenameJsonRouteName(scope.row)" />
+          <span v-else title="双击修改历史航线名称" style="cursor: text;"
+            @dblclick="startRenameJsonRouteName(scope.row)">
+            {{ scope.row.route_name }}
+          </span>
+        </template>
+      </el-table-column>
+      <el-table-column prop="file_name" label="文件名称" min-width="220">
+        <template #default="scope">
+          <el-input v-if="editingJsonFile === scope.row.file_name" v-model="editingJsonFileName" size="small"
+            autofocus @keyup.enter="confirmRenameJsonFile(scope.row)"
+            @blur="confirmRenameJsonFile(scope.row)" />
+          <span v-else title="双击修改 JSON 文件名" style="cursor: text;"
+            @dblclick="startRenameJsonRoute(scope.row)">
+            {{ scope.row.file_name }}
+          </span>
+        </template>
+      </el-table-column>
       <el-table-column prop="time" label="时间" width="180" />
       <el-table-column label="操作" width="160" fixed="right" align="center">
         <template #default="scope">
@@ -201,27 +341,27 @@ const removeJsonFile = async (fileName) => {
             style="position: absolute; right: 0; bottom: 6px; width: auto; padding: 2px 8px; font-size: 11px; margin: 0; color: #ff4757; border-color: rgba(255,71,87,0.3);"
             @click="$emit('clear-route')">清除航线</button>
         </h2>
-        <label>规划算法
-          <el-select v-model="planner.algorithm" class="glass-select" popper-class="glass-select-popper"
-            placeholder="请选择规划算法">
-            <el-option v-for="item in plannerTypes" :key="item.value" :label="item.label" :value="item.value" />
-          </el-select>
-        </label>
-                <div class="grid-2" style="margin-top: 8px;">
-          <label>?????
+        <label>机型选择
             <el-select v-model="planner.aircraftModel" class="glass-select" popper-class="glass-select-popper"
-              placeholder="?????">
+            placeholder="请选择机型">
               <el-option v-for="item in aircraftModels" :key="item.value" :label="item.label" :value="item.value" />
             </el-select>
+        </label>
+        <div class="grid-2" style="margin-top: 8px;">
+          <label>算法选择
+            <el-select v-model="planner.algorithm" class="glass-select" popper-class="glass-select-popper"
+              placeholder="请选择规划算法">
+              <el-option v-for="item in plannerTypes" :key="item.value" :label="item.label" :value="item.value" />
+            </el-select>
           </label>
-          <label>????
+          <label>策略选择
             <el-select v-model="planner.strategy" class="glass-select" popper-class="glass-select-popper"
-              placeholder="???????">
+              placeholder="请选择规划策略">
               <el-option v-for="item in planningStrategies" :key="item.value" :label="item.label" :value="item.value" />
             </el-select>
           </label>
         </div>
-<label>航线名称<input v-model="planner.name" type="text" placeholder="默认航线 A" /></label>
+        <label>航线名称<input v-model="planner.name" type="text" placeholder="默认航线 A" /></label>
 
         <div style="display: grid; gap: 8px; margin-top: 8px;">
           <label>起点
@@ -240,7 +380,7 @@ const removeJsonFile = async (fileName) => {
           </label>
         </div>
         <div class="grid-2" style="margin-top: 10px;">
-          <button class="primary" :disabled="loading || !planner.startText || !planner.endText"
+          <button class="primary" :disabled="loading || planner.planning || !planner.startText || !planner.endText"
             @click="$emit('plan-route')" style="margin: 0;">
             <span v-if="planner.planning" class="loading-spinner"></span>
             生成规划航线
@@ -254,10 +394,17 @@ const removeJsonFile = async (fileName) => {
       <section>
         <h2 style="width: 100%; position: relative;">
           历史航线
-          <button class="ghost"
-            style="position: absolute; right: 0; bottom: 6px; width: auto; padding: 2px 8px; font-size: 11px; margin: 0;"
-            @click="openJsonDialog">查看json</button>
+          <span style="position: absolute; right: 0; bottom: 6px; display: flex; gap: 6px;">
+            <button class="ghost"
+              style="width: auto; padding: 2px 8px; font-size: 11px; margin: 0;"
+              @click="openJsonDialog">导出</button>
+            <button class="ghost"
+              style="width: auto; padding: 2px 8px; font-size: 11px; margin: 0;"
+              @click="triggerJsonImport">导入</button>
+          </span>
         </h2>
+        <input ref="jsonImportInput" type="file" accept=".json,application/json" style="display: none;"
+          @change="handleJsonImport" />
         <div class="route-list" style="max-height: 120px; overflow-y: auto;">
           <div v-if="!savedRoutes.length" class="subtle" style="text-align: center; margin-top: 10px;">暂无保存的航线</div>
           <div v-for="route in savedRoutes" :key="route.route_id" class="saved-route">

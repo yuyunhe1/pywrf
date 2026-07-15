@@ -197,6 +197,64 @@ GFS 固定高度层；`200/300/500/800/1000/1500/2000/3000m AGL` 使用等压面
 与地形高度换算 AGL 后做垂直插值。高层插值要求 GRIB2 文件包含等压面 `UGRD/VGRD/HGT`
 和 surface HGT，不能只使用 `--wind-map-only` 的轻量文件。
 
+### 航点高度与可选多高度层规划
+
+平台默认按前端当前选择的单一高度层进行航线规划，这样地图热力图、粒子流和推荐航线使用的是同一高度层，
+便于调试和论文展示。若需要实验性启用多高度层搜索，可在启动后端前设置：
+
+```powershell
+$env:ROUTE_PLAN_MULTI_ALTITUDE="1"
+```
+
+启用后，后端会优先读取环境变量 `ROUTE_PLAN_AGL_LEVELS`，例如：
+
+```powershell
+$env:ROUTE_PLAN_AGL_LEVELS="80,100,200,300,500"
+```
+
+如果未设置，则围绕当前前端选择的高度层自动选择若干 AGL 候选层。规划状态为
+`(lon, lat, AGL level)`，边代价仍使用统一的 wind-aware cost，并增加高度平滑约束：
+
+- `ROUTE_PLAN_MIN_AGL_M`：最小离地高度，默认 `60`
+- `ROUTE_PLAN_MAX_ADJACENT_MSL_CHANGE_M`：相邻航点最大海拔高度变化，默认 `100`
+- `ROUTE_PLAN_MAX_CLIMB_GRADIENT`：最大爬升/下降坡度，默认 `0.12`
+- `ROUTE_PLAN_CRUISE_SPEED_MPS`：默认巡航速度，默认 `10`
+- `ROUTE_PLAN_MULTI_ALTITUDE=1` 启用多高度层搜索；默认不启用
+
+GFS 读取 surface `HGT/orog/gh` 作为地形高程；WRF `.npz` 缓存会尝试读取
+`hgt_surface / terrain / terrain_height / elevation / HGT`。航点高度按：
+
+```text
+altitude_amsl_m = terrain_height_m + altitude_agl_m
+```
+
+导出的 JSON 为任务对象，包含 `mission_name / coordinate_system / altitude_mode / waypoints`。
+每个航点至少包含 `lon, lat, altitude_agl_m, terrain_height_m, altitude_amsl_m, heading_deg, speed_mps`；
+其中兼容字段 `ele` 表示海拔高度 AMSL，便于后续转换到无人机或飞控任务文件。
+
+### 避风优先搜索范围
+
+避风优先会使用比路程优先更大的搜索走廊。默认 padding 为：
+
+```text
+max(1.5°, min(6.0°, max(lon_span, lat_span) * 1.25))
+```
+
+可通过环境变量调整：
+
+```powershell
+$env:ROUTE_PLAN_WIND_MIN_PADDING_DEG="1.5"
+$env:ROUTE_PLAN_WIND_MAX_PADDING_DEG="6.0"
+$env:ROUTE_PLAN_WIND_PADDING_FACTOR="1.25"
+```
+
+避风优先还会默认执行一次“终点到起点”的反向候选搜索，再将该几何路线倒回为起点到终点，
+用正向风场采样重新评分，对比最大风速、平均风速、高风险比例和距离后选择更优候选。若希望关闭：
+
+```powershell
+$env:ROUTE_PLAN_REVERSE_COMPARE="0"
+```
+
 ## WRF 实时降尺度缓存
 
 服务器侧可使用仓库根目录的脚本自动完成：
