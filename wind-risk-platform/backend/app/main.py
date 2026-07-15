@@ -52,6 +52,14 @@ from .data_provider import (
 from .decision_service import decide_navigation
 from .grid_planner_lpa_star import LPAStarPlanner
 from .grid_planner_wa_lpa_star import WALPAStarPlanner
+from .route_options import (
+    build_strategy_cost_config,
+    describe_aircraft_model,
+    describe_strategy,
+    normalize_aircraft_model,
+    normalize_planning_strategy,
+    route_search_padding_deg,
+)
 from .routing import plan_route
 from . import route_storage, wrf_cache_provider
 from .route_service import analyze_route, sample_route
@@ -141,6 +149,17 @@ def metadata(grid) -> dict:
             "dy": round(float(grid.lats[0] - grid.lats[1]), 8),
         },
     }
+
+
+def route_planning_bbox(start: tuple[float, float], end: tuple[float, float], strategy: str | None = None) -> str:
+    """Build a generously padded lon/lat bbox for grid route search."""
+
+    padding = route_search_padding_deg(start, end, strategy)
+    min_lon = max(-180.0, min(start[0], end[0]) - padding)
+    max_lon = min(180.0, max(start[0], end[0]) + padding)
+    min_lat = max(-90.0, min(start[1], end[1]) - padding)
+    max_lat = min(90.0, max(start[1], end[1]) + padding)
+    return f"{min_lon},{min_lat},{max_lon},{max_lat}"
 
 
 @app.get("/", include_in_schema=False)
@@ -286,20 +305,22 @@ def route_analyze(request: RouteAnalyzeRequest):
 @app.post("/api/route/plan")
 def route_plan(request: RoutePlanRequest):
     """Plan a single-altitude route between two map points."""
-    lons = [request.start[0], request.end[0]]
-    lats = [request.start[1], request.end[1]]
-    route_bbox = f"{min(lons) - 0.25},{min(lats) - 0.25},{max(lons) + 0.25},{max(lats) + 0.25}"
-    grid = load_grid(request.cycle, request.forecast_hour, request.level, route_bbox, request.valid_time, request.source)
     try:
+        aircraft_model = normalize_aircraft_model(request.aircraft_model)
+        planning_strategy = normalize_planning_strategy(request.planning_strategy)
+        cost_config = build_strategy_cost_config(planning_strategy)
+        route_bbox = route_planning_bbox(request.start, request.end, planning_strategy)
+        grid = load_grid(request.cycle, request.forecast_hour, request.level, route_bbox, request.valid_time, request.source)
         planner_type = request.planner_type.lower().replace("-", "_")
         if planner_type in {"astar", "a_star"}:
-            result = plan_route(grid, request.start, request.end, request.thresholds)
+            result = plan_route(grid, request.start, request.end, request.thresholds, cost_config=cost_config)
         elif planner_type in {"lpa", "lpa_star", "wa_lpa", "wa_lpa_star", "walpa", "walpa_star"}:
             planner_class = LPAStarPlanner if planner_type in {"lpa", "lpa_star"} else WALPAStarPlanner
             planner = planner_class(
                 grid,
                 {"lon": request.start[0], "lat": request.start[1]},
                 {"lon": request.end[0], "lat": request.end[1]},
+                cost_config=cost_config,
                 thresholds=request.thresholds,
             )
             plan = planner.plan()
@@ -322,6 +343,12 @@ def route_plan(request: RoutePlanRequest):
             }
         else:
             raise ValueError("planner_type must be astar, lpa_star, or wa_lpa_star")
+        result["aircraft_model"] = aircraft_model
+        result["aircraft_model_label"] = describe_aircraft_model(aircraft_model)
+        result["planning_strategy"] = planning_strategy
+        result["planning_strategy_label"] = describe_strategy(planning_strategy)
+        result["cost_config"] = cost_config
+        result["search_bbox"] = [float(value) for value in route_bbox.split(",")]
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     samples = sample_route(result["points"], grid, request.thresholds, request.sample_interval_km)

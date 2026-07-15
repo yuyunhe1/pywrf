@@ -48,6 +48,8 @@ class RoutePlanRequest(RouteAnalyzeRequest):
     start: tuple[float, float]
     end: tuple[float, float]
     planner_type: str = "wa_lpa_star"
+    aircraft_model: str = "fixed_wing"
+    planning_strategy: str = "distance_priority"
     points: list[tuple[float, float]] = Field(default_factory=lambda: [(0, 0), (0, 0)])
 
 

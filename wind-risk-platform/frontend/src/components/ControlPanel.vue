@@ -13,6 +13,16 @@ const plannerTypes = [
   { value: 'wa_lpa_star', label: 'WA-LPA*' },
 ]
 
+const aircraftModels = [
+  { value: 'fixed_wing', label: '固定翼无人机' },
+]
+
+const planningStrategies = [
+  { value: 'distance_priority', label: '路程优先' },
+  { value: 'balanced', label: '均衡避险' },
+  { value: 'wind_avoidance', label: '避风优先' },
+]
+
 const props = defineProps({
   options: { type: Object, required: true },
   selection: { type: Object, required: true },
@@ -153,8 +163,10 @@ const removeJsonFile = async (fileName) => {
 
       <!-- 2. 区域选择 -->
       <section>
+
         <h2 style="margin: 0 0 12px;">区域选择</h2>
         <div class="grid-3">
+
           <label>省份选择
             <el-select :model-value="areaSelection.province" class="glass-select" popper-class="glass-select-popper"
               filterable clearable placeholder="请选择省份" @update:model-value="handleAreaChange('province', $event)"
@@ -195,7 +207,21 @@ const removeJsonFile = async (fileName) => {
             <el-option v-for="item in plannerTypes" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </label>
-        <label>航线名称<input v-model="planner.name" type="text" placeholder="默认航线 A" /></label>
+                <div class="grid-2" style="margin-top: 8px;">
+          <label>?????
+            <el-select v-model="planner.aircraftModel" class="glass-select" popper-class="glass-select-popper"
+              placeholder="?????">
+              <el-option v-for="item in aircraftModels" :key="item.value" :label="item.label" :value="item.value" />
+            </el-select>
+          </label>
+          <label>????
+            <el-select v-model="planner.strategy" class="glass-select" popper-class="glass-select-popper"
+              placeholder="???????">
+              <el-option v-for="item in planningStrategies" :key="item.value" :label="item.label" :value="item.value" />
+            </el-select>
+          </label>
+        </div>
+<label>航线名称<input v-model="planner.name" type="text" placeholder="默认航线 A" /></label>
 
         <div style="display: grid; gap: 8px; margin-top: 8px;">
           <label>起点

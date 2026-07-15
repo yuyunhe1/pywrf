@@ -26,11 +26,16 @@ export const analyzeRoute = (selection, points, thresholds) =>
     level: selection.level,
     thresholds,
   }).then(({ data }) => data)
-export const planRoute = (selection, start, end, thresholds, plannerType = 'wa_lpa_star') =>
+export const planRoute = (selection, start, end, thresholds, plannerType = 'wa_lpa_star', aircraftModel = 'fixed_wing', planningStrategy = 'distance_priority') =>
   api.post('/route/plan', {
     start, end,
     ...(selection.validTime ? { valid_time: selection.validTime } : { cycle: selection.cycle, forecast_hour: selection.forecastHour }),
-    source: selection.source, level: selection.level, thresholds, planner_type: plannerType,
+    source: selection.source,
+    level: selection.level,
+    thresholds,
+    planner_type: plannerType,
+    aircraft_model: aircraftModel,
+    planning_strategy: planningStrategy,
   }).then(({ data }) => data)
 export const listRoutes = () => api.get('/routes').then(({ data }) => data)
 export const saveRoute = (route) => api.post('/routes', route).then(({ data }) => data)
