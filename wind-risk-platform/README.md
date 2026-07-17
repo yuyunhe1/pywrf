@@ -255,6 +255,74 @@ $env:ROUTE_PLAN_WIND_PADDING_FACTOR="1.25"
 $env:ROUTE_PLAN_REVERSE_COMPARE="0"
 ```
 
+### OMPL ST-RRT* 复现
+
+已提供一个不依赖 OMPL C++ 编译的 Python 复现脚本，用于理解和验证 OMPL `STRRTstar`
+的核心思想：
+
+- 状态为 `(x, y, t)`；
+- 运动必须沿时间正方向；
+- `space_distance / delta_t <= v_max`；
+- 使用起点树和目标树的双向扩展；
+- 目标点时间按最短可达时间和逐步扩大的 time bound 采样；
+- 以到达目标时间最小为优化目标；
+- 示例中包含一个随时间移动的圆形动态障碍。
+
+运行内置动态障碍 demo：
+
+```powershell
+.\backend\.venv\Scripts\python.exe backend\scripts\run_strrt_star_reproduction.py --demo
+```
+
+从仓库根目录运行：
+
+```powershell
+.\wind-risk-platform\backend\.venv\Scripts\python.exe `
+  wind-risk-platform\backend\scripts\run_strrt_star_reproduction.py `
+  --demo `
+  --output data\strrt_star_demo.json
+```
+
+自定义起终点：
+
+```powershell
+.\wind-risk-platform\backend\.venv\Scripts\python.exe `
+  wind-risk-platform\backend\scripts\run_strrt_star_reproduction.py `
+  --start 0.0,0.0 `
+  --goal 1.0,1.0 `
+  --v-max 0.6 `
+  --max-time 5
+```
+
+该脚本是研究和教学用途的轻量复现，方便后续把 ST-RRT* 思想迁移到无人机跨时间航迹规划。
+
+此外已提供直接链接 OMPL 2.0.1 原生 `ompl::geometric::STRRTstar` 的 C++ 复现。当前本地构建目录为
+`OMPL/build-msvc`，安装目录为 `OMPL/install`。从仓库根目录执行：
+
+```powershell
+pwsh -File wind-risk-platform\backend\scripts\build_strrt_star_native.ps1
+```
+
+脚本会自动配置并编译 `backend/native/strrt_star_demo`，运行二维空间时间规划，并将结果写入：
+
+```text
+data/strrt_star_native_result.json
+```
+
+可调整求解时长、最大速度、时空上限与随机种子：
+
+```powershell
+pwsh -File wind-risk-platform\backend\scripts\build_strrt_star_native.ps1 `
+  -SolveTime 3.0 `
+  -VMax 0.75 `
+  -MaxTime 8.0 `
+  -Seed 7 `
+  -Output data\strrt_star_native_result.json
+```
+
+原生示例使用 `(x, y, t)` 状态、移动圆形障碍、正向时间约束和最大速度约束，输出到达时间、
+空间路径长度、探索状态数、最大航段速度及完整时空路径，可作为后续接入实际风场与无人机约束的基线。
+
 ## WRF 实时降尺度缓存
 
 服务器侧可使用仓库根目录的脚本自动完成：

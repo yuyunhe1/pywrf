@@ -132,77 +132,38 @@ const renderHeatmap = () => {
 const renderRoute = () => {
   if (!map) return
   routeGroup.clearLayers()
-  
-  if (props.analysis?.samples) {
-    const samples = props.analysis.samples
-    if (samples.length >= 2) {
-      const start = samples[0]
-      const end = samples[samples.length - 1]
-      
-      // 添加起点标记
-      L.circleMarker([start.lat, start.lon], {
-        radius: 6,
-        fillColor: '#44d7b6',
-        color: '#fff',
-        weight: 2,
-        opacity: 1,
-        fillOpacity: 1
-      }).bindTooltip('起点', { permanent: true, direction: 'right' }).addTo(routeGroup)
-      
-      // 添加终点标记
-      L.circleMarker([end.lat, end.lon], {
-        radius: 6,
-        fillColor: '#ea5455',
-        color: '#fff',
-        weight: 2,
-        opacity: 1,
-        fillOpacity: 1
-      }).bindTooltip('终点', { permanent: true, direction: 'right' }).addTo(routeGroup)
-    }
-  } else if (props.planner?.startText || props.planner?.endText) {
-    // 即使没有规划航线，也显示已经选好的起点和终点
-    const parsePointSafely = (text) => {
-      if (!text) return null
-      const parts = text.split(',')
-      if (parts.length === 2) {
-        const lon = Number(parts[0])
-        const lat = Number(parts[1])
-        if (Number.isFinite(lon) && Number.isFinite(lat)) {
-          return { lon, lat }
-        }
-      }
-      return null
-    }
-    
-    const startPoint = parsePointSafely(props.planner?.startText)
-    const endPoint = parsePointSafely(props.planner?.endText)
-    
-    if (startPoint) {
-      L.circleMarker([startPoint.lat, startPoint.lon], {
-        radius: 6,
-        fillColor: '#44d7b6',
-        color: '#fff',
-        weight: 2,
-        opacity: 1,
-        fillOpacity: 1
-      }).bindTooltip('起点', { permanent: true, direction: 'right' }).addTo(routeGroup)
-    }
-    
-    if (endPoint) {
-      L.circleMarker([endPoint.lat, endPoint.lon], {
-        radius: 6,
-        fillColor: '#ea5455',
-        color: '#fff',
-        weight: 2,
-        opacity: 1,
-        fillOpacity: 1
-      }).bindTooltip('终点', { permanent: true, direction: 'right' }).addTo(routeGroup)
-    }
+
+  const parsePointSafely = (text) => {
+    if (!text) return null
+    const parts = text.split(',')
+    if (parts.length < 2) return null
+    const lon = Number(parts[0])
+    const lat = Number(parts[1])
+    return Number.isFinite(lon) && Number.isFinite(lat) ? { lon, lat } : null
   }
+  const addEndpointMarker = (point, label, color) => {
+    if (!point) return
+    L.circleMarker([point.lat, point.lon], {
+      radius: 6,
+      fillColor: color,
+      color: '#fff',
+      weight: 2,
+      opacity: 1,
+      fillOpacity: 1
+    }).bindTooltip(label, { permanent: true, direction: 'right' }).addTo(routeGroup)
+  }
+
+  const samples = props.analysis?.samples || []
+  const fallbackStart = samples.length >= 2 ? samples[0] : null
+  const fallbackEnd = samples.length >= 2 ? samples[samples.length - 1] : null
+  const startPoint = parsePointSafely(props.planner?.startText) || fallbackStart
+  const endPoint = parsePointSafely(props.planner?.endText) || fallbackEnd
+
+  addEndpointMarker(startPoint, '起点', '#44d7b6')
+  addEndpointMarker(endPoint, '终点', '#ea5455')
   
   if (!props.layers.route || !props.analysis?.samples) return
   
-  const samples = props.analysis.samples
   if (samples.length < 2) return
   const routeLatLngs = samples.map((item) => [item.lat, item.lon])
   
@@ -242,6 +203,10 @@ const clearRoute = () => {
   routeGroup?.clearLayers()
 }
 
+const clearDrawnRoute = () => {
+  drawnGroup?.clearLayers()
+}
+
 const focusArea = (target) => {
   if (!map || !target) return
   if (Array.isArray(target.bounds)) {
@@ -259,7 +224,7 @@ const focusArea = (target) => {
   }
 }
 
-defineExpose({ clearRoute, focusArea })
+defineExpose({ clearRoute, clearDrawnRoute, focusArea })
 watch(() => [props.wind, props.layers.velocity, props.thresholds], renderWind, { deep: true })
 watch(() => [props.heatmap, props.layers.heatmap], renderHeatmap, { deep: true })
 watch(() => [props.analysis, props.layers.route, props.planner?.startText, props.planner?.endText], renderRoute, { deep: true })

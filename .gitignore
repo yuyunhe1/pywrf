@@ -87,6 +87,9 @@ routes.sqlite3
 WPS/
 WRF/
 WRF_GEOG/
+OMPL/
+vcpkg/
+vcpkg-cache/
 
 # WPS runtime links/intermediate files if a local WPS tree is force-added later
 GRIBFILE.*

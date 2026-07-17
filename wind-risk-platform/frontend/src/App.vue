@@ -1,6 +1,6 @@
 <script setup>
 import L from 'leaflet'
-import { onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { analyzeRoute, deleteRoute, getExportedRouteUrl, getGfsDownloadStatus, getHeatmap, getPoint, getTimes, getWind, listRoutes, planRoute, saveRoute } from './api'
 import AnalysisPanel from './components/AnalysisPanel.vue'
 import ControlPanel from './components/ControlPanel.vue'
@@ -20,6 +20,8 @@ const error = ref('')
 const mapRef = ref()
 const controlPanelRef = ref()
 let routePoints = []
+let suppressPlannerAutoClear = false
+const activeRouteId = ref('')
 const planner = reactive({
   name: '默认航线 A',
   algorithm: 'wa_lpa_star',
@@ -235,6 +237,7 @@ const showPointPopup = (point, lon, lat, map) => {
 
 const runRouteAnalysis = async (points) => {
   routePoints = points
+  activeRouteId.value = ''
   analysis.value = await analyzeRoute(selection, points, thresholds)
 }
 
@@ -257,13 +260,32 @@ const queryPoint = async ({ lon, lat, map }) => {
   }
 }
 
-const clearRoute = () => {
+const clearPlannedRoute = ({ keepEndpoints = true } = {}) => {
   routePoints = []
   analysis.value = undefined
-  planner.startText = ''
-  planner.endText = ''
   planner.points = []
-  mapRef.value?.clearRoute()
+  activeRouteId.value = ''
+  mapRef.value?.clearDrawnRoute?.()
+  if (!keepEndpoints) {
+    planner.startText = ''
+    planner.endText = ''
+    picking.value = ''
+    mapRef.value?.clearRoute()
+  }
+}
+
+const clearRoute = () => {
+  clearPlannedRoute({ keepEndpoints: false })
+}
+
+const runWithPlannerAutoClearSuppressed = async (callback) => {
+  suppressPlannerAutoClear = true
+  try {
+    return await callback()
+  } finally {
+    await nextTick()
+    suppressPlannerAutoClear = false
+  }
 }
 
 const parsePoint = (text) => {
@@ -306,7 +328,7 @@ const normalizeRoutePoints = (points) => {
   }).filter(([lon, lat]) => Number.isFinite(lon) && Number.isFinite(lat))
 }
 
-const applyRouteToPlanner = async (name, points, { persist = false } = {}) => {
+const applyRouteToPlanner = async (name, points, { persist = false, routeId = '' } = {}) => {
   const normalizedPoints = normalizeRoutePoints(points)
   if (normalizedPoints.length < 2) throw new Error('导入的 JSON 至少需要包含 2 个有效航点')
   const start = lonLatPair(normalizedPoints[0])
@@ -317,6 +339,7 @@ const applyRouteToPlanner = async (name, points, { persist = false } = {}) => {
   planner.endText = end.join(', ')
   planner.points = normalizedPoints
   routePoints = normalizedPoints
+  activeRouteId.value = routeId || ''
   try {
     analysis.value = await analyzeRoute(selection, normalizedPoints, thresholds)
   } catch (reason) {
@@ -324,7 +347,7 @@ const applyRouteToPlanner = async (name, points, { persist = false } = {}) => {
     analysis.value = undefined
   }
   if (persist) {
-    await saveRoute({
+    const saved = await saveRoute({
       name: planner.name,
       start,
       end,
@@ -333,6 +356,7 @@ const applyRouteToPlanner = async (name, points, { persist = false } = {}) => {
       cycle: selection.cycle || null,
       forecast_hour: selection.forecastHour,
     })
+    activeRouteId.value = saved.route_id || ''
     savedRoutes.value = await listRoutes()
   }
 }
@@ -352,9 +376,10 @@ const runPlan = async (savedRoute) => {
   try {
     planner.planning = true
     if (savedRoute && Array.isArray(savedRoute.points)) {
-      await applyRouteToPlanner(savedRoute.name || '默认航线 A', savedRoute.points)
+      await runWithPlannerAutoClearSuppressed(() => applyRouteToPlanner(savedRoute.name || '默认航线 A', savedRoute.points, { routeId: savedRoute.route_id }))
       return
     }
+    activeRouteId.value = ''
     const result = await planRoute(
       selection,
       parsePoint(planner.startText),
@@ -366,6 +391,7 @@ const runPlan = async (savedRoute) => {
     )
     planner.points = result.points
     routePoints = result.points
+    activeRouteId.value = ''
     analysis.value = result.analysis
   } catch (reason) { 
     error.value = reason.response?.data?.detail || reason.message
@@ -390,6 +416,7 @@ const persistRoute = async () => {
     const start = lonLatPair(points[0]) || parsePoint(planner.startText)
     const end = lonLatPair(points[points.length - 1]) || parsePoint(planner.endText)
     const saved = await saveRoute({ name: planner.name, start, end, points, level: selection.level, cycle: selection.cycle, forecast_hour: selection.forecastHour })
+    activeRouteId.value = saved.route_id || ''
     savedRoutes.value = await listRoutes()
     downloadExportedJson(saved.exported_json?.file_name)
   } catch (reason) { 
@@ -400,7 +427,7 @@ const persistRoute = async () => {
 
 const importJsonRoute = async ({ name, points }) => {
   try {
-    await applyRouteToPlanner(name, points, { persist: true })
+    await runWithPlannerAutoClearSuppressed(() => applyRouteToPlanner(name, points, { persist: true }))
   } catch (reason) {
     error.value = reason.response?.data?.detail || reason.message
     setTimeout(() => { error.value = '' }, 4000)
@@ -415,14 +442,11 @@ const refreshRoutes = async () => {
   } 
 }
 const removeRoute = async (id) => { 
-  const deletedRoute = savedRoutes.value.find(r => r.route_id === id);
   await deleteRoute(id); 
 
   await refreshRoutes();
   controlPanelRef.value?.refreshJsonDialog?.()
-  if (deletedRoute && planner.name === deletedRoute.name) {
-    clearRoute();
-  }
+  if (activeRouteId.value === id) activeRouteId.value = ''
 }
 
 const useZoomDefaultLayer = async (zoom) => {
@@ -490,6 +514,16 @@ watch(() => selection.source, async (source) => {
     return
   }
   await applyTimes()
+})
+
+watch(() => [planner.algorithm, planner.strategy], () => {
+  if (suppressPlannerAutoClear) return
+  clearPlannedRoute({ keepEndpoints: true })
+})
+
+watch(() => [planner.startText, planner.endText], () => {
+  if (suppressPlannerAutoClear) return
+  clearPlannedRoute({ keepEndpoints: true })
 })
 
 onMounted(async () => {
