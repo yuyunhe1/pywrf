@@ -2,6 +2,7 @@
 
 import os
 import threading
+import math
 
 import numpy as np
 
@@ -11,32 +12,227 @@ from fastapi.responses import RedirectResponse, FileResponse
 import json
 from datetime import datetime
 from pathlib import Path
-from .models import RouteAnalyzeRequest, RouteDecisionRequest, RoutePlanRequest, RouteRecord
+from .models import ExportedRouteRenameRequest, RouteAnalyzeRequest, RouteDecisionRequest, RoutePlanRequest, RouteRecord
 
 EXPORT_DIR = Path("data/exported_routes")
 EXPORT_DIR.mkdir(parents=True, exist_ok=True)
 
-def export_route_to_json(record: RouteRecord):
+
+def _int_env(name: str, default: int) -> int:
+    try:
+        return int(os.getenv(name, str(default)))
+    except ValueError:
+        return default
+
+
+ROUTE_PLAN_MAX_GRID_CELLS = _int_env("ROUTE_PLAN_MAX_GRID_CELLS", 20000)
+
+
+def _safe_export_name(name: str | None) -> str:
+    safe_name = "".join(c for c in (name or "") if c.isalnum() or c in (" ", "-", "_")).strip()
+    return safe_name or "未命名航线"
+
+
+def _unique_export_path(route_name: str, timestamp: str, exclude: Path | None = None) -> Path:
+    safe_name = _safe_export_name(route_name)
+    file_path = EXPORT_DIR / f"{safe_name}_{timestamp}.json"
+    if not file_path.exists() or (exclude is not None and file_path == exclude):
+        return file_path
+    index = 1
+    while True:
+        candidate = EXPORT_DIR / f"{safe_name}_{index}_{timestamp}.json"
+        if not candidate.exists() or (exclude is not None and candidate == exclude):
+            return candidate
+        index += 1
+
+
+def _exported_route_path(file_name: str) -> Path:
+    requested = Path(file_name)
+    if requested.name != file_name or requested.suffix.lower() != ".json":
+        raise HTTPException(status_code=400, detail="非法 JSON 文件名")
+    return EXPORT_DIR / requested.name
+
+
+def _safe_json_file_name(file_name: str | None) -> str:
+    raw_name = (file_name or "").strip()
+    if not raw_name:
+        raise HTTPException(status_code=400, detail="JSON 文件名不能为空")
+    requested = Path(raw_name)
+    if requested.name != raw_name:
+        raise HTTPException(status_code=400, detail="非法 JSON 文件名")
+    if requested.suffix and requested.suffix.lower() != ".json":
+        raise HTTPException(status_code=400, detail="JSON 文件名必须以 .json 结尾")
+    stem = requested.stem if requested.suffix else requested.name
+    return f"{_safe_export_name(stem)}.json"
+
+
+def _unique_export_file_path(file_name: str, exclude: Path | None = None) -> Path:
+    target_path = EXPORT_DIR / _safe_json_file_name(file_name)
+    if not target_path.exists() or (exclude is not None and target_path == exclude):
+        return target_path
+    index = 1
+    while True:
+        candidate = EXPORT_DIR / f"{target_path.stem}_{index}.json"
+        if not candidate.exists() or (exclude is not None and candidate == exclude):
+            return candidate
+        index += 1
+
+
+def _exported_route_record(file: Path) -> dict:
+    route_id = None
+    mission_name = None
+    try:
+        payload = json.loads(file.read_text(encoding="utf-8"))
+        if isinstance(payload, dict):
+            route_id = payload.get("route_id")
+            mission_name = payload.get("mission_name") or payload.get("name") or payload.get("route_name")
+    except Exception:
+        payload = None
+    parts = file.stem.rsplit("_", 1)
+    name = mission_name or (parts[0] if len(parts) > 1 else file.stem)
+    time_str = parts[1] if len(parts) > 1 else ""
+    try:
+        dt = datetime.strptime(time_str, "%Y%m%d%H%M%S")
+        formatted_time = dt.strftime("%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        formatted_time = time_str
+    if route_id:
+        try:
+            route = route_storage.get_route(route_id)
+            if route:
+                name = route["name"]
+        except Exception:
+            pass
+    return {
+        "file_name": file.name,
+        "route_name": name,
+        "route_id": route_id,
+        "time": formatted_time,
+        "timestamp": file.stat().st_mtime,
+    }
+
+
+def _unique_route_id_by_name(route_name: str | None) -> str | None:
+    if not route_name:
+        return None
+    matches = [route for route in route_storage.list_routes() if route.get("name") == route_name]
+    return matches[0]["route_id"] if len(matches) == 1 else None
+
+
+def _export_route_payload_route_id(file_path: Path) -> str | None:
+    try:
+        payload = json.loads(file_path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    return payload.get("route_id") if isinstance(payload, dict) else None
+
+
+def _update_export_route_name(file_path: Path, route_name: str, route_id: str | None = None) -> None:
+    try:
+        payload = json.loads(file_path.read_text(encoding="utf-8"))
+    except Exception:
+        payload = None
+    if isinstance(payload, dict):
+        payload["mission_name"] = route_name
+        if route_id and not payload.get("route_id"):
+            payload["route_id"] = route_id
+        file_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _export_files_for_route(route_id: str):
+    if not route_id or not EXPORT_DIR.exists():
+        return []
+    return [file for file in EXPORT_DIR.glob("*.json") if _export_route_payload_route_id(file) == route_id]
+
+
+def delete_export_files_for_route(route_id: str) -> None:
+    for file in _export_files_for_route(route_id):
+        try:
+            file.unlink()
+        except FileNotFoundError:
+            pass
+
+
+def export_route_to_json(record: RouteRecord, route_id: str | None = None):
+    def _parse_level_agl(level: str | None) -> float | None:
+        if not level:
+            return None
+        text = level.lower().replace("agl", "").replace(" ", "")
+        number = ""
+        for char in text:
+            if char.isdigit() or char == ".":
+                number += char
+            elif number:
+                break
+        return float(number) if number else None
+
+    def _bearing_deg(start: tuple[float, float], end: tuple[float, float]) -> float:
+        lon1, lat1, lon2, lat2 = map(math.radians, (start[0], start[1], end[0], end[1]))
+        dlon = lon2 - lon1
+        y = math.sin(dlon) * math.cos(lat2)
+        x = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(dlon)
+        return (math.degrees(math.atan2(y, x)) + 360.0) % 360.0
+
+    default_agl = _parse_level_agl(record.level)
     waypoints = []
     for idx, point in enumerate(record.points):
-        lon = point[0]
-        lat = point[1]
-        ele = point[2] if len(point) > 2 else 0
+        lon = float(point[0])
+        lat = float(point[1])
+        altitude_amsl = float(point[2]) if len(point) > 2 and np.isfinite(point[2]) else None
+        altitude_agl = float(point[3]) if len(point) > 3 and np.isfinite(point[3]) else default_agl
+        terrain_height = float(point[4]) if len(point) > 4 and np.isfinite(point[4]) else None
+        if altitude_amsl is None and altitude_agl is not None and terrain_height is not None:
+            altitude_amsl = altitude_agl + terrain_height
+        if terrain_height is None and altitude_amsl is not None and altitude_agl is not None:
+            terrain_height = altitude_amsl - altitude_agl
+        if altitude_amsl is None:
+            altitude_amsl = 0.0
+        heading = None
+        if idx < len(record.points) - 1:
+            next_point = record.points[idx + 1]
+            heading = round(_bearing_deg((lon, lat), (float(next_point[0]), float(next_point[1]))), 1)
+        elif waypoints:
+            heading = waypoints[-1].get("heading_deg")
         waypoints.append({
             "point_index": idx + 1,
+            "seq": idx + 1,
             "lon": lon,
             "lat": lat,
-            "ele": ele
+            "ele": round(float(altitude_amsl), 2),
+            "altitude_mode": "AGL",
+            "altitude_agl_m": None if altitude_agl is None else round(float(altitude_agl), 2),
+            "terrain_height_m": None if terrain_height is None else round(float(terrain_height), 2),
+            "altitude_amsl_m": round(float(altitude_amsl), 2),
+            "heading_deg": heading,
+            "speed_mps": 10.0,
+            "action": "waypoint",
+            "hold_time_s": 0,
         })
     
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    # Sanitize name to avoid invalid filename characters
-    safe_name = "".join(c for c in record.name if c.isalnum() or c in (' ', '-', '_')).strip()
-    file_name = f"{safe_name}_{timestamp}.json"
-    file_path = EXPORT_DIR / file_name
+    file_path = _unique_export_path(record.name, timestamp)
+    payload = {
+        "route_id": route_id,
+        "mission_name": record.name,
+        "coordinate_system": "WGS84",
+        "altitude_mode": "AGL",
+        "altitude_reference": "terrain_following",
+        "default_cruise_speed_mps": 10.0,
+        "level": record.level,
+        "cycle": record.cycle,
+        "forecast_hour": record.forecast_hour,
+        "waypoint_schema": {
+            "ele": "legacy altitude field, meters AMSL",
+            "altitude_agl_m": "height above local terrain",
+            "terrain_height_m": "surface elevation/HGT, meters AMSL",
+            "altitude_amsl_m": "terrain_height_m + altitude_agl_m",
+        },
+        "waypoints": waypoints,
+    }
     
     with open(file_path, "w", encoding="utf-8") as f:
-        json.dump(waypoints, f, ensure_ascii=False, indent=2)
+        json.dump(payload, f, ensure_ascii=False, indent=2)
+    return _exported_route_record(file_path)
 
 from .data_provider import (
     availability,
@@ -52,10 +248,20 @@ from .data_provider import (
 from .decision_service import decide_navigation
 from .grid_planner_lpa_star import LPAStarPlanner
 from .grid_planner_wa_lpa_star import WALPAStarPlanner
+from .multi_altitude_routing import level_height_m, plan_multi_altitude_route
+from .route_options import (
+    PLANNING_STRATEGY_WIND_AVOIDANCE,
+    build_strategy_cost_config,
+    describe_aircraft_model,
+    describe_strategy,
+    normalize_aircraft_model,
+    normalize_planning_strategy,
+    route_search_padding_deg,
+)
 from .routing import plan_route
 from . import route_storage, wrf_cache_provider
 from .route_service import analyze_route, sample_route
-from .wind_provider import parse_bbox, point_value
+from .wind_provider import WindGrid, parse_bbox, point_value
 
 app = FastAPI(title="UAV Low-altitude Wind Risk API", version="0.1.0")
 app.add_middleware(
@@ -141,6 +347,228 @@ def metadata(grid) -> dict:
             "dy": round(float(grid.lats[0] - grid.lats[1]), 8),
         },
     }
+
+
+def route_planning_bbox(start: tuple[float, float], end: tuple[float, float], strategy: str | None = None) -> str:
+    """Build a generously padded lon/lat bbox for grid route search."""
+
+    padding = route_search_padding_deg(start, end, strategy)
+    min_lon = max(-180.0, min(start[0], end[0]) - padding)
+    max_lon = min(180.0, max(start[0], end[0]) + padding)
+    min_lat = max(-90.0, min(start[1], end[1]) - padding)
+    max_lat = min(90.0, max(start[1], end[1]) + padding)
+    return f"{min_lon},{min_lat},{max_lon},{max_lat}"
+
+
+def candidate_route_levels(selected_level: str) -> list[str]:
+    """Return AGL layers to search for multi-altitude route planning."""
+
+    configured = os.getenv("ROUTE_PLAN_AGL_LEVELS")
+    if configured:
+        values = []
+        for item in configured.split(","):
+            item = item.strip()
+            if not item:
+                continue
+            height = level_height_m(item if "m" in item.lower() else f"{item}m AGL")
+            if height is not None:
+                values.append(float(height))
+        levels = values
+    else:
+        selected_height = level_height_m(selected_level) or 100.0
+        available = [80.0, 100.0, 200.0, 300.0, 500.0]
+        nearby = [height for height in available if abs(height - selected_height) <= 250.0]
+        levels = sorted(set([selected_height, *nearby]))
+    return [f"{int(round(value))}m AGL" for value in sorted(set(levels)) if value > 0]
+
+
+def load_candidate_route_grids(request: RoutePlanRequest, route_bbox: str) -> list[WindGrid]:
+    """Load all usable candidate AGL grids for multi-altitude planning."""
+
+    grids: list[WindGrid] = []
+    for level in candidate_route_levels(request.level):
+        try:
+            grid = load_grid(request.cycle, request.forecast_hour, level, route_bbox, request.valid_time, request.source)
+        except HTTPException:
+            continue
+        if getattr(grid, "terrain", None) is None:
+            grid = WindGrid(
+                lons=grid.lons,
+                lats=grid.lats,
+                u=grid.u,
+                v=grid.v,
+                cycle=grid.cycle,
+                forecast_hour=grid.forecast_hour,
+                level=grid.level,
+                valid_time=grid.valid_time,
+                source=grid.source,
+                cycle_bj=getattr(grid, "cycle_bj", None),
+                valid_time_bj=getattr(grid, "valid_time_bj", None),
+                terrain=np.zeros_like(grid.u, dtype=float),
+            )
+        grids.append(grid)
+    unique: dict[str, WindGrid] = {}
+    for grid in grids:
+        unique[grid.level] = grid
+    return list(unique.values())
+
+
+def thin_route_planning_grid(grid: WindGrid) -> tuple[WindGrid, int]:
+    """Downsample only the planner grid when a long route loads too many cells.
+
+    The original grid is still used for route risk sampling after planning.
+    This keeps long-distance planning responsive while preserving analysis
+    against the highest available wind-field resolution.
+    """
+
+    nx = len(grid.lons)
+    ny = len(grid.lats)
+    cell_count = nx * ny
+    if ROUTE_PLAN_MAX_GRID_CELLS <= 0 or cell_count <= ROUTE_PLAN_MAX_GRID_CELLS:
+        return grid, 1
+    stride = max(2, int(np.ceil((cell_count / ROUTE_PLAN_MAX_GRID_CELLS) ** 0.5)))
+    lons = grid.lons[::stride]
+    lats = grid.lats[::stride]
+    if len(lons) < 2 or len(lats) < 2:
+        return grid, 1
+    return (
+        WindGrid(
+            lons=lons,
+            lats=lats,
+            u=grid.u[::stride, ::stride],
+            v=grid.v[::stride, ::stride],
+            cycle=grid.cycle,
+            forecast_hour=grid.forecast_hour,
+            level=grid.level,
+            valid_time=grid.valid_time,
+            source=f"{grid.source} (route-planning stride {stride})",
+            cycle_bj=getattr(grid, "cycle_bj", None),
+            valid_time_bj=getattr(grid, "valid_time_bj", None),
+            terrain=None if getattr(grid, "terrain", None) is None else grid.terrain[::stride, ::stride],
+        ),
+        stride,
+    )
+
+
+def enrich_route_points_with_altitude(points: list, grid: WindGrid) -> list:
+    """Attach [AMSL, AGL, terrain] to 2-D route points when possible."""
+
+    if not points:
+        return points
+    if len(points[0]) >= 5:
+        return points
+    agl = level_height_m(grid.level)
+    if agl is None:
+        return points
+    terrain = getattr(grid, "terrain", None)
+    if terrain is None:
+        terrain = np.zeros_like(grid.u, dtype=float)
+    enriched = []
+    for point in points:
+        lon, lat = float(point[0]), float(point[1])
+        row = int(np.abs(grid.lats - lat).argmin())
+        col = int(np.abs(grid.lons - lon).argmin())
+        terrain_height = float(np.asarray(terrain)[row, col])
+        if not np.isfinite(terrain_height):
+            terrain_height = 0.0
+        enriched.append([lon, lat, round(terrain_height + agl, 2), round(float(agl), 2), round(terrain_height, 2)])
+    return enriched
+
+
+def plan_single_altitude_route(
+    grid: WindGrid,
+    start: tuple[float, float],
+    end: tuple[float, float],
+    thresholds,
+    cost_config,
+    planner_type: str,
+) -> dict:
+    """Run the selected planner for one fixed altitude layer."""
+
+    if planner_type in {"astar", "a_star"}:
+        result = plan_route(grid, start, end, thresholds, cost_config=cost_config)
+        result["planner_type"] = planner_type
+        return result
+    if planner_type in {"lpa", "lpa_star", "wa_lpa", "wa_lpa_star", "walpa", "walpa_star"}:
+        planner_class = LPAStarPlanner if planner_type in {"lpa", "lpa_star"} else WALPAStarPlanner
+        planner = planner_class(
+            grid,
+            {"lon": start[0], "lat": start[1]},
+            {"lon": end[0], "lat": end[1]},
+            cost_config=cost_config,
+            thresholds=thresholds,
+        )
+        plan = planner.plan()
+        points = list(plan.points)
+        if not points:
+            raise ValueError("未找到可行路径")
+        if points[0] != start:
+            points.insert(0, start)
+        if points[-1] != end:
+            points.append(end)
+        return {
+            "points": points,
+            "segments": [],
+            "cost": plan.total_cost,
+            "distance_km": plan.path_length,
+            "level": grid.level,
+            "planner_type": planner_type,
+            "planning_time_ms": plan.planning_time_ms,
+            "expanded_nodes": plan.expanded_nodes,
+        }
+    raise ValueError("planner_type must be astar, lpa_star, or wa_lpa_star")
+
+
+def _route_choice_score(points: list, grid: WindGrid, thresholds, sample_interval_km: float) -> tuple:
+    samples = sample_route(points, grid, thresholds, sample_interval_km)
+    summary = analyze_route(samples, thresholds)
+    return (
+        float(summary.get("danger_ratio", 1.0)),
+        float(summary.get("max_wind_speed", float("inf"))),
+        float(summary.get("mean_wind_speed", float("inf"))),
+        float(summary.get("total_distance_km", float("inf"))),
+    )
+
+
+def compare_forward_reverse_routes(
+    grid: WindGrid,
+    start: tuple[float, float],
+    end: tuple[float, float],
+    thresholds,
+    cost_config,
+    planner_type: str,
+    sample_interval_km: float,
+    enable_reverse: bool = True,
+) -> dict:
+    """Plan start->end and end->start, then score both as start->end geometry."""
+
+    forward = plan_single_altitude_route(grid, start, end, thresholds, cost_config, planner_type)
+    if not enable_reverse or not _env_enabled("ROUTE_PLAN_REVERSE_COMPARE", True):
+        forward["search_direction"] = "forward"
+        return forward
+    try:
+        backward = plan_single_altitude_route(grid, end, start, thresholds, cost_config, planner_type)
+        backward_points = list(reversed(backward["points"]))
+        if backward_points[0] != start:
+            backward_points.insert(0, start)
+        if backward_points[-1] != end:
+            backward_points.append(end)
+        forward_score = _route_choice_score(forward["points"], grid, thresholds, sample_interval_km)
+        backward_score = _route_choice_score(backward_points, grid, thresholds, sample_interval_km)
+        if backward_score < forward_score:
+            backward["points"] = backward_points
+            backward["search_direction"] = "reverse_geometry_selected"
+            backward["forward_score"] = forward_score
+            backward["selected_score"] = backward_score
+            return backward
+        forward["search_direction"] = "forward"
+        forward["forward_score"] = forward_score
+        forward["reverse_score"] = backward_score
+        return forward
+    except ValueError as exc:
+        forward["search_direction"] = "forward"
+        forward["reverse_compare_error"] = str(exc)
+        return forward
 
 
 @app.get("/", include_in_schema=False)
@@ -286,46 +714,66 @@ def route_analyze(request: RouteAnalyzeRequest):
 @app.post("/api/route/plan")
 def route_plan(request: RoutePlanRequest):
     """Plan a single-altitude route between two map points."""
-    lons = [request.start[0], request.end[0]]
-    lats = [request.start[1], request.end[1]]
-    route_bbox = f"{min(lons) - 0.25},{min(lats) - 0.25},{max(lons) + 0.25},{max(lats) + 0.25}"
-    grid = load_grid(request.cycle, request.forecast_hour, request.level, route_bbox, request.valid_time, request.source)
     try:
+        aircraft_model = normalize_aircraft_model(request.aircraft_model)
+        planning_strategy = normalize_planning_strategy(request.planning_strategy)
+        cost_config = build_strategy_cost_config(planning_strategy)
+        route_bbox = route_planning_bbox(request.start, request.end, planning_strategy)
+        raw_grid = load_grid(request.cycle, request.forecast_hour, request.level, route_bbox, request.valid_time, request.source)
+        grid, route_grid_stride = thin_route_planning_grid(raw_grid)
         planner_type = request.planner_type.lower().replace("-", "_")
-        if planner_type in {"astar", "a_star"}:
-            result = plan_route(grid, request.start, request.end, request.thresholds)
-        elif planner_type in {"lpa", "lpa_star", "wa_lpa", "wa_lpa_star", "walpa", "walpa_star"}:
-            planner_class = LPAStarPlanner if planner_type in {"lpa", "lpa_star"} else WALPAStarPlanner
-            planner = planner_class(
+        candidate_grids = load_candidate_route_grids(request, route_bbox) if _env_enabled("ROUTE_PLAN_MULTI_ALTITUDE", False) else []
+        result = None
+        multi_altitude_error = None
+        if len(candidate_grids) >= 2:
+            thin_grids = []
+            route_grid_stride = 1
+            for candidate_grid in candidate_grids:
+                thin_grid, stride = thin_route_planning_grid(candidate_grid)
+                thin_grids.append(thin_grid)
+                route_grid_stride = max(route_grid_stride, stride)
+            try:
+                result = plan_multi_altitude_route(
+                    thin_grids,
+                    request.start,
+                    request.end,
+                    request.thresholds,
+                    cost_config=cost_config,
+                )
+                result["planner_type"] = f"{planner_type}_multi_altitude"
+                result["requested_planner_type"] = planner_type
+            except ValueError as exc:
+                multi_altitude_error = str(exc)
+
+        if result is None:
+            result = compare_forward_reverse_routes(
                 grid,
-                {"lon": request.start[0], "lat": request.start[1]},
-                {"lon": request.end[0], "lat": request.end[1]},
-                thresholds=request.thresholds,
+                request.start,
+                request.end,
+                request.thresholds,
+                cost_config,
+                planner_type,
+                request.sample_interval_km,
+                enable_reverse=planning_strategy == PLANNING_STRATEGY_WIND_AVOIDANCE,
             )
-            plan = planner.plan()
-            points = list(plan.points)
-            if not points:
-                raise ValueError("未找到可行路径")
-            if points[0] != request.start:
-                points.insert(0, request.start)
-            if points[-1] != request.end:
-                points.append(request.end)
-            result = {
-                "points": points,
-                "segments": [],
-                "cost": plan.total_cost,
-                "distance_km": plan.path_length,
-                "level": grid.level,
-                "planner_type": planner_type,
-                "planning_time_ms": plan.planning_time_ms,
-                "expanded_nodes": plan.expanded_nodes,
-            }
-        else:
-            raise ValueError("planner_type must be astar, lpa_star, or wa_lpa_star")
+        result["aircraft_model"] = aircraft_model
+        result["aircraft_model_label"] = describe_aircraft_model(aircraft_model)
+        result["planning_strategy"] = planning_strategy
+        result["planning_strategy_label"] = describe_strategy(planning_strategy)
+        result["cost_config"] = cost_config
+        result["search_bbox"] = [float(value) for value in route_bbox.split(",")]
+        result["search_grid_stride"] = route_grid_stride
+        result["multi_altitude"] = str(result.get("planner_type", "")).endswith("_multi_altitude")
+        if multi_altitude_error:
+            result["multi_altitude_error"] = multi_altitude_error
+        result["points"] = enrich_route_points_with_altitude(result["points"], raw_grid)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    samples = sample_route(result["points"], grid, request.thresholds, request.sample_interval_km)
-    return {**result, "analysis": analyze_route(samples, request.thresholds), "metadata": metadata(grid)}
+    if "analysis_samples" in result:
+        samples = result.pop("analysis_samples")
+    else:
+        samples = sample_route(result["points"], raw_grid, request.thresholds, request.sample_interval_km)
+    return {**result, "analysis": analyze_route(samples, request.thresholds), "metadata": metadata(raw_grid)}
 
 
 @app.post("/api/route/decision")
@@ -372,8 +820,9 @@ def route_decision(request: RouteDecisionRequest):
 
 @app.post("/api/routes", status_code=201)
 def create_route(record: RouteRecord):
-    export_route_to_json(record)
-    return route_storage.save_route(record.model_dump())
+    result = route_storage.save_route(record.model_dump())
+    exported = export_route_to_json(record, result["route_id"])
+    return {**result, "exported_json": exported}
 
 
 @app.get("/api/routes")
@@ -390,54 +839,74 @@ def route(route_id: str):
 
 @app.put("/api/routes/{route_id}")
 def update_route(route_id: str, record: RouteRecord):
-    export_route_to_json(record)
     payload = record.model_dump()
     payload["_update"] = True
     result = route_storage.save_route(payload, route_id)
     if result is None:
         raise HTTPException(status_code=404, detail="未找到该航线记录")
-    return result
+    exported = export_route_to_json(record, route_id)
+    return {**result, "exported_json": exported}
 
 @app.delete("/api/routes/{route_id}", status_code=204)
 def delete_route(route_id: str):
     if not route_storage.delete_route(route_id):
         raise HTTPException(status_code=404, detail="未找到该航线记录")
+    delete_export_files_for_route(route_id)
 
 @app.get("/api/exported-routes")
 def list_exported_routes():
     files = []
     if EXPORT_DIR.exists():
         for file in EXPORT_DIR.glob("*.json"):
-            parts = file.stem.rsplit("_", 1)
-            name = parts[0] if len(parts) > 1 else file.stem
-            time_str = parts[1] if len(parts) > 1 else ""
-            
-            try:
-                dt = datetime.strptime(time_str, "%Y%m%d%H%M%S")
-                formatted_time = dt.strftime("%Y-%m-%d %H:%M:%S")
-            except ValueError:
-                formatted_time = time_str
-                
-            files.append({
-                "file_name": file.name,
-                "route_name": name,
-                "time": formatted_time,
-                "timestamp": file.stat().st_mtime
-            })
+            files.append(_exported_route_record(file))
     files.sort(key=lambda x: x["timestamp"], reverse=True)
     return files
 
 @app.get("/api/exported-routes/{file_name}")
 def get_exported_route(file_name: str):
-    file_path = EXPORT_DIR / file_name
+    file_path = _exported_route_path(file_name)
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="文件不存在")
     return FileResponse(file_path, media_type="application/json", filename=file_name)
 
+@app.put("/api/exported-routes/{file_name}/rename")
+def rename_exported_route(file_name: str, request: ExportedRouteRenameRequest):
+    file_path = _exported_route_path(file_name)
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="文件不存在")
+    if request.file_name:
+        target_path = _unique_export_file_path(request.file_name, exclude=file_path)
+        if target_path != file_path:
+            file_path.rename(target_path)
+        return _exported_route_record(target_path)
+    elif request.route_name:
+        route_name = request.route_name.strip()
+        route_id = _export_route_payload_route_id(file_path)
+        if not route_id:
+            route_id = _unique_route_id_by_name(_exported_route_record(file_path).get("route_name"))
+        if route_id:
+            updated = route_storage.update_route_name(route_id, route_name)
+            if updated is None:
+                raise HTTPException(status_code=404, detail="未找到该航线记录")
+            for item in _export_files_for_route(route_id):
+                _update_export_route_name(item, route_name, route_id)
+            _update_export_route_name(file_path, route_name, route_id)
+        else:
+            _update_export_route_name(file_path, route_name)
+        return _exported_route_record(file_path)
+    else:
+        raise HTTPException(status_code=400, detail="必须提供新的 JSON 文件名")
+
 @app.delete("/api/exported-routes/{file_name}", status_code=204)
 def delete_exported_route(file_name: str):
-    file_path = EXPORT_DIR / file_name
+    file_path = _exported_route_path(file_name)
     if file_path.exists():
+        route_id = _export_route_payload_route_id(file_path)
+        if not route_id:
+            route_id = _unique_route_id_by_name(_exported_route_record(file_path).get("route_name"))
         file_path.unlink()
+        if route_id:
+            route_storage.delete_route(route_id)
+            delete_export_files_for_route(route_id)
     else:
         raise HTTPException(status_code=404, detail="文件不存在")

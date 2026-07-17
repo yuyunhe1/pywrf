@@ -1,6 +1,7 @@
 import axios from 'axios'
 
 const api = axios.create({ baseURL: '/api', timeout: 15000 })
+const ROUTE_PLAN_TIMEOUT_MS = 120000
 export const CHINA_BBOX = [73, 18, 135, 54]
 
 const selectionParams = (selection, bbox) => ({
@@ -26,12 +27,17 @@ export const analyzeRoute = (selection, points, thresholds) =>
     level: selection.level,
     thresholds,
   }).then(({ data }) => data)
-export const planRoute = (selection, start, end, thresholds, plannerType = 'wa_lpa_star') =>
+export const planRoute = (selection, start, end, thresholds, plannerType = 'wa_lpa_star', aircraftModel = 'fixed_wing', planningStrategy = 'wind_avoidance') =>
   api.post('/route/plan', {
     start, end,
     ...(selection.validTime ? { valid_time: selection.validTime } : { cycle: selection.cycle, forecast_hour: selection.forecastHour }),
-    source: selection.source, level: selection.level, thresholds, planner_type: plannerType,
-  }).then(({ data }) => data)
+    source: selection.source,
+    level: selection.level,
+    thresholds,
+    planner_type: plannerType,
+    aircraft_model: aircraftModel,
+    planning_strategy: planningStrategy,
+  }, { timeout: ROUTE_PLAN_TIMEOUT_MS }).then(({ data }) => data)
 export const listRoutes = () => api.get('/routes').then(({ data }) => data)
 export const saveRoute = (route) => api.post('/routes', route).then(({ data }) => data)
 export const deleteRoute = (routeId) => api.delete(`/routes/${routeId}`)
@@ -42,9 +48,21 @@ export const listExportedRoutes = async () => {
 }
 
 export const getExportedRouteUrl = (fileName) => {
-  return `${api.defaults.baseURL}/exported-routes/${fileName}`
+  return `${api.defaults.baseURL}/exported-routes/${encodeURIComponent(fileName)}`
 }
 
 export const deleteExportedRoute = async (fileName) => {
-  await api.delete(`/exported-routes/${fileName}`)
+  await api.delete(`/exported-routes/${encodeURIComponent(fileName)}`)
 }
+
+export const renameExportedRouteFile = async (fileName, newFileName) => {
+  const { data } = await api.put(`/exported-routes/${encodeURIComponent(fileName)}/rename`, { file_name: newFileName })
+  return data
+}
+
+export const renameExportedRouteName = async (fileName, routeName) => {
+  const { data } = await api.put(`/exported-routes/${encodeURIComponent(fileName)}/rename`, { route_name: routeName })
+  return data
+}
+
+export const renameExportedRoute = renameExportedRouteFile

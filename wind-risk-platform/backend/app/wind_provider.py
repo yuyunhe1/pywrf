@@ -43,6 +43,7 @@ class WindGrid:
     source: str = "GFS mock"
     cycle_bj: str | None = None
     valid_time_bj: str | None = None
+    terrain: np.ndarray | None = None
 
 
 def normalize_level(level: str) -> str:

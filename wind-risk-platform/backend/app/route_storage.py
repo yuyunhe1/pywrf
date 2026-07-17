@@ -36,5 +36,13 @@ def save_route(payload, route_id=None):
         db.execute("INSERT OR REPLACE INTO routes VALUES (?,?,?,?,?,?,?,?,?,?)", (route_id, payload["name"], json.dumps(payload["start"]), json.dumps(payload["end"]), json.dumps(payload["points"]), payload["level"], payload.get("cycle"), payload.get("forecast_hour"), created, now))
     return get_route(route_id)
 
+def update_route_name(route_id, name):
+    payload = get_route(route_id)
+    if payload is None:
+        return None
+    payload["name"] = name
+    payload["_update"] = True
+    return save_route(payload, route_id)
+
 def delete_route(route_id):
     with _connect() as db: return db.execute("DELETE FROM routes WHERE route_id=?", (route_id,)).rowcount > 0

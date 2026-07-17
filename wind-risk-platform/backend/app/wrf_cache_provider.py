@@ -275,6 +275,30 @@ def _crop(lons: np.ndarray, lats: np.ndarray, u: np.ndarray, v: np.ndarray, bbox
     return lons[lon_mask], lats[lat_mask], u[lat_mask][:, lon_mask], v[lat_mask][:, lon_mask]
 
 
+def _crop_scalar(lons: np.ndarray, lats: np.ndarray, values: np.ndarray | None, bbox):
+    if values is None:
+        return None
+    if not bbox:
+        return values
+    min_lon, min_lat, max_lon, max_lat = bbox
+    eps = 1e-5
+    lon_mask = (lons >= min_lon - eps) & (lons <= max_lon + eps)
+    lat_mask = (lats >= min_lat - eps) & (lats <= max_lat + eps)
+    if not lon_mask.any() or not lat_mask.any():
+        return None
+    return values[lat_mask][:, lon_mask]
+
+
+def _pick_terrain_array(data) -> np.ndarray | None:
+    for key in ("hgt_surface", "hgt_surface_m", "terrain", "terrain_height", "elevation", "HGT"):
+        if key in data.files:
+            terrain = np.asarray(data[key], dtype=float)
+            while terrain.ndim > 2:
+                terrain = terrain[0]
+            return terrain
+    return None
+
+
 @lru_cache(maxsize=48)
 def _get_grid_cached(record_path: str, level: str, bbox):
     path = ensure_cache_file(record_path)
@@ -282,6 +306,7 @@ def _get_grid_cached(record_path: str, level: str, bbox):
         lons = np.asarray(data["lons"], dtype=float)
         lats = np.asarray(data["lats"], dtype=float)
         levels_m = np.asarray(data["levels_m"], dtype=float)
+        terrain = _pick_terrain_array(data)
         if level.strip().lower() == AVERAGE_LAYER.lower():
             normalized_level = AVERAGE_LAYER
             u = _average_250_350m(levels_m, np.asarray(data["u"], dtype=float))
@@ -294,6 +319,7 @@ def _get_grid_cached(record_path: str, level: str, bbox):
         valid_time = str(data["valid_time_utc"].item())
         forecast_hour = int(data["forecast_hour"].item())
 
+    terrain = _crop_scalar(lons, lats, terrain, bbox)
     lons, lats, u, v = _crop(lons, lats, u, v, bbox)
     return WindGrid(
         lons=lons,
@@ -307,6 +333,7 @@ def _get_grid_cached(record_path: str, level: str, bbox):
         source=f"WRF cache: {Path(record_path).name}",
         cycle_bj=_format_bj(cycle),
         valid_time_bj=_format_bj(valid_time),
+        terrain=terrain,
     )
 
 

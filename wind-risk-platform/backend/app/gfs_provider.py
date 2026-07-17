@@ -468,6 +468,51 @@ def _crop_data_array(data_array, bbox: tuple[float, float, float, float] | None)
     return data_array.sel(selector)
 
 
+def _normalize_surface_height(
+    data_array,
+    bbox: tuple[float, float, float, float] | None,
+    reference_lons: np.ndarray,
+    reference_lats: np.ndarray,
+) -> np.ndarray:
+    """Normalize GFS surface HGT/orography to an existing WindGrid lon/lat grid."""
+
+    terrain = _crop_data_array(data_array, bbox).load().squeeze(drop=True)
+    lat_name = _coord_name(terrain, ("latitude", "lat"))
+    lon_name = _coord_name(terrain, ("longitude", "lon"))
+    values = np.asarray(terrain.transpose(lat_name, lon_name).values, dtype=float)
+    lats = np.asarray(terrain[lat_name].values, dtype=float).reshape(-1)
+    lons = np.asarray(terrain[lon_name].values, dtype=float).reshape(-1)
+
+    lons = ((lons + 180.0) % 360.0) - 180.0
+    lon_order = np.argsort(lons)
+    lat_order = np.argsort(lats)[::-1]
+    lons, lats = lons[lon_order], lats[lat_order]
+    values = values[np.ix_(lat_order, lon_order)]
+
+    unique_lons, unique_indices = np.unique(np.round(lons, 10), return_index=True)
+    lons = unique_lons
+    values = values[:, unique_indices]
+
+    lon_indices = np.asarray([int(np.abs(lons - lon).argmin()) for lon in reference_lons])
+    lat_indices = np.asarray([int(np.abs(lats - lat).argmin()) for lat in reference_lats])
+    if not np.allclose(lons[lon_indices], reference_lons, atol=1e-6) or not np.allclose(lats[lat_indices], reference_lats, atol=1e-6):
+        raise ValueError("GFS surface HGT grid does not align with normalized wind grid")
+    return values[np.ix_(lat_indices, lon_indices)]
+
+
+def _load_surface_height_grid(
+    path: Path,
+    bbox: tuple[float, float, float, float] | None,
+    reference_lons: np.ndarray,
+    reference_lats: np.ndarray,
+) -> np.ndarray | None:
+    try:
+        terrain = _open_surface_height(path)
+        return _normalize_surface_height(terrain, bbox, reference_lons, reference_lats)
+    except Exception:
+        return None
+
+
 def _pressure_coord(data_array) -> str:
     for name in ("isobaricInhPa", "isobaricInPa", "level"):
         if name in data_array.coords:
@@ -548,6 +593,7 @@ def _get_grid_cached(
     except ValueError as exc:
         raise ValueError(f"failed to read {item.path.name} at {normalized_level}: {exc}") from exc
     lons, lats, u, v = normalize_grid(u_data, v_data, bbox)
+    terrain = _load_surface_height_grid(item.path, bbox, lons, lats)
     return WindGrid(
         lons=lons,
         lats=lats,
@@ -560,6 +606,7 @@ def _get_grid_cached(
         source=f"GFS GRIB2: {item.path.name}",
         cycle_bj=item.cycle_bj,
         valid_time_bj=item.valid_time_bj,
+        terrain=terrain,
     )
 
 
