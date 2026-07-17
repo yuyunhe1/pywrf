@@ -82,7 +82,7 @@ const removeJsonFile = async (fileName) => {
     jsonFiles.value = await listExportedRoutes()
   } catch (error) {
     console.error('删除JSON文件失败', error)
-  }
+  } 
 }
 
 </script>
