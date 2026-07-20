@@ -232,6 +232,34 @@ altitude_amsl_m = terrain_height_m + altitude_agl_m
 每个航点至少包含 `lon, lat, altitude_agl_m, terrain_height_m, altitude_amsl_m, heading_deg, speed_mps`；
 其中兼容字段 `ele` 表示海拔高度 AMSL，便于后续转换到无人机或飞控任务文件。
 
+### 风切变风险与硬约束
+
+路径规划会使用独立的 `backend/app/wind_shear.py` 计算风矢量切变，并由 A*、LPA*、
+WA-LPA* 和实验性多高度规划共用：
+
+- 垂直风切变：使用上下有效高度层的实际层间距，计算
+  `sqrt((du)^2 + (dv)^2) / abs(z_upper-z_lower)`，同时输出每 10 m、每 30 m 等效风矢量变化。
+- 水平风切变：使用航段两端 `u/v` 矢量差除以 Haversine 实际水平距离，同时输出每 1 km
+  等效风矢量变化。WRF 结果表示约 3 km 模式网格尺度的水平风切变，不代表建筑或百米尺度切变。
+- 任意一端风速低于 `0.5 m/s` 时，风向夹角不单独触发硬约束，但风矢量差仍参与判断。
+- 上下高度层不足时返回“缺测”，不会用 `0` 代替。
+
+实验性默认阈值位于 `backend/config/wind_shear.json`。前端“阈值设置”可以调整垂直/水平
+矢量变化和风向变化阈值；重新规划后，右侧“航线风险分析”会显示最大切变、风险等级和位置。
+这些阈值用于本项目实验与验证，可根据观测结果调整，不代表无人机国家强制标准。
+
+若风切变完全阻断搜索区域，平台会自动进行一次降级规划：仅关闭风切变硬约束，继续保留风速、
+距离、顺逆风、侧风、地形和降雨等原有约束。地图显示该参考航线，右侧风切变分析会明确高风险警告。
+响应中包含：
+
+```json
+{
+  "active": true,
+  "reason": "wind_shear_blocked",
+  "message": "风切变硬约束已完全阻断起终点；地图显示的是忽略风切变的参考航线。"
+}
+```
+
 ### 避风优先搜索范围
 
 避风优先会使用比路程优先更大的搜索走廊。默认 padding 为：
@@ -324,6 +352,13 @@ pwsh -File wind-risk-platform\backend\scripts\build_strrt_star_native.ps1 `
 空间路径长度、探索状态数、最大航段速度及完整时空路径，可作为后续接入实际风场与无人机约束的基线。
 
 ## WRF 实时降尺度缓存
+
+前端切换到 WRF 数据源时会优先立即读取本地 `data/wrf_platform_cache`。若已配置远程服务器，
+`index.json` 会在后台刷新，SSH 暂时不可用或未配置密码/密钥不会阻止已有本地 WRF 数据显示。
+默认同一后端进程最多每 300 秒触发一次后台索引刷新，可通过
+`WRF_CACHE_INDEX_SYNC_INTERVAL_SECONDS` 调整。时间列表默认只公布已经下载到本地的 `.npz`，避免用户
+选中远程存在但本地缺失、且当前 SSH 无法下载的时效；如需恢复按需远程下载，可设置
+`WRF_CACHE_EXPOSE_REMOTE_FILES=1`。
 
 服务器侧可使用仓库根目录的脚本自动完成：
 

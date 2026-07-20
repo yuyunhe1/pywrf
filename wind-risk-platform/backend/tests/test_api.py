@@ -67,3 +67,33 @@ def test_point_and_route_analysis():
     assert route.status_code == 200
     assert route.json()["samples"]
     assert 0 <= route.json()["danger_ratio"] <= 1
+
+
+def test_route_plan_returns_wind_shear_analysis_and_validates_thresholds():
+    payload = {
+        "start": [118.2, 31.0],
+        "end": [118.5, 31.1],
+        "cycle": CYCLE,
+        "forecast_hour": 3,
+        "level": "100m AGL",
+        "planner_type": "astar",
+        "planning_strategy": "distance_priority",
+        "thresholds": {"safe": 1.5, "notice": 3.3, "warning": 5.4, "danger": 100.0},
+        "wind_shear": {
+            "enabled": False,
+            "vertical": {"hard_delta_v_10m_ms": 3.0, "hard_delta_v_30m_ms": 6.0},
+            "horizontal": {"hard_delta_v_1km_ms": 2.6, "hard_direction_change_deg": 45.0},
+        },
+    }
+    response = client.post("/api/route/plan", json=payload)
+
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert result["points"]
+    assert result["wind_shear"] == result["analysis"]["wind_shear"]
+    assert "max_horizontal_delta_v_1km_ms" in result["wind_shear"]
+    assert result["wind_shear"]["note"].startswith("项目实验性风险阈值")
+
+    payload["wind_shear"]["horizontal"]["hard_delta_v_1km_ms"] = -1
+    invalid = client.post("/api/route/plan", json=payload)
+    assert invalid.status_code == 422

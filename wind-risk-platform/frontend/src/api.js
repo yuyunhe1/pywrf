@@ -19,15 +19,16 @@ export const getWind = (selection, bbox = CHINA_BBOX) => api.get('/wind', { para
 export const getHeatmap = (selection, bbox = CHINA_BBOX) => api.get('/heatmap', { params: selectionParams(selection, bbox) }).then(({ data }) => data)
 export const getPoint = (selection, lon, lat, { bbox = CHINA_BBOX, signal } = {}) =>
   api.get('/point', { params: { ...selectionParams(selection, containsPoint(bbox, lon, lat) ? bbox : undefined), lon, lat }, signal }).then(({ data }) => data)
-export const analyzeRoute = (selection, points, thresholds) =>
+export const analyzeRoute = (selection, points, thresholds, windShear) =>
   api.post('/route/analyze', {
     points,
     ...(selection.validTime ? { valid_time: selection.validTime } : { cycle: selection.cycle, forecast_hour: selection.forecastHour }),
     source: selection.source,
     level: selection.level,
     thresholds,
+    wind_shear: windShear,
   }).then(({ data }) => data)
-export const planRoute = (selection, start, end, thresholds, plannerType = 'wa_lpa_star', aircraftModel = 'fixed_wing', planningStrategy = 'wind_avoidance') =>
+export const planRoute = (selection, start, end, thresholds, plannerType = 'wa_lpa_star', aircraftModel = 'fixed_wing', planningStrategy = 'wind_avoidance', windShear) =>
   api.post('/route/plan', {
     start, end,
     ...(selection.validTime ? { valid_time: selection.validTime } : { cycle: selection.cycle, forecast_hour: selection.forecastHour }),
@@ -37,6 +38,7 @@ export const planRoute = (selection, start, end, thresholds, plannerType = 'wa_l
     planner_type: plannerType,
     aircraft_model: aircraftModel,
     planning_strategy: planningStrategy,
+    wind_shear: windShear,
   }, { timeout: ROUTE_PLAN_TIMEOUT_MS }).then(({ data }) => data)
 export const listRoutes = () => api.get('/routes').then(({ data }) => data)
 export const saveRoute = (route) => api.post('/routes', route).then(({ data }) => data)

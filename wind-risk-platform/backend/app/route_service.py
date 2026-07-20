@@ -8,6 +8,7 @@ from .models import Thresholds
 from .wind_provider import WindGrid, point_value
 
 EARTH_RADIUS_KM = 6371.0
+POINT_EPSILON = 1e-10
 
 
 def haversine_km(start: tuple[float, float], end: tuple[float, float]) -> float:
@@ -16,6 +17,46 @@ def haversine_km(start: tuple[float, float], end: tuple[float, float]) -> float:
     dlon, dlat = lon2 - lon1, lat2 - lat1
     value = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
     return 2 * EARTH_RADIUS_KM * asin(sqrt(value))
+
+
+def anchor_route_endpoints(
+    grid_points: list[tuple[float, float]],
+    start: tuple[float, float],
+    end: tuple[float, float],
+) -> list[tuple[float, float]]:
+    """Replace the first/last grid centres with the requested map points.
+
+    Grid planners search cell centres internally.  Adding the requested points
+    before and after those centres creates artificial first/last turns.  The
+    centres represent the same start/goal cells, so replacing them preserves
+    the searched cell corridor while returning the actual flight geometry.
+    """
+
+    start_point = (float(start[0]), float(start[1]))
+    end_point = (float(end[0]), float(end[1]))
+    centres = [(float(point[0]), float(point[1])) for point in grid_points]
+
+    # Remove repeated centres, including the duplicate produced when start and
+    # goal map to the same grid cell.
+    unique_centres: list[tuple[float, float]] = []
+    for point in centres:
+        if not unique_centres or not _same_point(unique_centres[-1], point):
+            unique_centres.append(point)
+
+    if len(unique_centres) <= 1:
+        anchored = [start_point, end_point]
+    else:
+        anchored = [start_point, *unique_centres[1:-1], end_point]
+
+    points: list[tuple[float, float]] = []
+    for point in anchored:
+        if not points or not _same_point(points[-1], point):
+            points.append(point)
+    return points
+
+
+def _same_point(left: tuple[float, float], right: tuple[float, float]) -> bool:
+    return abs(left[0] - right[0]) <= POINT_EPSILON and abs(left[1] - right[1]) <= POINT_EPSILON
 
 
 def risk_name(speed: float, thresholds: Thresholds) -> str:
@@ -112,3 +153,46 @@ def analyze_route(samples: list[dict], thresholds: Thresholds) -> dict:
         "tailwind_ratio": round(tailwind_ratio, 3),
         "samples": samples,
     }
+
+
+def include_wind_shear_in_high_risk_ratio(
+    analysis: dict,
+    samples: list[dict],
+    wind_shear: dict | None,
+    thresholds: Thresholds,
+) -> dict:
+    """Combine wind-speed samples and valid shear evaluations into one ratio."""
+
+    if not analysis:
+        analysis = {}
+    wind_sample_count = len(samples)
+    wind_high_risk_count = sum(float(sample.get("wind_speed", 0.0)) > thresholds.warning for sample in samples)
+    wind_only_ratio = wind_high_risk_count / wind_sample_count if wind_sample_count else 0.0
+
+    shear_enabled = bool(wind_shear and wind_shear.get("enabled", False))
+    shear_evaluation_count = 0
+    shear_high_risk_count = 0
+    if shear_enabled:
+        shear_evaluation_count = int(wind_shear.get("vertical_shear_evaluation_count", 0) or 0) + int(
+            wind_shear.get("horizontal_shear_evaluation_count", 0) or 0
+        )
+        shear_high_risk_count = int(wind_shear.get("vertical_shear_warning_count", 0) or 0) + int(
+            wind_shear.get("horizontal_shear_warning_count", 0) or 0
+        )
+
+    total_evaluations = wind_sample_count + shear_evaluation_count
+    combined_high_risk_count = wind_high_risk_count + shear_high_risk_count
+    combined_ratio = combined_high_risk_count / total_evaluations if total_evaluations else 0.0
+    analysis.update(
+        {
+            "wind_only_danger_ratio": round(float(wind_only_ratio), 3),
+            "wind_shear_risk_ratio": round(
+                float(shear_high_risk_count / shear_evaluation_count) if shear_evaluation_count else 0.0,
+                3,
+            ),
+            "danger_ratio": round(float(combined_ratio), 3),
+            "high_risk_evaluation_count": combined_high_risk_count,
+            "risk_evaluation_count": total_evaluations,
+        }
+    )
+    return analysis

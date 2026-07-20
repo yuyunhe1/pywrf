@@ -16,15 +16,22 @@ from __future__ import annotations
 import heapq
 import math
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 import numpy as np
 
-from .cost_evaluator import calculate_edge_cost, cost_config_from_thresholds
+from .cost_evaluator import calculate_edge_cost, cost_config_from_thresholds, evaluate_node_flyability
 from .models import Thresholds
 from .route_service import haversine_km, risk_name
 from .wind_provider import WindGrid
+from .wind_shear import (
+    WindShearBlockedError,
+    WindShearEnvironment,
+    build_vertical_wind_shear_field,
+    compute_horizontal_wind_shear,
+    ensure_wind_shear_config,
+)
 
 
 NEIGHBOURS_8 = tuple((dr, dc) for dr in (-1, 0, 1) for dc in (-1, 0, 1) if (dr, dc) != (0, 0))
@@ -128,6 +135,7 @@ class MultiAltitudeAStar:
         thresholds: Thresholds,
         cost_config: Any | None = None,
         config: MultiAltitudeConfig | None = None,
+        wind_shear_config: Any | None = None,
     ):
         if len(grids) < 2:
             raise ValueError("multi-altitude planning requires at least two height layers")
@@ -152,6 +160,19 @@ class MultiAltitudeAStar:
         else:
             self.cost_config = cost_config_from_thresholds(thresholds, cost_config)
         self.reference = self.grids[0]
+        self.wind_shear_config = ensure_wind_shear_config(wind_shear_config)
+        no_horizontal_config = replace(
+            self.wind_shear_config,
+            horizontal=replace(self.wind_shear_config.horizontal, enabled=False),
+        )
+        self.wind_shear_environments = [
+            WindShearEnvironment(
+                config=no_horizontal_config,
+                vertical=build_vertical_wind_shear_field(self.grids, float(level), self.wind_shear_config),
+            )
+            for level in self.levels_m
+        ]
+        self.wind_shear_blocked_count = 0
         self.start_node = (_nearest_index(self.reference.lats, start[1]), _nearest_index(self.reference.lons, start[0]))
         self.end_node = (_nearest_index(self.reference.lats, end[1]), _nearest_index(self.reference.lons, end[0]))
 
@@ -212,6 +233,7 @@ class MultiAltitudeAStar:
         ok, dz_msl = self.altitude_transition_ok(level_from, row_from, col_from, level_to, row_to, col_to, horizontal_m)
         if not ok:
             return float("inf")
+        source_grid = self.grids[level_from]
         grid = self.grids[level_to]
         node_from = {
             "row": row_from,
@@ -226,7 +248,44 @@ class MultiAltitudeAStar:
             "agl_height": float(self.levels_m[level_to]),
         }
         terrain_data = {"hgt_surface": grid.terrain} if getattr(grid, "terrain", None) is not None else None
-        edge = calculate_edge_cost(node_from, node_to, grid, terrain_data, None, self.cost_config)
+        source_terrain = {"hgt_surface": source_grid.terrain} if getattr(source_grid, "terrain", None) is not None else None
+        source_check = evaluate_node_flyability(
+            node_from,
+            source_grid,
+            source_terrain,
+            None,
+            self.cost_config,
+            self.wind_shear_environments[level_from],
+        )
+        if not source_check["is_flyable"]:
+            if source_check["blocked_reason"] == "vertical_wind_shear":
+                self.wind_shear_blocked_count += 1
+            return float("inf")
+
+        horizontal_shear = compute_horizontal_wind_shear(
+            _cell_point(source_grid, row_from, col_from),
+            _cell_point(grid, row_to, col_to),
+            float(source_grid.u[row_from, col_from]),
+            float(source_grid.v[row_from, col_from]),
+            float(grid.u[row_to, col_to]),
+            float(grid.v[row_to, col_to]),
+            self.wind_shear_config,
+        )
+        if horizontal_shear.get("is_flyable") is False:
+            self.wind_shear_blocked_count += 1
+            return float("inf")
+
+        edge = calculate_edge_cost(
+            node_from,
+            node_to,
+            grid,
+            terrain_data,
+            None,
+            self.cost_config,
+            self.wind_shear_environments[level_to],
+        )
+        if edge.reason in {"vertical_wind_shear", "horizontal_wind_shear"}:
+            self.wind_shear_blocked_count += 1
         if edge.blocked or not np.isfinite(edge.total_cost):
             return float("inf")
         vertical_sec = abs(dz_msl) / max(self.config.vertical_speed_mps, EPSILON)
@@ -249,7 +308,15 @@ class MultiAltitudeAStar:
                 "agl_height": float(level),
             }
             terrain_data = {"hgt_surface": grid.terrain} if getattr(grid, "terrain", None) is not None else None
-            edge = calculate_edge_cost(node, node, grid, terrain_data, None, self.cost_config)
+            edge = calculate_edge_cost(
+                node,
+                node,
+                grid,
+                terrain_data,
+                None,
+                self.cost_config,
+                self.wind_shear_environments[level_index],
+            )
             if not edge.blocked:
                 states.append((level_index, row, col, None))
         if not states:
@@ -324,6 +391,13 @@ class MultiAltitudeAStar:
             ]
             for item in waypoints
         ]
+        shear_analysis_points = [
+            list(_cell_point(self.grids[state_item[0]], state_item[1], state_item[2]))
+            for state_item in states
+        ]
+        if shear_analysis_points:
+            shear_analysis_points[0] = [float(self.start[0]), float(self.start[1])]
+            shear_analysis_points[-1] = [float(self.end[0]), float(self.end[1])]
 
         samples = []
         cumulative = 0.0
@@ -380,7 +454,9 @@ class MultiAltitudeAStar:
                 "height_changes": height_changes,
             },
             "expanded_nodes": expanded_nodes,
+            "search_wind_shear_blocked_edges": self.wind_shear_blocked_count,
             "analysis_samples": samples,
+            "shear_analysis_points": shear_analysis_points,
         }
 
     def plan(self) -> dict:
@@ -425,6 +501,8 @@ class MultiAltitudeAStar:
                         heapq.heappush(queue, (next_cost + self.heuristic(nr, nc), next_cost, counter, *next_state))
 
         if goal_state is None:
+            if self.wind_shear_blocked_count:
+                raise WindShearBlockedError(self.wind_shear_blocked_count)
             raise ValueError(f"多高度层航线规划未找到可行路径，已扩展 {expanded_nodes} 个节点")
         return self.reconstruct(parents, goal_state, best, expanded_nodes)
 
@@ -436,5 +514,6 @@ def plan_multi_altitude_route(
     thresholds: Thresholds,
     cost_config: Any | None = None,
     config: MultiAltitudeConfig | None = None,
+    wind_shear_config: Any | None = None,
 ) -> dict:
-    return MultiAltitudeAStar(grids, start, end, thresholds, cost_config, config).plan()
+    return MultiAltitudeAStar(grids, start, end, thresholds, cost_config, config, wind_shear_config).plan()

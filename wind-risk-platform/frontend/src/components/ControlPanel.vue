@@ -28,6 +28,7 @@ const props = defineProps({
   selection: { type: Object, required: true },
   layers: { type: Object, required: true },
   thresholds: { type: Object, required: true },
+  windShear: { type: Object, required: true },
   planner: { type: Object, required: true },
   savedRoutes: { type: Array, required: true },
   areaSelection: { type: Object, required: true },
@@ -480,6 +481,41 @@ defineExpose({ refreshJsonDialog })
           <label>四级风<input v-model.number="thresholds.danger" type="number" min="0" step="0.5" /></label>
           <label>级差突变<input v-model.number="thresholds.mutationLevelDiff" type="number" min="1" step="1" title="相邻网格风级差大于等于此值时高亮" /></label>
           <label>夹角突变<input v-model.number="thresholds.mutationAngle" type="number" min="0" max="180" step="5" title="相邻网格风向夹角大于此值时高亮" /></label>
+        </div>
+        <div class="shear-thresholds">
+          <div class="shear-threshold-head">
+            <strong>风切变硬约束</strong>
+            <label class="switch" style="margin: 0;"><input v-model="windShear.enabled" type="checkbox" />启用</label>
+          </div>
+          <label class="switch"><input v-model="windShear.vertical.hard_constraint_enabled" type="checkbox" />
+            垂直风切变硬约束</label>
+          <div class="threshold-grid">
+            <label>谨慎变化/10m
+              <input v-model.number="windShear.vertical.caution_delta_v_10m_ms" type="number" min="0" step="0.1" />
+            </label>
+            <label>垂直变化/10m
+              <input v-model.number="windShear.vertical.hard_delta_v_10m_ms" type="number" min="0.1" step="0.1" />
+            </label>
+            <label>极端变化/30m
+              <input v-model.number="windShear.vertical.hard_delta_v_30m_ms" type="number" min="0.1" step="0.1" />
+            </label>
+            <label>垂直风向变化
+              <input v-model.number="windShear.vertical.hard_direction_change_deg" type="number" min="0.1" max="180" step="1" />
+            </label>
+            <label>谨慎风向变化
+              <input v-model.number="windShear.vertical.caution_direction_change_deg" type="number" min="0" max="180" step="1" />
+            </label>
+            <label>水平变化/km
+              <input v-model.number="windShear.horizontal.hard_delta_v_1km_ms" type="number" min="0.1" step="0.1" />
+            </label>
+            <label>水平风向变化
+              <input v-model.number="windShear.horizontal.hard_direction_change_deg" type="number" min="0.1" max="180" step="1" />
+            </label>
+            <label>方向有效风速
+              <input v-model.number="windShear.min_wind_speed_for_direction_ms" type="number" min="0" step="0.1" />
+            </label>
+          </div>
+          <p class="subtle">以上为项目实验性风险阈值，可根据观测和实验结果调整。</p>
         </div>
       </section>
     </div>

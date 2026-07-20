@@ -260,8 +260,23 @@ from .route_options import (
 )
 from .routing import plan_route
 from . import route_storage, wrf_cache_provider
-from .route_service import analyze_route, sample_route
+from .route_service import (
+    analyze_route,
+    anchor_route_endpoints,
+    haversine_km,
+    include_wind_shear_in_high_risk_ratio,
+    sample_route,
+)
 from .wind_provider import WindGrid, parse_bbox, point_value
+from .wind_shear import (
+    WindShearBlockedError,
+    WindShearEnvironment,
+    analyze_route_wind_shear,
+    build_vertical_wind_shear_field,
+    ensure_wind_shear_config,
+    level_height_m as shear_level_height_m,
+    thin_vertical_wind_shear_field,
+)
 
 app = FastAPI(title="UAV Low-altitude Wind Risk API", version="0.1.0")
 app.add_middleware(
@@ -382,6 +397,65 @@ def candidate_route_levels(selected_level: str) -> list[str]:
     return [f"{int(round(value))}m AGL" for value in sorted(set(levels)) if value > 0]
 
 
+WIND_SHEAR_AGL_LEVELS = (10.0, 30.0, 50.0, 80.0, 100.0, 200.0, 300.0, 500.0, 800.0, 1000.0, 1500.0, 2000.0, 3000.0)
+
+
+def vertical_shear_candidate_levels(selected_level: str) -> list[str]:
+    """Choose the nearest real layers bracketing the selected AGL height."""
+
+    selected = shear_level_height_m(selected_level)
+    if selected is None:
+        return []
+    available = np.asarray(WIND_SHEAR_AGL_LEVELS, dtype=float)
+    insertion = int(np.searchsorted(available, selected))
+    exact = insertion < len(available) and np.isclose(available[insertion], selected)
+    if exact and 0 < insertion < len(available) - 1:
+        values = (available[insertion - 1], available[insertion + 1])
+    elif insertion <= 0:
+        values = (available[0], available[1])
+    elif insertion >= len(available):
+        values = (available[-2], available[-1])
+    else:
+        values = (available[insertion - 1], available[insertion])
+    return [f"{int(round(value))}m AGL" for value in values]
+
+
+def build_route_wind_shear_environment(
+    request: RouteAnalyzeRequest,
+    route_bbox: str,
+    base_grid: WindGrid,
+    stride: int = 1,
+) -> WindShearEnvironment:
+    """Load actual adjacent height layers and build the selected-level shear field."""
+
+    config = ensure_wind_shear_config(request.wind_shear)
+    target_height = shear_level_height_m(request.level)
+    if not config.enabled or not config.vertical.enabled or target_height is None:
+        return WindShearEnvironment(config=config)
+
+    grids: list[WindGrid] = []
+    base_height = shear_level_height_m(base_grid.level)
+    for level in vertical_shear_candidate_levels(request.level):
+        height = shear_level_height_m(level)
+        if base_height is not None and height is not None and np.isclose(base_height, height):
+            grid = base_grid
+        else:
+            try:
+                grid = load_grid(
+                    request.cycle,
+                    request.forecast_hour,
+                    level,
+                    route_bbox,
+                    request.valid_time,
+                    request.source,
+                )
+            except HTTPException:
+                continue
+        grids.append(grid)
+    field = build_vertical_wind_shear_field(grids, target_height, config)
+    return WindShearEnvironment(config=config, vertical=thin_vertical_wind_shear_field(field, stride))
+
+
 def load_candidate_route_grids(request: RoutePlanRequest, route_bbox: str) -> list[WindGrid]:
     """Load all usable candidate AGL grids for multi-altitude planning."""
 
@@ -482,11 +556,19 @@ def plan_single_altitude_route(
     thresholds,
     cost_config,
     planner_type: str,
+    wind_shear_environment: WindShearEnvironment | None = None,
 ) -> dict:
     """Run the selected planner for one fixed altitude layer."""
 
     if planner_type in {"astar", "a_star"}:
-        result = plan_route(grid, start, end, thresholds, cost_config=cost_config)
+        result = plan_route(
+            grid,
+            start,
+            end,
+            thresholds,
+            cost_config=cost_config,
+            wind_shear_environment=wind_shear_environment,
+        )
         result["planner_type"] = planner_type
         return result
     if planner_type in {"lpa", "lpa_star", "wa_lpa", "wa_lpa_star", "walpa", "walpa_star"}:
@@ -497,24 +579,31 @@ def plan_single_altitude_route(
             {"lon": end[0], "lat": end[1]},
             cost_config=cost_config,
             thresholds=thresholds,
+            wind_shear_environment=wind_shear_environment,
         )
         plan = planner.plan()
-        points = list(plan.points)
+        points = anchor_route_endpoints(list(plan.points), start, end)
         if not points:
+            if plan.wind_shear_blocked_count:
+                raise WindShearBlockedError(plan.wind_shear_blocked_count)
             raise ValueError("未找到可行路径")
-        if points[0] != start:
-            points.insert(0, start)
-        if points[-1] != end:
-            points.append(end)
+        distance_km = sum(haversine_km(point_from, point_to) for point_from, point_to in zip(points, points[1:]))
+        shear_analysis_points = anchor_route_endpoints(
+            [planner.cell_point(node) for node in planner.node_path()],
+            start,
+            end,
+        )
         return {
             "points": points,
             "segments": [],
             "cost": plan.total_cost,
-            "distance_km": plan.path_length,
+            "distance_km": round(distance_km, 3),
             "level": grid.level,
             "planner_type": planner_type,
             "planning_time_ms": plan.planning_time_ms,
             "expanded_nodes": plan.expanded_nodes,
+            "search_wind_shear_blocked_edges": plan.wind_shear_blocked_count,
+            "shear_analysis_points": shear_analysis_points,
         }
     raise ValueError("planner_type must be astar, lpa_star, or wa_lpa_star")
 
@@ -539,24 +628,42 @@ def compare_forward_reverse_routes(
     planner_type: str,
     sample_interval_km: float,
     enable_reverse: bool = True,
+    wind_shear_environment: WindShearEnvironment | None = None,
 ) -> dict:
     """Plan start->end and end->start, then score both as start->end geometry."""
 
-    forward = plan_single_altitude_route(grid, start, end, thresholds, cost_config, planner_type)
+    forward = plan_single_altitude_route(
+        grid,
+        start,
+        end,
+        thresholds,
+        cost_config,
+        planner_type,
+        wind_shear_environment,
+    )
     if not enable_reverse or not _env_enabled("ROUTE_PLAN_REVERSE_COMPARE", True):
         forward["search_direction"] = "forward"
         return forward
     try:
-        backward = plan_single_altitude_route(grid, end, start, thresholds, cost_config, planner_type)
-        backward_points = list(reversed(backward["points"]))
-        if backward_points[0] != start:
-            backward_points.insert(0, start)
-        if backward_points[-1] != end:
-            backward_points.append(end)
+        backward = plan_single_altitude_route(
+            grid,
+            end,
+            start,
+            thresholds,
+            cost_config,
+            planner_type,
+            wind_shear_environment,
+        )
+        backward_points = anchor_route_endpoints(list(reversed(backward["points"])), start, end)
         forward_score = _route_choice_score(forward["points"], grid, thresholds, sample_interval_km)
         backward_score = _route_choice_score(backward_points, grid, thresholds, sample_interval_km)
         if backward_score < forward_score:
             backward["points"] = backward_points
+            backward["shear_analysis_points"] = anchor_route_endpoints(
+                list(reversed(backward.get("shear_analysis_points", backward_points))),
+                start,
+                end,
+            )
             backward["search_direction"] = "reverse_geometry_selected"
             backward["forward_score"] = forward_score
             backward["selected_score"] = backward_score
@@ -708,12 +815,25 @@ def route_analyze(request: RouteAnalyzeRequest):
     route_bbox = f"{min(lons) - 0.5},{min(lats) - 0.5},{max(lons) + 0.5},{max(lats) + 0.5}"
     grid = load_grid(request.cycle, request.forecast_hour, request.level, route_bbox, request.valid_time, request.source)
     samples = sample_route(request.points, grid, request.thresholds, request.sample_interval_km)
-    return {**analyze_route(samples, request.thresholds), "metadata": metadata(grid)}
+    shear_environment = build_route_wind_shear_environment(request, route_bbox, grid)
+    shear_analysis = analyze_route_wind_shear(request.points, grid, shear_environment)
+    route_risk = include_wind_shear_in_high_risk_ratio(
+        analyze_route(samples, request.thresholds),
+        samples,
+        shear_analysis,
+        request.thresholds,
+    )
+    return {
+        **route_risk,
+        "wind_shear": shear_analysis,
+        "metadata": metadata(grid),
+    }
 
 
 @app.post("/api/route/plan")
 def route_plan(request: RoutePlanRequest):
     """Plan a single-altitude route between two map points."""
+    wind_shear_fallback = None
     try:
         aircraft_model = normalize_aircraft_model(request.aircraft_model)
         planning_strategy = normalize_planning_strategy(request.planning_strategy)
@@ -721,6 +841,13 @@ def route_plan(request: RoutePlanRequest):
         route_bbox = route_planning_bbox(request.start, request.end, planning_strategy)
         raw_grid = load_grid(request.cycle, request.forecast_hour, request.level, route_bbox, request.valid_time, request.source)
         grid, route_grid_stride = thin_route_planning_grid(raw_grid)
+        raw_shear_environment = build_route_wind_shear_environment(request, route_bbox, raw_grid)
+        planner_shear_environment = WindShearEnvironment(
+            config=raw_shear_environment.config,
+            vertical=thin_vertical_wind_shear_field(raw_shear_environment.vertical, route_grid_stride)
+            if raw_shear_environment.vertical is not None
+            else None,
+        )
         planner_type = request.planner_type.lower().replace("-", "_")
         candidate_grids = load_candidate_route_grids(request, route_bbox) if _env_enabled("ROUTE_PLAN_MULTI_ALTITUDE", False) else []
         result = None
@@ -739,6 +866,7 @@ def route_plan(request: RoutePlanRequest):
                     request.end,
                     request.thresholds,
                     cost_config=cost_config,
+                    wind_shear_config=request.wind_shear,
                 )
                 result["planner_type"] = f"{planner_type}_multi_altitude"
                 result["requested_planner_type"] = planner_type
@@ -755,6 +883,7 @@ def route_plan(request: RoutePlanRequest):
                 planner_type,
                 request.sample_interval_km,
                 enable_reverse=planning_strategy == PLANNING_STRATEGY_WIND_AVOIDANCE,
+                wind_shear_environment=planner_shear_environment,
             )
         result["aircraft_model"] = aircraft_model
         result["aircraft_model_label"] = describe_aircraft_model(aircraft_model)
@@ -767,13 +896,70 @@ def route_plan(request: RoutePlanRequest):
         if multi_altitude_error:
             result["multi_altitude_error"] = multi_altitude_error
         result["points"] = enrich_route_points_with_altitude(result["points"], raw_grid)
+    except WindShearBlockedError as exc:
+        # Preserve a visible reference route for analysis: retry with only the
+        # wind-shear constraint disabled while retaining wind-speed and all
+        # other existing route constraints.
+        try:
+            fallback_config_mapping = request.wind_shear.model_dump()
+            fallback_config_mapping["enabled"] = False
+            fallback_shear_environment = WindShearEnvironment(
+                config=ensure_wind_shear_config(fallback_config_mapping),
+                vertical=planner_shear_environment.vertical,
+            )
+            result = compare_forward_reverse_routes(
+                grid,
+                request.start,
+                request.end,
+                request.thresholds,
+                cost_config,
+                planner_type,
+                request.sample_interval_km,
+                enable_reverse=planning_strategy == PLANNING_STRATEGY_WIND_AVOIDANCE,
+                wind_shear_environment=fallback_shear_environment,
+            )
+            wind_shear_fallback = {
+                "active": True,
+                "reason": "wind_shear_blocked",
+                "message": "风切变硬约束已完全阻断起终点；地图显示的是忽略风切变、仍保留风速等原有约束的参考航线。",
+                "blocked_by_wind_shear_count": exc.blocked_count,
+            }
+            result["wind_shear_fallback"] = wind_shear_fallback
+            result["aircraft_model"] = aircraft_model
+            result["aircraft_model_label"] = describe_aircraft_model(aircraft_model)
+            result["planning_strategy"] = planning_strategy
+            result["planning_strategy_label"] = describe_strategy(planning_strategy)
+            result["cost_config"] = cost_config
+            result["search_bbox"] = [float(value) for value in route_bbox.split(",")]
+            result["search_grid_stride"] = route_grid_stride
+            result["multi_altitude"] = False
+            result["points"] = enrich_route_points_with_altitude(result["points"], raw_grid)
+        except ValueError as fallback_exc:
+            raise HTTPException(status_code=400, detail=str(fallback_exc)) from fallback_exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     if "analysis_samples" in result:
         samples = result.pop("analysis_samples")
     else:
         samples = sample_route(result["points"], raw_grid, request.thresholds, request.sample_interval_km)
-    return {**result, "analysis": analyze_route(samples, request.thresholds), "metadata": metadata(raw_grid)}
+    route_analysis = analyze_route(samples, request.thresholds)
+    shear_analysis_points = result.pop("shear_analysis_points", result["points"])
+    shear_analysis = analyze_route_wind_shear(shear_analysis_points, raw_grid, raw_shear_environment)
+    route_analysis = include_wind_shear_in_high_risk_ratio(
+        route_analysis,
+        samples,
+        shear_analysis,
+        request.thresholds,
+    )
+    route_analysis["wind_shear"] = shear_analysis
+    if wind_shear_fallback is not None:
+        route_analysis["wind_shear_fallback"] = wind_shear_fallback
+    return {
+        **result,
+        "wind_shear": shear_analysis,
+        "analysis": route_analysis,
+        "metadata": metadata(raw_grid),
+    }
 
 
 @app.post("/api/route/decision")

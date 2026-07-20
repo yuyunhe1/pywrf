@@ -7,10 +7,11 @@ from math import acos, degrees, hypot
 
 import numpy as np
 
-from .cost_evaluator import calculate_edge_cost, cost_config_from_thresholds, is_node_flyable
+from .cost_evaluator import calculate_edge_cost, cost_config_from_thresholds, evaluate_node_flyability
 from .models import Thresholds
-from .route_service import haversine_km, risk_name
+from .route_service import anchor_route_endpoints, haversine_km, risk_name
 from .wind_provider import WindGrid, point_value
+from .wind_shear import WindShearBlockedError, WindShearEnvironment
 
 
 # Row points south; column points east.  State retains the previous direction so
@@ -60,12 +61,22 @@ def plan_route(
     cost_config=None,
     terrain_data=None,
     rain_data=None,
+    wind_shear_environment: WindShearEnvironment | None = None,
 ) -> dict:
     """Find a safe 8-neighbour path; one requested level means altitude is constant."""
     start_node = (_nearest_index(grid.lats, start[1]), _nearest_index(grid.lons, start[0]))
     end_node = (_nearest_index(grid.lats, end[1]), _nearest_index(grid.lons, end[0]))
     cost_config = cost_config_from_thresholds(thresholds, cost_config)
-    if not is_node_flyable(start_node, grid, terrain_data, rain_data, cost_config) or not is_node_flyable(end_node, grid, terrain_data, rain_data, cost_config):
+    start_check = evaluate_node_flyability(
+        start_node, grid, terrain_data, rain_data, cost_config, wind_shear_environment
+    )
+    end_check = evaluate_node_flyability(
+        end_node, grid, terrain_data, rain_data, cost_config, wind_shear_environment
+    )
+    if not start_check["is_flyable"] or not end_check["is_flyable"]:
+        blocked_reason = start_check["blocked_reason"] if not start_check["is_flyable"] else end_check["blocked_reason"]
+        if blocked_reason in {"vertical_wind_shear", "horizontal_wind_shear"}:
+            raise WindShearBlockedError()
         raise ValueError("起点或终点位于四级风及以上（或更高）的禁飞网格内")
 
     def heuristic(row: int, col: int) -> float:
@@ -76,6 +87,7 @@ def plan_route(
     parents: dict[tuple[int, int, tuple[int, int] | None], tuple[int, int, tuple[int, int] | None] | None] = {}
     best: dict[tuple[int, int, tuple[int, int] | None], float] = {(start_node[0], start_node[1], None): 0.0}
     goal_state = None
+    wind_shear_blocked_count = 0
     while queue:
         _, cost, row, col, previous = heapq.heappop(queue)
         state = (row, col, previous)
@@ -88,8 +100,18 @@ def plan_route(
             nr, nc = row + direction[0], col + direction[1]
             if not (0 <= nr < len(grid.lats) and 0 <= nc < len(grid.lons)):
                 continue
-            edge_cost = calculate_edge_cost((row, col), (nr, nc), grid, terrain_data, rain_data, cost_config)
+            edge_cost = calculate_edge_cost(
+                (row, col),
+                (nr, nc),
+                grid,
+                terrain_data,
+                rain_data,
+                cost_config,
+                wind_shear_environment,
+            )
             if edge_cost.blocked or not np.isfinite(edge_cost.total_cost):
+                if edge_cost.reason in {"vertical_wind_shear", "horizontal_wind_shear"}:
+                    wind_shear_blocked_count += 1
                 continue
             next_cost = cost + edge_cost.total_cost + _turn_cost(previous, direction)
             next_state = (nr, nc, direction)
@@ -98,6 +120,8 @@ def plan_route(
                 parents[next_state] = state
                 heapq.heappush(queue, (next_cost + heuristic(nr, nc), next_cost, nr, nc, direction))
     if goal_state is None:
+        if wind_shear_blocked_count:
+            raise WindShearBlockedError(wind_shear_blocked_count)
         raise ValueError("在当前四级风及以上（或更高）的禁飞限制下，未找到安全的飞行航线")
     nodes = []
     state = goal_state
@@ -111,16 +135,22 @@ def plan_route(
         a, b, c = simplified[-1], nodes[index], nodes[index + 1]
         if (b[0] - a[0], b[1] - a[1]) != (c[0] - b[0], c[1] - b[1]):
             simplified.append(b)
-    simplified.append(nodes[-1])
-    
-    points = [_cell_point(grid, row, col) for row, col in simplified]
-    if len(points) >= 2:
-        points.insert(0, start)
-        points.append(end)
+    if simplified[-1] != nodes[-1]:
+        simplified.append(nodes[-1])
+
+    grid_points = [_cell_point(grid, row, col) for row, col in simplified]
+    points = anchor_route_endpoints(grid_points, start, end)
+    shear_analysis_points = anchor_route_endpoints(
+        [_cell_point(grid, row, col) for row, col in nodes],
+        start,
+        end,
+    )
         
     segments = _segment_risk(points, grid, thresholds)
     return {
         "points": points, "segments": segments, "cost": round(goal_state and best[goal_state], 3),
         "distance_km": round(sum(item["distance_km"] for item in segments), 3),
         "level": grid.level,
+        "search_wind_shear_blocked_edges": wind_shear_blocked_count,
+        "shear_analysis_points": shear_analysis_points,
     }

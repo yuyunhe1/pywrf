@@ -28,6 +28,7 @@ from .grid_planner_lpa_star import LPAStarPlanner, Node
 from .grid_planner_wa_lpa_star import WALPAStarPlanner
 from .models import Thresholds
 from .routing import plan_route
+from .route_service import anchor_route_endpoints
 from .wind_provider import WindGrid
 
 
@@ -251,7 +252,8 @@ def _plan_candidate(
     nodes = planner.node_path()
     if not nodes:
         raise ValueError("未找到可行路径")
-    return [_node_point(grid, node) for node in nodes], nodes, result.total_cost
+    grid_points = [_node_point(grid, node) for node in nodes]
+    return anchor_route_endpoints(grid_points, start_point, end_point), nodes, result.total_cost
 
 
 def _path_summary(

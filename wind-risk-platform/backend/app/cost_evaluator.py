@@ -13,6 +13,8 @@ from typing import Any
 
 import numpy as np
 
+from .wind_shear import WindShearEnvironment, compute_horizontal_wind_shear, node_vertical_shear
+
 
 EARTH_RADIUS_KM = 6371.0088
 
@@ -55,6 +57,9 @@ class EdgeCost:
     total_cost: float
     blocked: bool = False
     reason: str | None = None
+    horizontal_shear_s1: float | None = None
+    horizontal_delta_v_1km_ms: float | None = None
+    horizontal_direction_change_deg: float | None = None
 
     def __float__(self) -> float:
         return self.total_cost
@@ -220,49 +225,191 @@ def decompose_wind_along_edge(node_from: Any, node_to: Any, u: float, v: float) 
     }
 
 
-def is_node_flyable(node: Any, wind_field, terrain_data: Any, rain_data: Any, config: Any | None) -> bool:
+def evaluate_node_flyability(
+    node: Any,
+    wind_field,
+    terrain_data: Any,
+    rain_data: Any,
+    config: Any | None,
+    wind_shear_environment: WindShearEnvironment | None = None,
+) -> dict[str, Any]:
     config = ensure_cost_config(config)
     _, _, wind_speed = _wind_at(wind_field, node)
     if not np.isfinite(wind_speed) or wind_speed >= config.thresholds.max_wind_speed:
-        return False
+        return {"is_flyable": False, "blocked_reason": "wind_speed"}
 
     min_agl = config.thresholds.min_agl_height
     clearance = _clearance_agl(node, wind_field, terrain_data, config)
     if min_agl > 0 and clearance is not None and clearance < min_agl:
-        return False
+        return {"is_flyable": False, "blocked_reason": "terrain_clearance"}
 
     rain = _grid_value(rain_data, node, ("rain", "rain_rate", "apcp", "prate"))
     if rain is not None and config.thresholds.rain_blocking and rain >= config.thresholds.max_rain:
-        return False
-    return True
+        return {"is_flyable": False, "blocked_reason": "rain"}
+
+    vertical_constraint_enabled = bool(
+        wind_shear_environment is not None
+        and wind_shear_environment.config.enabled
+        and wind_shear_environment.config.vertical.enabled
+        and wind_shear_environment.config.vertical.hard_constraint_enabled
+    )
+    vertical_shear = node_vertical_shear(node, wind_shear_environment) if vertical_constraint_enabled else None
+    if vertical_shear is not None and vertical_shear.get("is_flyable") is False:
+        return {
+            "is_flyable": False,
+            "blocked_reason": "vertical_wind_shear",
+            "wind_shear": vertical_shear,
+        }
+    return {"is_flyable": True, "blocked_reason": None, "wind_shear": vertical_shear}
 
 
-def calculate_edge_cost(node_from: Any, node_to: Any, wind_field, terrain_data: Any, rain_data: Any, config: Any | None) -> EdgeCost:
+def is_node_flyable(
+    node: Any,
+    wind_field,
+    terrain_data: Any,
+    rain_data: Any,
+    config: Any | None,
+    wind_shear_environment: WindShearEnvironment | None = None,
+) -> bool:
+    return bool(
+        evaluate_node_flyability(
+            node,
+            wind_field,
+            terrain_data,
+            rain_data,
+            config,
+            wind_shear_environment,
+        )["is_flyable"]
+    )
+
+
+def calculate_edge_cost(
+    node_from: Any,
+    node_to: Any,
+    wind_field,
+    terrain_data: Any,
+    rain_data: Any,
+    config: Any | None,
+    wind_shear_environment: WindShearEnvironment | None = None,
+) -> EdgeCost:
     config = ensure_cost_config(config)
-    if not is_node_flyable(node_to, wind_field, terrain_data, rain_data, config):
-        return EdgeCost(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, float("inf"), True, "node is not flyable")
+    node_check = evaluate_node_flyability(
+        node_to,
+        wind_field,
+        terrain_data,
+        rain_data,
+        config,
+        wind_shear_environment,
+    )
+    if not node_check["is_flyable"]:
+        return EdgeCost(
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            float("inf"),
+            True,
+            str(node_check["blocked_reason"]),
+        )
 
+    from_row, from_col = _node_row_col(node_from)
+    to_row, to_col = _node_row_col(node_to)
     start = _cell_point(wind_field, node_from)
     end = _cell_point(wind_field, node_to)
+    horizontal_shear = None
+    if wind_shear_environment is not None and (from_row, from_col) != (to_row, to_col):
+        u_from, v_from, _ = _wind_at(wind_field, node_from)
+        u_to, v_to, _ = _wind_at(wind_field, node_to)
+        horizontal_shear = compute_horizontal_wind_shear(
+            start,
+            end,
+            u_from,
+            v_from,
+            u_to,
+            v_to,
+            wind_shear_environment.config,
+        )
+        if horizontal_shear.get("is_flyable") is False:
+            return EdgeCost(
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                float("inf"),
+                True,
+                "horizontal_wind_shear",
+                horizontal_shear_s1=horizontal_shear["horizontal_shear_s1"],
+                horizontal_delta_v_1km_ms=horizontal_shear["delta_v_1km_ms"],
+                horizontal_direction_change_deg=horizontal_shear["direction_change_deg"],
+            )
+    risk_nodes: list[Any] = [node_to]
+    if abs(to_row - from_row) == 1 and abs(to_col - from_col) == 1:
+        # A diagonal centre-to-centre edge touches both side-adjacent cells.
+        # Requiring both cells to be flyable prevents the final real-coordinate
+        # segment from cutting through a high-risk corner cell.
+        side_nodes = ((from_row, to_col), (to_row, from_col))
+        side_checks = [
+            evaluate_node_flyability(
+                node,
+                wind_field,
+                terrain_data,
+                rain_data,
+                config,
+                wind_shear_environment,
+            )
+            for node in side_nodes
+        ]
+        blocked_side = next((item for item in side_checks if not item["is_flyable"]), None)
+        if blocked_side is not None:
+            return EdgeCost(
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                float("inf"),
+                True,
+                str(blocked_side["blocked_reason"] or "diagonal_corner"),
+            )
+        # Even flyable side cells contribute risk.  Using the worst value is
+        # conservative, but prevents a diagonal shortcut from hiding a windy,
+        # rainy or terrain-constrained cell that the real segment may enter.
+        risk_nodes.extend(side_nodes)
+
     distance_cost = _haversine_km(start, end)
 
-    u, v, wind_speed = _wind_at(wind_field, node_to)
+    winds = [_wind_at(wind_field, node) for node in risk_nodes]
+    wind_speed = max(sample[2] for sample in winds)
     wind_speed_cost = normalize_risk(
         wind_speed,
         config.thresholds.safe_wind_speed,
         config.thresholds.max_wind_speed,
     )
-    components = decompose_wind_along_edge(node_from, node_to, u, v)
-    headwind_cost = components["headwind"]
-    crosswind_cost = normalize_risk(components["crosswind"], 0.0, config.thresholds.max_wind_speed)
+    component_samples = [decompose_wind_along_edge(node_from, node_to, u, v) for u, v, _ in winds]
+    headwind_cost = max(sample["headwind"] for sample in component_samples)
+    tailwind = min(sample["tailwind"] for sample in component_samples)
+    crosswind = max(sample["crosswind"] for sample in component_samples)
+    crosswind_cost = normalize_risk(crosswind, 0.0, config.thresholds.max_wind_speed)
 
-    clearance = _clearance_agl(node_to, wind_field, terrain_data, config)
+    clearances = [_clearance_agl(node, wind_field, terrain_data, config) for node in risk_nodes]
+    finite_clearances = [value for value in clearances if value is not None and np.isfinite(value)]
+    clearance = min(finite_clearances) if finite_clearances else None
     terrain_cost = 0.0
     if clearance is not None and config.thresholds.min_agl_height > 0:
         safe_clearance = config.thresholds.min_agl_height * 2
         terrain_cost = normalize_risk(safe_clearance - clearance, 0.0, config.thresholds.min_agl_height)
 
-    rain = _grid_value(rain_data, node_to, ("rain", "rain_rate", "apcp", "prate"))
+    rain_values = [_grid_value(rain_data, node, ("rain", "rain_rate", "apcp", "prate")) for node in risk_nodes]
+    finite_rain = [value for value in rain_values if value is not None and np.isfinite(value)]
+    rain = max(finite_rain) if finite_rain else None
     rain_cost = 0.0 if rain is None else normalize_risk(float(rain), 0.0, config.thresholds.max_rain)
 
     weights = config.weights
@@ -278,9 +425,61 @@ def calculate_edge_cost(node_from: Any, node_to: Any, wind_field, terrain_data: 
         distance_cost=distance_cost,
         wind_speed_cost=wind_speed_cost,
         headwind_cost=headwind_cost,
-        tailwind=components["tailwind"],
+        tailwind=tailwind,
         crosswind_cost=crosswind_cost,
         terrain_cost=terrain_cost,
         rain_cost=rain_cost,
         total_cost=float(total),
+        horizontal_shear_s1=None if horizontal_shear is None else horizontal_shear["horizontal_shear_s1"],
+        horizontal_delta_v_1km_ms=None if horizontal_shear is None else horizontal_shear["delta_v_1km_ms"],
+        horizontal_direction_change_deg=None if horizontal_shear is None else horizontal_shear["direction_change_deg"],
+    )
+
+
+def evaluate_edge_flyability(
+    node_from: Any,
+    node_to: Any,
+    wind_field,
+    terrain_data: Any = None,
+    rain_data: Any = None,
+    config: Any | None = None,
+    wind_shear_environment: WindShearEnvironment | None = None,
+) -> dict[str, Any]:
+    """Return a reusable edge decision with an explicit blocking reason."""
+
+    edge = calculate_edge_cost(
+        node_from,
+        node_to,
+        wind_field,
+        terrain_data,
+        rain_data,
+        config,
+        wind_shear_environment,
+    )
+    return {
+        "is_flyable": not edge.blocked and np.isfinite(edge.total_cost),
+        "blocked_reason": edge.reason,
+        "edge_cost": edge,
+    }
+
+
+def is_edge_flyable(
+    node_from: Any,
+    node_to: Any,
+    wind_field,
+    terrain_data: Any = None,
+    rain_data: Any = None,
+    config: Any | None = None,
+    wind_shear_environment: WindShearEnvironment | None = None,
+) -> bool:
+    return bool(
+        evaluate_edge_flyability(
+            node_from,
+            node_to,
+            wind_field,
+            terrain_data,
+            rain_data,
+            config,
+            wind_shear_environment,
+        )["is_flyable"]
     )

@@ -37,6 +37,22 @@ const navigationDecision = computed(() => {
     }
   }
 
+  if (props.analysis.wind_shear_fallback) {
+    return {
+      level: '高风切变警告',
+      color: '#ea5455',
+      message: props.analysis.wind_shear_fallback.message,
+    }
+  }
+
+  if (props.analysis.wind_shear_failure || props.analysis.wind_shear?.highest_shear_level === '禁飞') {
+    return {
+      level: '风切变风险',
+      color: '#ea5455',
+      message: props.analysis.wind_shear_failure?.message || '航线上存在超过实验阈值的风切变，建议重新规划或暂缓飞行。',
+    }
+  }
+
   const level = props.analysis.risk_level
   if (level === '大于四级') {
     return {
@@ -65,6 +81,9 @@ const navigationDecision = computed(() => {
     message: '航线整体风场处于可控范围内，可按常规流程执行任务，飞行中仍需关注实时风场变化。',
   }
 })
+
+const shear = computed(() => props.analysis?.wind_shear)
+const metric = (value, digits = 3) => Number.isFinite(Number(value)) ? Number(value).toFixed(digits) : '缺测'
 
 const toBeijingTime = (utcText, bjText) => {
   if (bjText) return bjText

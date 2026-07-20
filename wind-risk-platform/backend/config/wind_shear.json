@@ -1,0 +1,20 @@
+{
+  "enabled": true,
+  "min_wind_speed_for_direction_ms": 0.5,
+  "vertical": {
+    "enabled": true,
+    "caution_delta_v_10m_ms": 1.0,
+    "hard_delta_v_10m_ms": 3.0,
+    "hard_delta_v_30m_ms": 6.0,
+    "caution_direction_change_deg": 20.0,
+    "hard_direction_change_deg": 45.0,
+    "hard_constraint_enabled": true
+  },
+  "horizontal": {
+    "enabled": true,
+    "hard_delta_v_1km_ms": 2.6,
+    "hard_direction_change_deg": 45.0,
+    "hard_constraint_enabled": true
+  },
+  "note": "项目实验性风险阈值，可根据观测和实验结果调整，不代表无人机国家强制标准"
+}

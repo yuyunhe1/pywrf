@@ -23,6 +23,39 @@ class Thresholds(BaseModel):
             raise ValueError("风级阈值必须严格递增")
         return value
 
+
+class VerticalWindShearSettings(BaseModel):
+    enabled: bool = True
+    caution_delta_v_10m_ms: float = Field(default=1.0, ge=0)
+    hard_delta_v_10m_ms: float = Field(default=3.0, gt=0)
+    hard_delta_v_30m_ms: float = Field(default=6.0, gt=0)
+    caution_direction_change_deg: float = Field(default=20.0, ge=0, le=180)
+    hard_direction_change_deg: float = Field(default=45.0, gt=0, le=180)
+    hard_constraint_enabled: bool = True
+
+    @model_validator(mode="after")
+    def validate_threshold_order(self):
+        if self.caution_delta_v_10m_ms >= self.hard_delta_v_10m_ms:
+            raise ValueError("垂直风切变谨慎阈值必须小于硬约束阈值")
+        if self.caution_direction_change_deg >= self.hard_direction_change_deg:
+            raise ValueError("垂直风向谨慎阈值必须小于硬约束阈值")
+        return self
+
+
+class HorizontalWindShearSettings(BaseModel):
+    enabled: bool = True
+    hard_delta_v_1km_ms: float = Field(default=2.6, gt=0)
+    hard_direction_change_deg: float = Field(default=45.0, gt=0, le=180)
+    hard_constraint_enabled: bool = True
+
+
+class WindShearSettings(BaseModel):
+    enabled: bool = True
+    min_wind_speed_for_direction_ms: float = Field(default=0.5, ge=0)
+    vertical: VerticalWindShearSettings = Field(default_factory=VerticalWindShearSettings)
+    horizontal: HorizontalWindShearSettings = Field(default_factory=HorizontalWindShearSettings)
+    note: str = "项目实验性风险阈值，可根据观测和实验结果调整，不代表无人机国家强制标准"
+
 class RouteAnalyzeRequest(BaseModel):
     """Route analysis request. Each route point uses [longitude, latitude]."""
 
@@ -33,6 +66,7 @@ class RouteAnalyzeRequest(BaseModel):
     source: str | None = None
     level: str
     thresholds: Thresholds = Field(default_factory=Thresholds)
+    wind_shear: WindShearSettings = Field(default_factory=WindShearSettings)
     sample_interval_km: float = Field(default=3.0, gt=0, le=100)
 
     @model_validator(mode="after")
