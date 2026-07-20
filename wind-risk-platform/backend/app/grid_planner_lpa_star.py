@@ -189,7 +189,7 @@ class LPAStarPlanner:
             self.cost_config,
             self.wind_shear_environment,
         )
-        if cost.reason in {"vertical_wind_shear", "horizontal_wind_shear"}:
+        if cost.reason == "horizontal_wind_shear":
             self.wind_shear_blocked_count += 1
         return float("inf") if cost.blocked else cost.total_cost
 

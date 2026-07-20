@@ -22,13 +22,15 @@ SHEAR_MISSING = "缺测"
 
 @dataclass(frozen=True)
 class VerticalWindShearConfig:
-    enabled: bool = True
+    # Retained for request/config compatibility.  The current planners do not
+    # evaluate vertical shear and never use it as a node constraint.
+    enabled: bool = False
     caution_delta_v_10m_ms: float = 1.0
     hard_delta_v_10m_ms: float = 3.0
     hard_delta_v_30m_ms: float = 6.0
     caution_direction_change_deg: float = 20.0
     hard_direction_change_deg: float = 45.0
-    hard_constraint_enabled: bool = True
+    hard_constraint_enabled: bool = False
 
 
 @dataclass(frozen=True)
@@ -72,11 +74,11 @@ class WindShearEnvironment:
 
 
 class WindShearBlockedError(ValueError):
-    """Raised when explored routes are blocked specifically by wind shear."""
+    """Raised when explored routes are blocked by horizontal-shear edges."""
 
     def __init__(self, blocked_count: int = 1):
         self.blocked_count = max(1, int(blocked_count))
-        super().__init__("规划区域内存在超过阈值的风切变航段，当前条件下无可行路径。")
+        super().__init__("规划区域内存在超过阈值的水平风切变边，当前条件下无可行路径。")
 
 
 _BUILTIN_DEFAULT = {
@@ -247,6 +249,28 @@ def _point(node: Any) -> tuple[float, float]:
     if isinstance(node, dict):
         return float(node.get("lon", node.get("longitude"))), float(node.get("lat", node.get("latitude")))
     return float(node[0]), float(node[1])
+
+
+def _point_agl_height(node: Any) -> float | None:
+    if not isinstance(node, dict):
+        return None
+    value = node.get("altitude_agl_m", node.get("agl_height", node.get("agl_m")))
+    if value is None:
+        return None
+    height = float(value)
+    return height if math.isfinite(height) else None
+
+
+def _point_wind(node: Any, wind_field: Any, row: int, col: int) -> tuple[float, float]:
+    if isinstance(node, dict):
+        u_value = node.get("u_mps", node.get("u"))
+        v_value = node.get("v_mps", node.get("v"))
+        if u_value is not None and v_value is not None:
+            u = float(u_value)
+            v = float(v_value)
+            if math.isfinite(u) and math.isfinite(v):
+                return u, v
+    return float(wind_field.u[row, col]), float(wind_field.v[row, col])
 
 
 def compute_horizontal_wind_shear(
@@ -449,57 +473,49 @@ def analyze_route_wind_shear(
     wind_field: Any,
     environment: WindShearEnvironment,
 ) -> dict[str, Any]:
-    vertical_results: list[tuple[int, tuple[float, float], dict[str, Any]]] = []
-    node_values: list[tuple[tuple[float, float], int, int, float, float]] = []
-    for index, point_value in enumerate(points):
+    """Analyze horizontal shear on the route's consecutive horizontal edges.
+
+    Vertical shear fields remain available as low-level utilities for future
+    work, but are deliberately excluded from route planning and route risk.
+    """
+
+    node_values: list[tuple[tuple[float, float], int, int, float, float, float | None]] = []
+    for point_value in points:
         point = _point(point_value)
         row = int(np.abs(wind_field.lats - point[1]).argmin())
         col = int(np.abs(wind_field.lons - point[0]).argmin())
-        node_values.append((point, row, col, float(wind_field.u[row, col]), float(wind_field.v[row, col])))
-        vertical_results.append((index, point, vertical_shear_at(environment.vertical, row, col)))
+        u, v = _point_wind(point_value, wind_field, row, col)
+        node_values.append(
+            (point, row, col, u, v, _point_agl_height(point_value))
+        )
 
     horizontal_results: list[tuple[int, tuple[float, float], dict[str, Any]]] = []
     for index, (left, right) in enumerate(zip(node_values, node_values[1:])):
+        if left[5] is not None and right[5] is not None and not math.isclose(left[5], right[5]):
+            # This is an altitude transition, not an edge between adjacent
+            # horizontal nodes on one layer.
+            continue
         result = compute_horizontal_wind_shear(left[0], right[0], left[3], left[4], right[3], right[4], environment.config)
         midpoint = ((left[0][0] + right[0][0]) / 2.0, (left[0][1] + right[0][1]) / 2.0)
         horizontal_results.append((index, midpoint, result))
 
-    valid_vertical = [item for item in vertical_results if item[2]["status"] == "valid"]
     valid_horizontal = [item for item in horizontal_results if item[2]["status"] == "valid"]
 
     def maximum(items, key):
         values = [(item, item[2].get(key)) for item in items if item[2].get(key) is not None]
         return max(values, key=lambda pair: pair[1])[0] if values else None
 
-    max_vertical = maximum(valid_vertical, "vertical_shear_s1")
     max_horizontal = maximum(valid_horizontal, "horizontal_shear_s1")
-    max_vertical_direction = maximum(valid_vertical, "direction_change_deg")
     max_horizontal_direction = maximum(valid_horizontal, "direction_change_deg")
     rank = {SHEAR_MISSING: -1, SHEAR_SAFE: 0, SHEAR_CAUTION: 1, SHEAR_NO_FLY: 2}
-    all_results = [*vertical_results, *horizontal_results]
-    highest = max((item[2]["shear_level"] for item in all_results), key=lambda level: rank.get(level, -1), default=SHEAR_MISSING)
-    vertical_level = max(
-        (item[2]["shear_level"] for item in vertical_results),
-        key=lambda level: rank.get(level, -1),
-        default=SHEAR_MISSING,
-    )
+    horizontal_active = bool(environment.config.enabled and environment.config.horizontal.enabled)
     horizontal_level = max(
         (item[2]["shear_level"] for item in horizontal_results),
         key=lambda level: rank.get(level, -1),
         default=SHEAR_MISSING,
-    )
-    blocked = [item for item in all_results if item[2].get("is_flyable") is False]
-
-    location_candidates = [
-        (max_vertical, "vertical"),
-        (max_horizontal, "horizontal"),
-    ]
-    location_candidates = [item for item in location_candidates if item[0] is not None]
-    highest_location = max(
-        location_candidates,
-        key=lambda item: rank.get(item[0][2]["shear_level"], -1),
-        default=(None, "vertical"),
-    )
+    ) if horizontal_active else SHEAR_MISSING
+    highest = horizontal_level
+    blocked = [item for item in horizontal_results if item[2].get("is_flyable") is False]
 
     def location(item, shear_type):
         if item is None:
@@ -515,28 +531,28 @@ def analyze_route_wind_shear(
         }
 
     return {
-        "enabled": environment.config.enabled,
-        "vertical_status": "valid" if valid_vertical else "missing",
-        "vertical_layer_pair_m": None
-        if environment.vertical is None
-        else [environment.vertical.lower_height_m, environment.vertical.upper_height_m],
-        "max_vertical_shear_s1": None if max_vertical is None else round(max_vertical[2]["vertical_shear_s1"], 6),
-        "max_vertical_delta_v_10m_ms": None if not valid_vertical else round(max(item[2]["delta_v_10m_ms"] for item in valid_vertical), 3),
-        "max_vertical_delta_v_30m_ms": None if not valid_vertical else round(max(item[2]["delta_v_30m_ms"] for item in valid_vertical), 3),
-        "max_vertical_direction_change_deg": None if max_vertical_direction is None else round(max_vertical_direction[2]["direction_change_deg"], 2),
+        "enabled": horizontal_active,
+        "mode": "horizontal_edges_only",
+        "vertical_status": "disabled",
+        "vertical_layer_pair_m": None,
+        "max_vertical_shear_s1": None,
+        "max_vertical_delta_v_10m_ms": None,
+        "max_vertical_delta_v_30m_ms": None,
+        "max_vertical_direction_change_deg": None,
         "max_horizontal_shear_s1": None if max_horizontal is None else round(max_horizontal[2]["horizontal_shear_s1"], 6),
         "max_horizontal_delta_v_1km_ms": None if not valid_horizontal else round(max(item[2]["delta_v_1km_ms"] for item in valid_horizontal), 3),
         "max_horizontal_direction_change_deg": None if max_horizontal_direction is None else round(max_horizontal_direction[2]["direction_change_deg"], 2),
-        "vertical_shear_warning_count": sum(item[2]["shear_level"] in {SHEAR_CAUTION, SHEAR_NO_FLY} for item in vertical_results),
-        "horizontal_shear_warning_count": sum(item[2]["shear_level"] == SHEAR_NO_FLY for item in horizontal_results),
-        "vertical_shear_evaluation_count": len(valid_vertical),
-        "horizontal_shear_evaluation_count": len(valid_horizontal),
+        "vertical_shear_warning_count": 0,
+        "horizontal_shear_warning_count": sum(item[2]["shear_level"] == SHEAR_NO_FLY for item in horizontal_results)
+        if horizontal_active else 0,
+        "vertical_shear_evaluation_count": 0,
+        "horizontal_shear_evaluation_count": len(valid_horizontal) if horizontal_active else 0,
         "blocked_by_wind_shear_count": len(blocked),
         "highest_shear_level": highest,
-        "vertical_shear_level": vertical_level,
+        "vertical_shear_level": SHEAR_MISSING,
         "horizontal_shear_level": horizontal_level,
-        "max_vertical_location": location(max_vertical, "vertical"),
+        "max_vertical_location": None,
         "max_horizontal_location": location(max_horizontal, "horizontal"),
-        "max_shear_location": location(highest_location[0], highest_location[1]),
-        "note": environment.config.note,
+        "max_shear_location": location(max_horizontal, "horizontal"),
+        "note": f"{environment.config.note}；当前仅将相邻水平节点间的风矢量切变作为边约束，暂不考虑垂直风切变",
     }

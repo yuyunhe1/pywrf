@@ -13,7 +13,7 @@ from typing import Any
 
 import numpy as np
 
-from .wind_shear import WindShearEnvironment, compute_horizontal_wind_shear, node_vertical_shear
+from .wind_shear import WindShearEnvironment, compute_horizontal_wind_shear
 
 
 EARTH_RADIUS_KM = 6371.0088
@@ -190,6 +190,20 @@ def _level_height_agl(wind_field) -> float | None:
     return float(number) if number else None
 
 
+def _same_horizontal_layer(node_from: Any, node_to: Any, wind_field) -> bool:
+    def height(node: Any) -> float | None:
+        if isinstance(node, dict) and "agl_height" in node:
+            return float(node["agl_height"])
+        return _level_height_agl(wind_field)
+
+    from_height = height(node_from)
+    to_height = height(node_to)
+    if from_height is None or to_height is None:
+        # A regular 2-D grid has no per-node height and is one horizontal layer.
+        return True
+    return bool(np.isclose(from_height, to_height))
+
+
 def _clearance_agl(node: Any, wind_field, terrain_data: Any, config: CostConfig) -> float | None:
     terrain_height = _grid_value(terrain_data, node, ("terrain", "terrain_height", "elevation", "hgt", "hgt_surface"))
     if terrain_height is not None and config.thresholds.flight_altitude_msl is not None:
@@ -233,6 +247,14 @@ def evaluate_node_flyability(
     config: Any | None,
     wind_shear_environment: WindShearEnvironment | None = None,
 ) -> dict[str, Any]:
+    """Evaluate properties owned by a node/grid cell.
+
+    Mean wind speed, terrain clearance and rain are node properties.  Wind
+    shear is intentionally excluded here: horizontal shear belongs to the
+    edge between two adjacent horizontal nodes, while vertical shear is not
+    part of the current planner.
+    """
+
     config = ensure_cost_config(config)
     _, _, wind_speed = _wind_at(wind_field, node)
     if not np.isfinite(wind_speed) or wind_speed >= config.thresholds.max_wind_speed:
@@ -247,20 +269,7 @@ def evaluate_node_flyability(
     if rain is not None and config.thresholds.rain_blocking and rain >= config.thresholds.max_rain:
         return {"is_flyable": False, "blocked_reason": "rain"}
 
-    vertical_constraint_enabled = bool(
-        wind_shear_environment is not None
-        and wind_shear_environment.config.enabled
-        and wind_shear_environment.config.vertical.enabled
-        and wind_shear_environment.config.vertical.hard_constraint_enabled
-    )
-    vertical_shear = node_vertical_shear(node, wind_shear_environment) if vertical_constraint_enabled else None
-    if vertical_shear is not None and vertical_shear.get("is_flyable") is False:
-        return {
-            "is_flyable": False,
-            "blocked_reason": "vertical_wind_shear",
-            "wind_shear": vertical_shear,
-        }
-    return {"is_flyable": True, "blocked_reason": None, "wind_shear": vertical_shear}
+    return {"is_flyable": True, "blocked_reason": None, "wind_shear": None}
 
 
 def is_node_flyable(
@@ -320,7 +329,14 @@ def calculate_edge_cost(
     start = _cell_point(wind_field, node_from)
     end = _cell_point(wind_field, node_to)
     horizontal_shear = None
-    if wind_shear_environment is not None and (from_row, from_col) != (to_row, to_col):
+    same_horizontal_layer = _same_horizontal_layer(node_from, node_to, wind_field)
+    if (
+        wind_shear_environment is not None
+        and wind_shear_environment.config.enabled
+        and wind_shear_environment.config.horizontal.enabled
+        and same_horizontal_layer
+        and (from_row, from_col) != (to_row, to_col)
+    ):
         u_from, v_from, _ = _wind_at(wind_field, node_from)
         u_to, v_to, _ = _wind_at(wind_field, node_to)
         horizontal_shear = compute_horizontal_wind_shear(

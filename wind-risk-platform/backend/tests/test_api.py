@@ -91,6 +91,8 @@ def test_route_plan_returns_wind_shear_analysis_and_validates_thresholds():
     result = response.json()
     assert result["points"]
     assert result["wind_shear"] == result["analysis"]["wind_shear"]
+    assert result["wind_shear"]["mode"] == "horizontal_edges_only"
+    assert result["wind_shear"]["vertical_status"] == "disabled"
     assert "max_horizontal_delta_v_1km_ms" in result["wind_shear"]
     assert result["wind_shear"]["note"].startswith("项目实验性风险阈值")
 

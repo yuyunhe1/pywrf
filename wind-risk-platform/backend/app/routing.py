@@ -74,9 +74,6 @@ def plan_route(
         end_node, grid, terrain_data, rain_data, cost_config, wind_shear_environment
     )
     if not start_check["is_flyable"] or not end_check["is_flyable"]:
-        blocked_reason = start_check["blocked_reason"] if not start_check["is_flyable"] else end_check["blocked_reason"]
-        if blocked_reason in {"vertical_wind_shear", "horizontal_wind_shear"}:
-            raise WindShearBlockedError()
         raise ValueError("起点或终点位于四级风及以上（或更高）的禁飞网格内")
 
     def heuristic(row: int, col: int) -> float:
@@ -110,7 +107,7 @@ def plan_route(
                 wind_shear_environment,
             )
             if edge_cost.blocked or not np.isfinite(edge_cost.total_cost):
-                if edge_cost.reason in {"vertical_wind_shear", "horizontal_wind_shear"}:
+                if edge_cost.reason == "horizontal_wind_shear":
                     wind_shear_blocked_count += 1
                 continue
             next_cost = cost + edge_cost.total_cost + _turn_cost(previous, direction)

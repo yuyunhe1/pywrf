@@ -25,13 +25,15 @@ class Thresholds(BaseModel):
 
 
 class VerticalWindShearSettings(BaseModel):
-    enabled: bool = True
+    # Kept in the schema for backward compatibility; current route planning
+    # deliberately ignores vertical wind shear.
+    enabled: bool = False
     caution_delta_v_10m_ms: float = Field(default=1.0, ge=0)
     hard_delta_v_10m_ms: float = Field(default=3.0, gt=0)
     hard_delta_v_30m_ms: float = Field(default=6.0, gt=0)
     caution_direction_change_deg: float = Field(default=20.0, ge=0, le=180)
     hard_direction_change_deg: float = Field(default=45.0, gt=0, le=180)
-    hard_constraint_enabled: bool = True
+    hard_constraint_enabled: bool = False
 
     @model_validator(mode="after")
     def validate_threshold_order(self):

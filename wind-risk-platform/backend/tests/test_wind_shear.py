@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from app.models import Thresholds
-from app.cost_evaluator import evaluate_node_flyability
+from app.cost_evaluator import evaluate_edge_flyability, evaluate_node_flyability
 from app.routing import plan_route
 from app.route_service import include_wind_shear_in_high_risk_ratio
 from app.wind_provider import WindGrid
@@ -11,6 +11,7 @@ from app.wind_shear import (
     SHEAR_SAFE,
     WindShearBlockedError,
     WindShearEnvironment,
+    analyze_route_wind_shear,
     build_vertical_wind_shear_field,
     compute_direction_change,
     compute_horizontal_wind_shear,
@@ -74,13 +75,21 @@ def test_high_risk_ratio_combines_wind_and_wind_shear_evaluations():
 
     assert result["wind_only_danger_ratio"] == 0.0
     assert result["wind_shear_risk_ratio"] == 0.5
-    assert result["danger_ratio"] == 0.333
-    assert result["high_risk_evaluation_count"] == 2
-    assert result["risk_evaluation_count"] == 6
+    assert result["danger_ratio"] == 0.25
+    assert result["high_risk_evaluation_count"] == 1
+    assert result["risk_evaluation_count"] == 4
 
 
 def test_equal_speed_opposite_direction_is_strong_vector_shear():
-    result = compute_vertical_wind_shear(5.0, 0.0, 0.0, -5.0, 0.0, 10.0)
+    result = compute_vertical_wind_shear(
+        5.0,
+        0.0,
+        0.0,
+        -5.0,
+        0.0,
+        10.0,
+        {"vertical": {"enabled": True, "hard_constraint_enabled": True}},
+    )
 
     assert result["delta_wind_vector_ms"] == 10.0
     assert result["direction_change_deg"] == pytest.approx(180.0)
@@ -89,7 +98,15 @@ def test_equal_speed_opposite_direction_is_strong_vector_shear():
 
 
 def test_vertical_hard_threshold_at_three_metres_per_second_per_ten_metres():
-    result = compute_vertical_wind_shear(0.0, 1.0, 100.0, 3.0, 1.0, 110.0)
+    result = compute_vertical_wind_shear(
+        0.0,
+        1.0,
+        100.0,
+        3.0,
+        1.0,
+        110.0,
+        {"vertical": {"enabled": True, "hard_constraint_enabled": True}},
+    )
 
     assert result["delta_v_10m_ms"] == pytest.approx(3.0)
     assert result["is_flyable"] is False
@@ -97,7 +114,15 @@ def test_vertical_hard_threshold_at_three_metres_per_second_per_ten_metres():
 
 
 def test_extreme_vertical_thirty_metre_threshold_blocks():
-    result = compute_vertical_wind_shear(0.0, 1.0, 100.0, 6.1, 1.0, 130.0)
+    result = compute_vertical_wind_shear(
+        0.0,
+        1.0,
+        100.0,
+        6.1,
+        1.0,
+        130.0,
+        {"vertical": {"enabled": True, "hard_constraint_enabled": True}},
+    )
 
     assert result["delta_v_30m_ms"] == pytest.approx(6.1)
     assert result["is_flyable"] is False
@@ -114,7 +139,7 @@ def test_horizontal_vector_change_threshold_blocks_real_distance_edge():
     assert result["blocked_reason"] == "horizontal_wind_shear"
 
 
-def test_direction_change_at_forty_five_degrees_blocks_horizontal_edge():
+def test_direction_change_threshold_blocks_only_the_horizontal_edge():
     result = compute_horizontal_wind_shear((118.0, 31.0), (119.0, 31.0), 1.0, 0.0, 1.0, 1.0)
 
     assert result["direction_change_deg"] == pytest.approx(45.0)
@@ -142,7 +167,7 @@ def test_vertical_field_uses_actual_layer_spacing_and_reports_missing_data():
     assert missing.vertical_shear_s1 is None
 
 
-def test_vertical_shear_field_blocks_node_with_explicit_reason():
+def test_vertical_shear_does_not_block_node():
     selected = _grid(np.ones((3, 3)), level="100m AGL")
     lower = _grid(np.ones((3, 3)), level="80m AGL")
     upper_wind = np.ones((3, 3))
@@ -163,8 +188,42 @@ def test_vertical_shear_field_blocks_node_with_explicit_reason():
         environment,
     )
 
-    assert result["is_flyable"] is False
-    assert result["blocked_reason"] == "vertical_wind_shear"
+    assert result["is_flyable"] is True
+    assert result["blocked_reason"] is None
+
+
+def test_horizontal_shear_blocks_only_the_corresponding_edge_not_its_nodes():
+    grid = _grid([[1.0, -1.0, -1.0]])
+    environment = _horizontal_environment(hard_delta_v_1km_ms=0.5)
+    cost_config = {"thresholds": {"max_wind_speed": 7.9}}
+
+    left_node = evaluate_node_flyability((0, 0), grid, None, None, cost_config, environment)
+    middle_node = evaluate_node_flyability((0, 1), grid, None, None, cost_config, environment)
+    blocked_edge = evaluate_edge_flyability((0, 0), (0, 1), grid, None, None, cost_config, environment)
+    safe_edge = evaluate_edge_flyability((0, 1), (0, 2), grid, None, None, cost_config, environment)
+
+    assert left_node["is_flyable"] is True
+    assert middle_node["is_flyable"] is True
+    assert blocked_edge["is_flyable"] is False
+    assert blocked_edge["blocked_reason"] == "horizontal_wind_shear"
+    assert bool(safe_edge["is_flyable"]) is True
+
+
+def test_route_shear_analysis_skips_cross_altitude_transitions():
+    grid = _grid([[1.0, -1.0, 1.0]])
+    environment = _horizontal_environment(hard_delta_v_1km_ms=0.5)
+    points = [
+        {"lon": grid.lons[0], "lat": grid.lats[0], "altitude_agl_m": 100.0},
+        {"lon": grid.lons[1], "lat": grid.lats[0], "altitude_agl_m": 200.0},
+        {"lon": grid.lons[2], "lat": grid.lats[0], "altitude_agl_m": 200.0},
+    ]
+
+    result = analyze_route_wind_shear(points, grid, environment)
+
+    assert result["vertical_status"] == "disabled"
+    assert result["vertical_shear_evaluation_count"] == 0
+    assert result["horizontal_shear_evaluation_count"] == 1
+    assert result["horizontal_shear_warning_count"] == 1
 
 
 @pytest.mark.parametrize("planner_type", ["astar", "lpa_star", "wa_lpa_star"])
@@ -200,7 +259,7 @@ def test_astar_reports_wind_shear_blocked_when_barrier_closes_domain():
             (grid.lons[-1], grid.lats[2]),
             Thresholds(danger=7.9),
             cost_config={"weights": {"beta_wind": 0.0, "gamma_headwind": 0.0, "delta_crosswind": 0.0}},
-            wind_shear_environment=_horizontal_environment(),
+            wind_shear_environment=_horizontal_environment(hard_delta_v_1km_ms=2.0),
         )
 
     assert exc_info.value.blocked_count > 0
@@ -214,7 +273,7 @@ def test_route_api_returns_reference_path_when_shear_fully_blocks(monkeypatch):
     u = np.ones((5, 5), dtype=float) * 5.0
     u[:, 2] = -5.0
     grid = _grid(u)
-    environment = _horizontal_environment()
+    environment = _horizontal_environment(hard_delta_v_1km_ms=2.0)
     monkeypatch.setenv("ROUTE_PLAN_MULTI_ALTITUDE", "0")
     monkeypatch.setattr(main, "load_grid", lambda *args, **kwargs: grid)
     monkeypatch.setattr(main, "build_route_wind_shear_environment", lambda *args, **kwargs: environment)

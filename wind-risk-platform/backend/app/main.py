@@ -272,10 +272,7 @@ from .wind_shear import (
     WindShearBlockedError,
     WindShearEnvironment,
     analyze_route_wind_shear,
-    build_vertical_wind_shear_field,
     ensure_wind_shear_config,
-    level_height_m as shear_level_height_m,
-    thin_vertical_wind_shear_field,
 )
 
 app = FastAPI(title="UAV Low-altitude Wind Risk API", version="0.1.0")
@@ -397,63 +394,17 @@ def candidate_route_levels(selected_level: str) -> list[str]:
     return [f"{int(round(value))}m AGL" for value in sorted(set(levels)) if value > 0]
 
 
-WIND_SHEAR_AGL_LEVELS = (10.0, 30.0, 50.0, 80.0, 100.0, 200.0, 300.0, 500.0, 800.0, 1000.0, 1500.0, 2000.0, 3000.0)
-
-
-def vertical_shear_candidate_levels(selected_level: str) -> list[str]:
-    """Choose the nearest real layers bracketing the selected AGL height."""
-
-    selected = shear_level_height_m(selected_level)
-    if selected is None:
-        return []
-    available = np.asarray(WIND_SHEAR_AGL_LEVELS, dtype=float)
-    insertion = int(np.searchsorted(available, selected))
-    exact = insertion < len(available) and np.isclose(available[insertion], selected)
-    if exact and 0 < insertion < len(available) - 1:
-        values = (available[insertion - 1], available[insertion + 1])
-    elif insertion <= 0:
-        values = (available[0], available[1])
-    elif insertion >= len(available):
-        values = (available[-2], available[-1])
-    else:
-        values = (available[insertion - 1], available[insertion])
-    return [f"{int(round(value))}m AGL" for value in values]
-
-
 def build_route_wind_shear_environment(
     request: RouteAnalyzeRequest,
     route_bbox: str,
     base_grid: WindGrid,
     stride: int = 1,
 ) -> WindShearEnvironment:
-    """Load actual adjacent height layers and build the selected-level shear field."""
+    """Build horizontal-edge shear settings without loading other heights."""
 
+    del route_bbox, base_grid, stride
     config = ensure_wind_shear_config(request.wind_shear)
-    target_height = shear_level_height_m(request.level)
-    if not config.enabled or not config.vertical.enabled or target_height is None:
-        return WindShearEnvironment(config=config)
-
-    grids: list[WindGrid] = []
-    base_height = shear_level_height_m(base_grid.level)
-    for level in vertical_shear_candidate_levels(request.level):
-        height = shear_level_height_m(level)
-        if base_height is not None and height is not None and np.isclose(base_height, height):
-            grid = base_grid
-        else:
-            try:
-                grid = load_grid(
-                    request.cycle,
-                    request.forecast_hour,
-                    level,
-                    route_bbox,
-                    request.valid_time,
-                    request.source,
-                )
-            except HTTPException:
-                continue
-        grids.append(grid)
-    field = build_vertical_wind_shear_field(grids, target_height, config)
-    return WindShearEnvironment(config=config, vertical=thin_vertical_wind_shear_field(field, stride))
+    return WindShearEnvironment(config=config)
 
 
 def load_candidate_route_grids(request: RoutePlanRequest, route_bbox: str) -> list[WindGrid]:
@@ -842,12 +793,7 @@ def route_plan(request: RoutePlanRequest):
         raw_grid = load_grid(request.cycle, request.forecast_hour, request.level, route_bbox, request.valid_time, request.source)
         grid, route_grid_stride = thin_route_planning_grid(raw_grid)
         raw_shear_environment = build_route_wind_shear_environment(request, route_bbox, raw_grid)
-        planner_shear_environment = WindShearEnvironment(
-            config=raw_shear_environment.config,
-            vertical=thin_vertical_wind_shear_field(raw_shear_environment.vertical, route_grid_stride)
-            if raw_shear_environment.vertical is not None
-            else None,
-        )
+        planner_shear_environment = raw_shear_environment
         planner_type = request.planner_type.lower().replace("-", "_")
         candidate_grids = load_candidate_route_grids(request, route_bbox) if _env_enabled("ROUTE_PLAN_MULTI_ALTITUDE", False) else []
         result = None
@@ -898,14 +844,13 @@ def route_plan(request: RoutePlanRequest):
         result["points"] = enrich_route_points_with_altitude(result["points"], raw_grid)
     except WindShearBlockedError as exc:
         # Preserve a visible reference route for analysis: retry with only the
-        # wind-shear constraint disabled while retaining wind-speed and all
+        # horizontal-shear edge constraint disabled while retaining wind-speed and all
         # other existing route constraints.
         try:
             fallback_config_mapping = request.wind_shear.model_dump()
             fallback_config_mapping["enabled"] = False
             fallback_shear_environment = WindShearEnvironment(
                 config=ensure_wind_shear_config(fallback_config_mapping),
-                vertical=planner_shear_environment.vertical,
             )
             result = compare_forward_reverse_routes(
                 grid,
@@ -921,7 +866,7 @@ def route_plan(request: RoutePlanRequest):
             wind_shear_fallback = {
                 "active": True,
                 "reason": "wind_shear_blocked",
-                "message": "风切变硬约束已完全阻断起终点；地图显示的是忽略风切变、仍保留风速等原有约束的参考航线。",
+                "message": "水平风切变边约束已完全阻断起终点；地图显示的是忽略水平风切变、仍保留风速等节点约束的参考航线。",
                 "blocked_by_wind_shear_count": exc.blocked_count,
             }
             result["wind_shear_fallback"] = wind_shear_fallback

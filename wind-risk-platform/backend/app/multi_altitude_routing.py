@@ -16,7 +16,7 @@ from __future__ import annotations
 import heapq
 import math
 import os
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
@@ -28,8 +28,6 @@ from .wind_provider import WindGrid
 from .wind_shear import (
     WindShearBlockedError,
     WindShearEnvironment,
-    build_vertical_wind_shear_field,
-    compute_horizontal_wind_shear,
     ensure_wind_shear_config,
 )
 
@@ -161,17 +159,7 @@ class MultiAltitudeAStar:
             self.cost_config = cost_config_from_thresholds(thresholds, cost_config)
         self.reference = self.grids[0]
         self.wind_shear_config = ensure_wind_shear_config(wind_shear_config)
-        no_horizontal_config = replace(
-            self.wind_shear_config,
-            horizontal=replace(self.wind_shear_config.horizontal, enabled=False),
-        )
-        self.wind_shear_environments = [
-            WindShearEnvironment(
-                config=no_horizontal_config,
-                vertical=build_vertical_wind_shear_field(self.grids, float(level), self.wind_shear_config),
-            )
-            for level in self.levels_m
-        ]
+        self.wind_shear_environment = WindShearEnvironment(config=self.wind_shear_config)
         self.wind_shear_blocked_count = 0
         self.start_node = (_nearest_index(self.reference.lats, start[1]), _nearest_index(self.reference.lons, start[0]))
         self.end_node = (_nearest_index(self.reference.lats, end[1]), _nearest_index(self.reference.lons, end[0]))
@@ -255,24 +243,9 @@ class MultiAltitudeAStar:
             source_terrain,
             None,
             self.cost_config,
-            self.wind_shear_environments[level_from],
+            None,
         )
         if not source_check["is_flyable"]:
-            if source_check["blocked_reason"] == "vertical_wind_shear":
-                self.wind_shear_blocked_count += 1
-            return float("inf")
-
-        horizontal_shear = compute_horizontal_wind_shear(
-            _cell_point(source_grid, row_from, col_from),
-            _cell_point(grid, row_to, col_to),
-            float(source_grid.u[row_from, col_from]),
-            float(source_grid.v[row_from, col_from]),
-            float(grid.u[row_to, col_to]),
-            float(grid.v[row_to, col_to]),
-            self.wind_shear_config,
-        )
-        if horizontal_shear.get("is_flyable") is False:
-            self.wind_shear_blocked_count += 1
             return float("inf")
 
         edge = calculate_edge_cost(
@@ -282,9 +255,9 @@ class MultiAltitudeAStar:
             terrain_data,
             None,
             self.cost_config,
-            self.wind_shear_environments[level_to],
+            self.wind_shear_environment if level_from == level_to else None,
         )
-        if edge.reason in {"vertical_wind_shear", "horizontal_wind_shear"}:
+        if edge.reason == "horizontal_wind_shear":
             self.wind_shear_blocked_count += 1
         if edge.blocked or not np.isfinite(edge.total_cost):
             return float("inf")
@@ -315,7 +288,7 @@ class MultiAltitudeAStar:
                 terrain_data,
                 None,
                 self.cost_config,
-                self.wind_shear_environments[level_index],
+                None,
             )
             if not edge.blocked:
                 states.append((level_index, row, col, None))
@@ -391,13 +364,22 @@ class MultiAltitudeAStar:
             ]
             for item in waypoints
         ]
-        shear_analysis_points = [
-            list(_cell_point(self.grids[state_item[0]], state_item[1], state_item[2]))
-            for state_item in states
-        ]
+        shear_analysis_points = []
+        for state_item in states:
+            level_index, row, col, _ = state_item
+            lon, lat = _cell_point(self.grids[level_index], row, col)
+            shear_analysis_points.append(
+                {
+                    "lon": lon,
+                    "lat": lat,
+                    "altitude_agl_m": float(self.levels_m[level_index]),
+                    "u_mps": float(self.grids[level_index].u[row, col]),
+                    "v_mps": float(self.grids[level_index].v[row, col]),
+                }
+            )
         if shear_analysis_points:
-            shear_analysis_points[0] = [float(self.start[0]), float(self.start[1])]
-            shear_analysis_points[-1] = [float(self.end[0]), float(self.end[1])]
+            shear_analysis_points[0].update({"lon": float(self.start[0]), "lat": float(self.start[1])})
+            shear_analysis_points[-1].update({"lon": float(self.end[0]), "lat": float(self.end[1])})
 
         samples = []
         cumulative = 0.0

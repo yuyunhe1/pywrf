@@ -161,7 +161,12 @@ def include_wind_shear_in_high_risk_ratio(
     wind_shear: dict | None,
     thresholds: Thresholds,
 ) -> dict:
-    """Combine wind-speed samples and valid shear evaluations into one ratio."""
+    """Combine node wind risk and horizontal-edge shear risk.
+
+    Wind samples represent node/grid-cell properties.  Horizontal wind-shear
+    evaluations represent consecutive route edges.  Vertical shear is not
+    included in the current planning or risk model.
+    """
 
     if not analysis:
         analysis = {}
@@ -173,12 +178,8 @@ def include_wind_shear_in_high_risk_ratio(
     shear_evaluation_count = 0
     shear_high_risk_count = 0
     if shear_enabled:
-        shear_evaluation_count = int(wind_shear.get("vertical_shear_evaluation_count", 0) or 0) + int(
-            wind_shear.get("horizontal_shear_evaluation_count", 0) or 0
-        )
-        shear_high_risk_count = int(wind_shear.get("vertical_shear_warning_count", 0) or 0) + int(
-            wind_shear.get("horizontal_shear_warning_count", 0) or 0
-        )
+        shear_evaluation_count = int(wind_shear.get("horizontal_shear_evaluation_count", 0) or 0)
+        shear_high_risk_count = int(wind_shear.get("horizontal_shear_warning_count", 0) or 0)
 
     total_evaluations = wind_sample_count + shear_evaluation_count
     combined_high_risk_count = wind_high_risk_count + shear_high_risk_count
