@@ -7,7 +7,8 @@ import os
 from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 from pathlib import Path
-from threading import RLock
+from threading import RLock, Thread
+from time import monotonic
 
 import numpy as np
 
@@ -19,6 +20,14 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_CACHE_DIR = REPOSITORY_ROOT / "data" / "wrf_platform_cache"
 REMOTE_INDEX = "index.json"
 SYNC_LOCK = RLock()
+INDEX_SYNC_STATE_LOCK = RLock()
+INDEX_SYNC_THREAD: Thread | None = None
+INDEX_SYNC_LAST_STARTED = 0.0
+INDEX_SYNC_STATUS = {
+    "running": False,
+    "last_success": None,
+    "last_error": None,
+}
 AVERAGE_LAYER = "250-350m AGL average"
 
 
@@ -130,6 +139,69 @@ def refresh_cache() -> None:
         _get_grid_cached.cache_clear()
 
 
+def _index_sync_status() -> dict:
+    """Return a copy of the non-blocking remote index synchronization state."""
+    with INDEX_SYNC_STATE_LOCK:
+        return dict(INDEX_SYNC_STATUS)
+
+
+def _run_background_index_sync() -> None:
+    """Refresh the remote index without delaying a local WRF availability request."""
+    try:
+        sync_index(force=True)
+    except Exception as exc:
+        with INDEX_SYNC_STATE_LOCK:
+            INDEX_SYNC_STATUS["last_error"] = str(exc)
+    else:
+        with INDEX_SYNC_STATE_LOCK:
+            INDEX_SYNC_STATUS["last_success"] = datetime.now(timezone.utc).isoformat()
+            INDEX_SYNC_STATUS["last_error"] = None
+    finally:
+        with INDEX_SYNC_STATE_LOCK:
+            INDEX_SYNC_STATUS["running"] = False
+
+
+def schedule_index_sync() -> dict:
+    """Schedule a best-effort remote index refresh and return immediately.
+
+    A missing local index still requires a synchronous download because there is
+    no local WRF selection to serve. Once an index exists, SSH failures must not
+    prevent the frontend from displaying already downloaded WRF cache files.
+    """
+    global INDEX_SYNC_THREAD, INDEX_SYNC_LAST_STARTED
+
+    if not remote_configured() or os.getenv("WRF_CACHE_AUTO_SYNC_INDEX", "1") != "1":
+        return _index_sync_status()
+
+    local_index = cache_dir() / REMOTE_INDEX
+    if not local_index.is_file():
+        sync_index(force=True)
+        with INDEX_SYNC_STATE_LOCK:
+            INDEX_SYNC_STATUS["last_success"] = datetime.now(timezone.utc).isoformat()
+            INDEX_SYNC_STATUS["last_error"] = None
+        return _index_sync_status()
+
+    try:
+        interval = max(0.0, float(os.getenv("WRF_CACHE_INDEX_SYNC_INTERVAL_SECONDS", "300")))
+    except ValueError:
+        interval = 300.0
+    now = monotonic()
+    with INDEX_SYNC_STATE_LOCK:
+        if INDEX_SYNC_THREAD is not None and INDEX_SYNC_THREAD.is_alive():
+            return dict(INDEX_SYNC_STATUS)
+        if now - INDEX_SYNC_LAST_STARTED < interval:
+            return dict(INDEX_SYNC_STATUS)
+        INDEX_SYNC_LAST_STARTED = now
+        INDEX_SYNC_STATUS["running"] = True
+        INDEX_SYNC_THREAD = Thread(
+            target=_run_background_index_sync,
+            name="wrf-cache-index-sync",
+            daemon=True,
+        )
+        INDEX_SYNC_THREAD.start()
+        return dict(INDEX_SYNC_STATUS)
+
+
 def sync_latest_cycle(force_index: bool = True) -> dict:
     """Download the latest remote WRF cache cycle into the local mirror directory."""
     if not remote_configured():
@@ -173,12 +245,15 @@ def sync_latest_cycle(force_index: bool = True) -> dict:
 
 def availability() -> dict:
     """Return selectable WRF cache times and levels."""
-    if remote_configured() and os.getenv("WRF_CACHE_AUTO_SYNC_INDEX", "1") == "1":
-        sync_index(force=True)
+    remote_sync = schedule_index_sync()
     index = load_index()
+    expose_remote_files = (
+        remote_configured()
+        and os.getenv("WRF_CACHE_EXPOSE_REMOTE_FILES", "0").strip().lower() in {"1", "true", "yes", "on"}
+    )
     files = [
         item for item in index.get("files", [])
-        if remote_configured() or (cache_dir() / item["path"]).is_file()
+        if expose_remote_files or (cache_dir() / item["path"]).is_file()
     ]
     available_keys = {
         (item["valid_time"], item["cycle"], int(item["forecast_hour"]))
@@ -209,6 +284,8 @@ def availability() -> dict:
         "forecast_hours_by_cycle": by_cycle,
         "valid_times": sorted(valid_times, key=lambda item: item["valid_time"]),
         "levels": levels,
+        "remote_sync": remote_sync,
+        "remote_files_exposed": expose_remote_files,
     }
 
 
@@ -355,4 +432,5 @@ def diagnostics() -> dict:
         "mode": "wrf_cache",
         "cache_dir": str(cache_dir()),
         "remote_enabled": remote_configured(),
+        "remote_sync": _index_sync_status(),
     }

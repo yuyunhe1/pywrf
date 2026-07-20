@@ -37,6 +37,22 @@ const navigationDecision = computed(() => {
     }
   }
 
+  if (props.analysis.wind_shear_fallback) {
+    return {
+      level: '高风切变警告',
+      color: '#ea5455',
+      message: props.analysis.wind_shear_fallback.message,
+    }
+  }
+
+  if (props.analysis.wind_shear_failure || props.analysis.wind_shear?.highest_shear_level === '禁飞') {
+    return {
+      level: '风切变风险',
+      color: '#ea5455',
+      message: props.analysis.wind_shear_failure?.message || '航线上存在超过实验阈值的风切变，建议重新规划或暂缓飞行。',
+    }
+  }
+
   const level = props.analysis.risk_level
   if (level === '大于四级') {
     return {
@@ -65,6 +81,9 @@ const navigationDecision = computed(() => {
     message: '航线整体风场处于可控范围内，可按常规流程执行任务，飞行中仍需关注实时风场变化。',
   }
 })
+
+const shear = computed(() => props.analysis?.wind_shear)
+const metric = (value, digits = 3) => Number.isFinite(Number(value)) ? Number(value).toFixed(digits) : '缺测'
 
 const toBeijingTime = (utcText, bjText) => {
   if (bjText) return bjText
@@ -241,6 +260,28 @@ onBeforeUnmount(() => {
         <span style="color: #8099aa; font-size: 12px;">综合等级</span>
         <strong style="margin: 0; font-size: 20px;">{{ analysis?.risk_level || '-' }}</strong>
       </div>
+
+      <section class="wind-shear-analysis">
+        <h3 style="margin-bottom: 8px;">风切变分析</h3>
+        <div v-if="analysis?.wind_shear_failure" class="shear-failure">
+          规划区域内存在超过阈值的风切变航段，当前条件下无可行路径。
+        </div>
+        <template v-else>
+          <div v-if="analysis?.wind_shear_fallback" class="shear-failure" style="margin-bottom: 10px;">
+            风切变硬约束已完全阻断起终点。地图当前显示的是忽略风切变、仍保留风速等原有约束的参考航线，不建议直接执行。
+          </div>
+          <div class="stats" style="grid-template-columns: 1fr 1fr; gap: 8px;">
+            <div class="stat">
+              <span>最大垂直切变</span>
+              <strong>{{ metric(shear?.max_vertical_shear_s1, 4) }}<small>s⁻¹</small></strong>
+            </div>
+            <div class="stat">
+              <span>最大水平切变</span>
+              <strong>{{ metric(shear?.max_horizontal_shear_s1, 4) }}<small>s⁻¹</small></strong>
+            </div>
+          </div>
+        </template>
+      </section>
 
       <section>
         <div class="decision-card"

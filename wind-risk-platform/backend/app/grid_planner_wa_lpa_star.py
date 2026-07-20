@@ -18,6 +18,7 @@ from .cost_evaluator import ensure_cost_config, is_node_flyable
 from .grid_planner_lpa_star import LPAStarPlanner, LPAStarResult, Node
 from .models import Thresholds
 from .wind_provider import WindGrid
+from .wind_shear import WindShearEnvironment
 
 
 EPSILON = 1e-9
@@ -350,6 +351,7 @@ class WALPAStarPlanner(LPAStarPlanner):
         self.expanded_nodes = 0
         self.touched_nodes = 0
         self.queue_pushes = 0
+        self.wind_shear_blocked_count = 0
         self._has_planned = False
         self.rhs[self.start] = 0.0
         self._insert_or_update(self.start)
@@ -383,6 +385,7 @@ class WALPAStarPlanner(LPAStarPlanner):
             "expanded_nodes": result.expanded_nodes,
             "touched_nodes": result.touched_nodes,
             "queue_pushes": result.queue_pushes,
+            "wind_shear_blocked_count": result.wind_shear_blocked_count,
         }
 
     def update_environment_cost(
@@ -450,6 +453,7 @@ def plan_wa_lpa_star(
     wa_config: Any | None = None,
     terrain_data: Any | None = None,
     rain_data: Any | None = None,
+    wind_shear_environment: WindShearEnvironment | None = None,
 ) -> dict[str, Any]:
     planner = WALPAStarPlanner(
         wind_field,
@@ -459,6 +463,7 @@ def plan_wa_lpa_star(
         terrain_data=terrain_data,
         rain_data=rain_data,
         thresholds=thresholds,
+        wind_shear_environment=wind_shear_environment,
         wa_config=wa_config,
     )
     return planner.format_result(planner.plan(), "none")

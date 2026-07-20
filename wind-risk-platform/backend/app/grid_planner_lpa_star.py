@@ -27,6 +27,7 @@ from .cost_evaluator import calculate_edge_cost, cost_config_from_thresholds, en
 from .models import Thresholds
 from .route_service import haversine_km
 from .wind_provider import WindGrid
+from .wind_shear import WindShearEnvironment
 
 
 Node = tuple[int, int]
@@ -49,6 +50,7 @@ class LPAStarResult:
     touched_nodes: int
     queue_pushes: int
     reused_search: bool
+    wind_shear_blocked_count: int = 0
 
 
 @dataclass
@@ -62,6 +64,7 @@ class LPAStarPlanner:
     terrain_data: Any | None = None
     rain_data: Any | None = None
     thresholds: Thresholds | None = None
+    wind_shear_environment: WindShearEnvironment | None = None
 
     g: dict[Node, float] = field(default_factory=dict, init=False)
     rhs: dict[Node, float] = field(default_factory=dict, init=False)
@@ -71,6 +74,7 @@ class LPAStarPlanner:
     expanded_nodes: int = field(default=0, init=False)
     touched_nodes: int = field(default=0, init=False)
     queue_pushes: int = field(default=0, init=False)
+    wind_shear_blocked_count: int = field(default=0, init=False)
     _has_planned: bool = field(default=False, init=False)
 
     def __post_init__(self) -> None:
@@ -176,7 +180,17 @@ class LPAStarPlanner:
         return self.neighbours(node)
 
     def edge_cost(self, node_from: Node, node_to: Node) -> float:
-        cost = calculate_edge_cost(node_from, node_to, self.wind_field, self.terrain_data, self.rain_data, self.cost_config)
+        cost = calculate_edge_cost(
+            node_from,
+            node_to,
+            self.wind_field,
+            self.terrain_data,
+            self.rain_data,
+            self.cost_config,
+            self.wind_shear_environment,
+        )
+        if cost.reason in {"vertical_wind_shear", "horizontal_wind_shear"}:
+            self.wind_shear_blocked_count += 1
         return float("inf") if cost.blocked else cost.total_cost
 
     def best_predecessor(self, node: Node) -> tuple[Node | None, float]:
@@ -235,6 +249,7 @@ class LPAStarPlanner:
         rain_data: Any | None = None,
         changed_nodes: Iterable[Any] | None = None,
         cost_config: Any | None = None,
+        wind_shear_environment: WindShearEnvironment | None = None,
     ) -> None:
         """Apply changed grids/costs and mark only affected vertices inconsistent."""
         if wind_field is not None:
@@ -245,6 +260,8 @@ class LPAStarPlanner:
             self.rain_data = rain_data
         if cost_config is not None:
             self.cost_config = ensure_cost_config(cost_config)
+        if wind_shear_environment is not None:
+            self.wind_shear_environment = wind_shear_environment
 
         if changed_nodes is None:
             changed = [self.start, self.goal]
@@ -317,7 +334,15 @@ class LPAStarPlanner:
                     rain_value = float(np.asarray(rain_source)[row, col])
                     max_rain = rain_value if max_rain is None else max(max_rain, rain_value)
         for start, end in zip(path, path[1:]):
-            edge = calculate_edge_cost(start, end, self.wind_field, self.terrain_data, self.rain_data, self.cost_config)
+            edge = calculate_edge_cost(
+                start,
+                end,
+                self.wind_field,
+                self.terrain_data,
+                self.rain_data,
+                self.cost_config,
+                self.wind_shear_environment,
+            )
             path_length += edge.distance_cost
             total_cost += edge.total_cost
             cumulative_risk += edge.wind_speed_cost + edge.headwind_cost + edge.crosswind_cost + edge.terrain_cost + edge.rain_cost
@@ -342,6 +367,7 @@ class LPAStarPlanner:
             touched_nodes=self.touched_nodes,
             queue_pushes=self.queue_pushes,
             reused_search=self._has_planned,
+            wind_shear_blocked_count=self.wind_shear_blocked_count,
         )
 
     def plan(self) -> LPAStarResult:
@@ -366,8 +392,18 @@ def plan_lpa_star(
     cost_config: Any | None = None,
     terrain_data: Any | None = None,
     rain_data: Any | None = None,
+    wind_shear_environment: WindShearEnvironment | None = None,
 ) -> dict:
-    planner = LPAStarPlanner(wind_field, start_node, goal_node, cost_config, terrain_data, rain_data, thresholds)
+    planner = LPAStarPlanner(
+        wind_field,
+        start_node,
+        goal_node,
+        cost_config,
+        terrain_data,
+        rain_data,
+        thresholds,
+        wind_shear_environment,
+    )
     result = planner.plan()
     return {
         "coarse_path": result.coarse_path,
@@ -380,4 +416,5 @@ def plan_lpa_star(
         "planning_time_ms": result.planning_time_ms,
         "expanded_nodes": result.expanded_nodes,
         "touched_nodes": result.touched_nodes,
+        "wind_shear_blocked_count": result.wind_shear_blocked_count,
     }

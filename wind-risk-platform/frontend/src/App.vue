@@ -11,6 +11,25 @@ const DEFAULT_LOOKAHEAD_HOURS = 3
 const selection = reactive({ source: 'gfs', cycle: '', forecastHour: DEFAULT_LOOKAHEAD_HOURS, validTime: '', level: '100m AGL' })
 const layers = reactive({ heatmap: false, velocity: true, route: true })
 const thresholds = reactive({ safe: 1.5, notice: 3.3, warning: 5.4, danger: 7.9 })
+const windShear = reactive({
+  enabled: true,
+  min_wind_speed_for_direction_ms: 0.5,
+  vertical: {
+    enabled: true,
+    caution_delta_v_10m_ms: 1.0,
+    hard_delta_v_10m_ms: 3.0,
+    hard_delta_v_30m_ms: 6.0,
+    caution_direction_change_deg: 20.0,
+    hard_direction_change_deg: 45.0,
+    hard_constraint_enabled: true,
+  },
+  horizontal: {
+    enabled: true,
+    hard_delta_v_1km_ms: 2.6,
+    hard_direction_change_deg: 45.0,
+    hard_constraint_enabled: true,
+  },
+})
 const wind = ref()
 const heatmap = ref()
 const analysis = ref()
@@ -238,7 +257,7 @@ const showPointPopup = (point, lon, lat, map) => {
 const runRouteAnalysis = async (points) => {
   routePoints = points
   activeRouteId.value = ''
-  analysis.value = await analyzeRoute(selection, points, thresholds)
+  analysis.value = await analyzeRoute(selection, points, thresholds, windShear)
 }
 
 const queryPoint = async ({ lon, lat, map }) => {
@@ -341,7 +360,7 @@ const applyRouteToPlanner = async (name, points, { persist = false, routeId = ''
   routePoints = normalizedPoints
   activeRouteId.value = routeId || ''
   try {
-    analysis.value = await analyzeRoute(selection, normalizedPoints, thresholds)
+    analysis.value = await analyzeRoute(selection, normalizedPoints, thresholds, windShear)
   } catch (reason) {
     console.warn('导入航线分析失败:', reason)
     analysis.value = undefined
@@ -388,13 +407,28 @@ const runPlan = async (savedRoute) => {
       planner.algorithm,
       planner.aircraftModel,
       planner.strategy,
+      windShear,
     )
     planner.points = result.points
     routePoints = result.points
     activeRouteId.value = ''
     analysis.value = result.analysis
-  } catch (reason) { 
-    error.value = reason.response?.data?.detail || reason.message
+  } catch (reason) {
+    const detail = reason.response?.data?.detail
+    if (detail?.reason === 'wind_shear_blocked') {
+      planner.points = []
+      routePoints = []
+      activeRouteId.value = ''
+      mapRef.value?.clearDrawnRoute?.()
+      analysis.value = {
+        wind_shear_failure: detail,
+        wind_shear: {
+          highest_shear_level: '禁飞',
+          blocked_by_wind_shear_count: detail.blocked_by_wind_shear_count,
+        },
+      }
+    }
+    error.value = apiErrorMessage(reason)
     setTimeout(() => { error.value = '' }, 3000)
   } finally {
     planner.planning = false
@@ -521,6 +555,11 @@ watch(() => [planner.algorithm, planner.strategy], () => {
   clearPlannedRoute({ keepEndpoints: true })
 })
 
+watch([thresholds, windShear], () => {
+  if (suppressPlannerAutoClear) return
+  clearPlannedRoute({ keepEndpoints: true })
+}, { deep: true })
+
 watch(() => [planner.startText, planner.endText], () => {
   if (suppressPlannerAutoClear) return
   clearPlannedRoute({ keepEndpoints: true })
@@ -542,7 +581,7 @@ onBeforeUnmount(() => {
       <h1>面向低空无人机通航决策的风场预报平台</h1>
       <p class="en-title">LOW-ALTITUDE UAV FLIGHT DECISION WIND FORECAST PLATFORM</p>
     </header>
-    <ControlPanel ref="controlPanelRef" :options="options" :selection="selection" :layers="layers" :thresholds="thresholds" :planner="planner" :saved-routes="savedRoutes" :area-selection="areaSelection" :area-presets="areaPresets" :loading="loading" :picking="picking" @reload="loadWindField" @clear-route="clearRoute" @pick-start="picking = 'start'" @pick-end="picking = 'end'" @plan-route="runPlan" @save-route="persistRoute" @load-routes="refreshRoutes" @delete-route="removeRoute" @focus-area="focusArea" @import-json-route="importJsonRoute" />
+    <ControlPanel ref="controlPanelRef" :options="options" :selection="selection" :layers="layers" :thresholds="thresholds" :wind-shear="windShear" :planner="planner" :saved-routes="savedRoutes" :area-selection="areaSelection" :area-presets="areaPresets" :loading="loading" :picking="picking" @reload="loadWindField" @clear-route="clearRoute" @pick-start="picking = 'start'" @pick-end="picking = 'end'" @plan-route="runPlan" @save-route="persistRoute" @load-routes="refreshRoutes" @delete-route="removeRoute" @focus-area="focusArea" @import-json-route="importJsonRoute" />
     <WindMap ref="mapRef" :wind="wind" :heatmap="heatmap" :layers="layers" :thresholds="thresholds" :analysis="analysis" :planner="planner" @point-click="handleMapClick" @route-created="runRouteAnalysis" @zoom-changed="useZoomDefaultLayer" />
     <AnalysisPanel :metadata="metadata" :analysis="analysis" :thresholds="thresholds" />
     <div v-if="error" class="error-toast" @click="error = ''">{{ error }}</div>
