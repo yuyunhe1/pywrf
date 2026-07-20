@@ -36,6 +36,18 @@ const props = defineProps({
   picking: { type: String, default: '' },
 })
 
+const vFocus = {
+  mounted: (el) => {
+    // el might be the input itself or a wrapper
+    if (el.tagName === 'INPUT') {
+      el.focus()
+    } else {
+      const input = el.querySelector('input')
+      if (input) input.focus()
+    }
+  }
+}
+
 const emit = defineEmits(['reload', 'clear-route', 'pick-start', 'pick-end', 'plan-route', 'save-route', 'load-routes', 'delete-route', 'focus-area', 'import-json-route'])
 
 const handleAreaChange = (kind, value) => {
@@ -55,17 +67,14 @@ const handleValidTimeClear = () => {
 }
 
 const formatRouteDate = (value) => {
-  if (!value) return '未记录时间'
+  if (!value) return '未记录日期'
   const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '未记录时间'
+  if (Number.isNaN(date.getTime())) return '未记录日期'
   return new Intl.DateTimeFormat('zh-CN', {
     timeZone: 'Asia/Shanghai',
     year: 'numeric',
     month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
+    day: '2-digit'
   }).format(date)
 }
 
@@ -92,6 +101,20 @@ const refreshJsonDialog = async () => {
 
 const viewJsonFile = (fileName) => {
   window.open(getExportedRouteUrl(fileName), '_blank')
+}
+
+const triggerExportByName = async (routeName) => {
+  try {
+    const files = await listExportedRoutes()
+    const targetFile = files.find(f => f.route_name === routeName)
+    if (targetFile) {
+      viewJsonFile(targetFile.file_name)
+    } else {
+      window.alert('未找到该航线对应的 JSON 文件')
+    }
+  } catch (error) {
+    console.error('查找导出文件失败', error)
+  }
 }
 
 const triggerJsonImport = () => {
@@ -158,8 +181,9 @@ const startRenameJsonRoute = (row) => {
 const confirmRenameJsonFile = async (row) => {
   if (editingJsonFile.value !== row.file_name) return
   const fileName = editingJsonFileName.value.trim()
-  if (!fileName) {
-    editingJsonFile.value = ''
+  editingJsonFile.value = ''
+  editingJsonFileName.value = ''
+  if (!fileName || fileName === row.file_name) {
     return
   }
   try {
@@ -168,9 +192,6 @@ const confirmRenameJsonFile = async (row) => {
   } catch (error) {
     console.error('重命名 JSON 文件失败', error)
     window.alert(error.response?.data?.detail || error.message || '重命名 JSON 文件失败')
-  } finally {
-    editingJsonFile.value = ''
-    editingJsonFileName.value = ''
   }
 }
 
@@ -182,8 +203,9 @@ const startRenameJsonRouteName = (row) => {
 const confirmRenameJsonRouteName = async (row) => {
   if (editingJsonRouteFile.value !== row.file_name) return
   const routeName = editingJsonRouteName.value.trim()
-  if (!routeName) {
-    editingJsonRouteFile.value = ''
+  editingJsonRouteFile.value = ''
+  editingJsonRouteName.value = ''
+  if (!routeName || routeName === row.route_name) {
     return
   }
   try {
@@ -193,9 +215,6 @@ const confirmRenameJsonRouteName = async (row) => {
   } catch (error) {
     console.error('重命名历史航线失败', error)
     window.alert(error.response?.data?.detail || error.message || '重命名历史航线失败')
-  } finally {
-    editingJsonRouteFile.value = ''
-    editingJsonRouteName.value = ''
   }
 }
 
@@ -210,45 +229,65 @@ const removeJsonFile = async (fileName) => {
   } 
 }
 
+const playRouteFromDialog = (row) => {
+  showJsonDialog.value = false
+  // find route in savedRoutes by name or file
+  const route = props.savedRoutes.find(r => r.name === row.route_name)
+  if (route) {
+    emit('plan-route', route)
+  } else {
+    // If not found in DB but exists in JSON list, we might want to alert or handle it.
+    // Assuming DB has it if it's in the json list for now.
+    window.alert('该航线在历史记录中未找到，可能已被删除')
+  }
+}
+
 defineExpose({ refreshJsonDialog })
 
 </script>
 
 <template>
-  <el-dialog v-model="showJsonDialog" title="导出历史航线 JSON 列表" width="40%" class="glass-dialog" destroy-on-close>
-    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px;">
-      <span class="subtle">双击航线名称可同步修改历史航线；双击文件名称可修改 JSON 文件名</span>
+  <!-- JSON 文件列表弹窗 -->
+  <el-dialog v-model="showJsonDialog" title="历史航线列表" width="65%" class="glass-dialog" destroy-on-close>
+    <div style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
+      <button class="ghost" style="width: auto; padding: 4px 10px; margin: 0; font-size: 11px; display: flex; align-items: center; gap: 4px;" @click="triggerJsonImport">
+        <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+        导入 JSON
+      </button>
+      <input type="file" ref="jsonImportInput" style="display: none;" accept=".json" @change="handleJsonImport" />
     </div>
     <el-table :data="jsonFiles" class="glass-table" style="width: 100%" height="400">
-      <el-table-column prop="route_name" label="航线名称" min-width="150">
+      <el-table-column label="航线名称" min-width="120">
         <template #default="scope">
-          <el-input v-if="editingJsonRouteFile === scope.row.file_name" v-model="editingJsonRouteName" size="small"
-            autofocus @keyup.enter="confirmRenameJsonRouteName(scope.row)"
-            @blur="confirmRenameJsonRouteName(scope.row)" />
-          <span v-else title="双击修改历史航线名称" style="cursor: text;"
-            @dblclick="startRenameJsonRouteName(scope.row)">
+          <div v-if="editingJsonRouteFile === scope.row.file_name" style="display: flex; gap: 4px; align-items: center;">
+            <input class="glass-input-inline" v-model="editingJsonRouteName" v-focus @blur="confirmRenameJsonRouteName(scope.row)" @keyup.enter="confirmRenameJsonRouteName(scope.row)" />
+          </div>
+          <div v-else @click="startRenameJsonRouteName(scope.row)" style="cursor: pointer; width: 100%; min-height: 24px; display: flex; align-items: center;">
             {{ scope.row.route_name }}
-          </span>
+          </div>
         </template>
       </el-table-column>
-      <el-table-column prop="file_name" label="文件名称" min-width="220">
+      <el-table-column label="文件名称" min-width="150">
         <template #default="scope">
-          <el-input v-if="editingJsonFile === scope.row.file_name" v-model="editingJsonFileName" size="small"
-            autofocus @keyup.enter="confirmRenameJsonFile(scope.row)"
-            @blur="confirmRenameJsonFile(scope.row)" />
-          <span v-else title="双击修改 JSON 文件名" style="cursor: text;"
-            @dblclick="startRenameJsonRoute(scope.row)">
+          <div v-if="editingJsonFile === scope.row.file_name" style="display: flex; gap: 4px; align-items: center;">
+            <input class="glass-input-inline" v-model="editingJsonFileName" v-focus @blur="confirmRenameJsonFile(scope.row)" @keyup.enter="confirmRenameJsonFile(scope.row)" />
+          </div>
+          <div v-else @click="startRenameJsonRoute(scope.row)" style="cursor: pointer; width: 100%; min-height: 24px; display: flex; align-items: center;">
             {{ scope.row.file_name }}
-          </span>
+          </div>
         </template>
       </el-table-column>
       <el-table-column prop="time" label="时间" width="180" />
-      <el-table-column label="操作" width="160" fixed="right" align="center">
+      <el-table-column label="操作" width="220" fixed="right" align="center">
         <template #default="scope">
           <div style="display: flex; justify-content: center; gap: 8px;">
             <el-button type="primary" link size="small" class="glass-table-btn"
               @click="viewJsonFile(scope.row.file_name)">
-              查看 JSON
+              导出
+            </el-button>
+            <el-button type="success" link size="small" class="glass-table-btn"
+              @click="playRouteFromDialog(scope.row)">
+              回放
             </el-button>
             <el-button type="danger" link size="small"
               @click="removeJsonFile(scope.row.file_name)">
@@ -278,7 +317,7 @@ defineExpose({ refreshJsonDialog })
             </el-select>
           </label>
         </div>
-        <label>风场时刻
+        <label>时间选择
           <el-select v-model="selection.validTime" class="glass-select" popper-class="glass-select-popper" filterable
             clearable placeholder="请选择风场时刻" :disabled="!options.valid_times.length" @clear="handleValidTimeClear">
             <el-option v-for="item in options.valid_times" :key="`${item.label}-${item.cycle}`" :label="item.label"
@@ -287,8 +326,6 @@ defineExpose({ refreshJsonDialog })
         </label>
         <div style="display: flex; justify-content: space-between; align-items: center; margin: 12px 0 8px;">
           <span style="color: #a1b8cb; font-size: 11px; font-weight: 600;">风场图层</span>
-          <label class="switch" style="margin: 0; font-size: 11px;"><input v-model="layers.route" type="checkbox" />
-            显示航线</label>
         </div>
         <div class="segmented-control" style="margin-bottom: 10px;">
           <button type="button" :class="{ active: layers.velocity }"
@@ -296,9 +333,15 @@ defineExpose({ refreshJsonDialog })
           <button type="button" :class="{ active: layers.heatmap }"
             @click="layers.heatmap = true; layers.velocity = false">风速热力图</button>
         </div>
+        <div v-if="layers.heatmap" style="margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: rgba(0, 0, 0, 0.2); border-radius: 4px; border: 1px solid rgba(0, 243, 255, 0.1);">
+          <span style="color: #00f3ff; font-size: 12px;">突变高危区高亮</span>
+          <div class="cyber-switch" :class="{ 'is-active': layers.mutation }" @click="layers.mutation = !layers.mutation">
+            <div class="switch-handle"></div>
+          </div>
+        </div>
         <button class="primary"
           :disabled="loading || !selection.source || !selection.level || !selection.validTime || !options.valid_times.length"
-          @click="$emit('reload')" style="margin-top: 8px;">{{ loading ? '加载中...' : '加载当前风场' }}</button>
+          @click="$emit('reload')" style="margin-top: 8px;">{{ loading ? '加载中...' : '加载风场' }}</button>
       </section>
 
       <!-- 2. 区域选择 -->
@@ -306,20 +349,19 @@ defineExpose({ refreshJsonDialog })
 
         <h2 style="margin: 0 0 12px;">区域选择</h2>
         <div class="grid-3">
-
+          <label>片区选择
+            <el-select :model-value="areaSelection.region" class="glass-select" popper-class="glass-select-popper"
+              filterable clearable placeholder="请选择片区" @update:model-value="handleAreaChange('region', $event)"
+              @clear="handleAreaChange('region', '')">
+              <el-option v-for="item in areaPresets.region" :key="item.value" :label="item.label" :value="item.value" />
+            </el-select>
+          </label>
           <label>省份选择
             <el-select :model-value="areaSelection.province" class="glass-select" popper-class="glass-select-popper"
               filterable clearable placeholder="请选择省份" @update:model-value="handleAreaChange('province', $event)"
               @clear="handleAreaChange('province', '')">
               <el-option v-for="item in areaPresets.province" :key="item.value" :label="item.label"
                 :value="item.value" />
-            </el-select>
-          </label>
-          <label>片区选择
-            <el-select :model-value="areaSelection.region" class="glass-select" popper-class="glass-select-popper"
-              filterable clearable placeholder="请选择片区" @update:model-value="handleAreaChange('region', $event)"
-              @clear="handleAreaChange('region', '')">
-              <el-option v-for="item in areaPresets.region" :key="item.value" :label="item.label" :value="item.value" />
             </el-select>
           </label>
           <label>项目选择
@@ -361,7 +403,13 @@ defineExpose({ refreshJsonDialog })
             </el-select>
           </label>
         </div>
-        <label>航线名称<input v-model="planner.name" type="text" placeholder="默认航线 A" /></label>
+        <label>航线名称
+          <div class="input-group">
+            <input ref="routeNameInput" v-model="planner.name" type="text" placeholder="默认航线 A" />
+            <button class="ghost" style="width: auto; padding: 4px 12px; margin-left: 4px;" title="编辑" @click="$refs.routeNameInput?.focus()">修改</button>
+            <button class="primary" style="width: auto; padding: 4px 12px; margin: 0 0 0 4px;" title="确认">确认</button>
+          </div>
+        </label>
 
         <div style="display: grid; gap: 8px; margin-top: 8px;">
           <label>起点
@@ -380,13 +428,13 @@ defineExpose({ refreshJsonDialog })
           </label>
         </div>
         <div class="grid-2" style="margin-top: 10px;">
-          <button class="primary" :disabled="loading || planner.planning || !planner.startText || !planner.endText"
+          <button class="primary" :disabled="loading || !planner.startText || !planner.endText"
             @click="$emit('plan-route')" style="margin: 0;">
             <span v-if="planner.planning" class="loading-spinner"></span>
             生成规划航线
           </button>
           <button class="ghost" :disabled="!planner.points.length" @click="$emit('save-route')"
-            style="margin: 0;">应用航线</button>
+            style="margin: 0;">下载保存</button>
         </div>
       </section>
 
@@ -397,14 +445,9 @@ defineExpose({ refreshJsonDialog })
           <span style="position: absolute; right: 0; bottom: 6px; display: flex; gap: 6px;">
             <button class="ghost"
               style="width: auto; padding: 2px 8px; font-size: 11px; margin: 0;"
-              @click="openJsonDialog">导出</button>
-            <button class="ghost"
-              style="width: auto; padding: 2px 8px; font-size: 11px; margin: 0;"
-              @click="triggerJsonImport">导入</button>
+              @click="openJsonDialog">更多...</button>
           </span>
         </h2>
-        <input ref="jsonImportInput" type="file" accept=".json,application/json" style="display: none;"
-          @change="handleJsonImport" />
         <div class="route-list" style="max-height: 120px; overflow-y: auto;">
           <div v-if="!savedRoutes.length" class="subtle" style="text-align: center; margin-top: 10px;">暂无保存的航线</div>
           <div v-for="route in savedRoutes" :key="route.route_id" class="saved-route">
@@ -412,7 +455,17 @@ defineExpose({ refreshJsonDialog })
               <span class="saved-route-name">{{ route.name }}</span>
               <span class="saved-route-date">{{ formatRouteDate(route.created_at) }}</span>
             </button>
-            <button class="icon-button" title="删除" @click="$emit('delete-route', route.route_id)">×</button>
+            <div style="display: flex; gap: 4px; padding-left: 4px;">
+              <button class="icon-button" title="导出" @click="triggerExportByName(route.name)">
+                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              </button>
+              <button class="icon-button" title="回放" @click="$emit('plan-route', route)">
+                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+              </button>
+              <button class="icon-button" title="删除" @click="$emit('delete-route', route.route_id)">
+                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -425,6 +478,8 @@ defineExpose({ refreshJsonDialog })
           <label>二级风<input v-model.number="thresholds.notice" type="number" min="0" step="0.5" /></label>
           <label>三级风<input v-model.number="thresholds.warning" type="number" min="0" step="0.5" /></label>
           <label>四级风<input v-model.number="thresholds.danger" type="number" min="0" step="0.5" /></label>
+          <label>级差突变<input v-model.number="thresholds.mutationLevelDiff" type="number" min="1" step="1" title="相邻网格风级差大于等于此值时高亮" /></label>
+          <label>夹角突变<input v-model.number="thresholds.mutationAngle" type="number" min="0" max="180" step="5" title="相邻网格风向夹角大于此值时高亮" /></label>
         </div>
       </section>
     </div>

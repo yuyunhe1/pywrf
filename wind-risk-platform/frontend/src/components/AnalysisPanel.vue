@@ -210,56 +210,78 @@ onBeforeUnmount(() => {
 
 <template>
   <aside class="panel analysis-panel">
-    <div class="panel-content">
-      <div style="margin-bottom: 12px;">
+    <div class="panel-content" style="padding-bottom: 4px;">
+      <div style="margin-bottom: 8px;">
         <p class="eyebrow">ROUTE ANALYSIS</p>
         <h1 style="font-size: 18px; margin-bottom: 0;">航线风险分析</h1>
       </div>
 
-      <section class="metadata">
-        <div><span>风场时刻</span><strong>{{ toBeijingTime(metadata?.valid_time, metadata?.valid_time_bj) }}</strong></div>
-        <div><span>起报时间</span><strong>{{ metadata?.cycle_bj || '待加载' }} (F{{ String(metadata?.forecast_hour ??
-          0).padStart(3, '0') }})</strong></div>
-        <div><span>高度层</span><strong>{{ metadata?.level || '-' }}</strong></div>
-        <div v-if="analysis"><span>航线总里程</span><strong>{{ analysis.total_distance_km }} km</strong></div>
-        <div v-if="analysis"><span>最长连续高风险里程</span><strong>{{ analysis.max_continuous_danger_km }} km</strong></div>
+      <section style="padding: 0; background: transparent; border: none; box-shadow: none; margin-bottom: 8px;">
+        <div style="display: grid; grid-template-columns: 1fr; gap: 6px; margin-bottom: 6px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
+            <span style="color: #a1b8cb; font-size: 12px; font-weight: 600;">风场时刻</span>
+            <strong style="color: #fff; font-size: 13px; font-family: monospace; white-space: nowrap;">{{ toBeijingTime(metadata?.valid_time, metadata?.valid_time_bj).replace(' 北京时间', '') }}</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
+            <span style="color: #a1b8cb; font-size: 12px; font-weight: 600; white-space: nowrap; margin-right: 4px;">起报时间</span>
+            <strong style="color: #fff; font-size: 13px; font-family: monospace; white-space: nowrap;">{{ metadata?.cycle_bj ? metadata.cycle_bj.replace(' 北京时间', '') : '待加载' }} <span style="color: #8099aa; font-size: 11px;">(F{{ String(metadata?.forecast_hour ?? 0).padStart(3, '0') }})</span></strong>
+          </div>
+        </div>
+        <div v-if="analysis" style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
+            <span style="color: #a1b8cb; font-size: 12px; font-weight: 600; white-space: nowrap; margin-right: 4px;">总里程</span>
+            <strong style="color: #00f3ff; font-size: 14px; font-family: monospace; white-space: nowrap;">{{ analysis?.total_distance_km?.toFixed(1) ?? '-' }} <span style="font-size: 10px; color: #8099aa;">km</span></strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
+            <span style="color: #a1b8cb; font-size: 12px; font-weight: 600; white-space: nowrap; margin-right: 4px;">最长高风险</span>
+            <strong style="color: #ea5455; font-size: 14px; font-family: monospace; white-space: nowrap;">{{ analysis?.max_continuous_danger_km?.toFixed(1) ?? '-' }} <span style="font-size: 10px; color: #8099aa;">km</span></strong>
+          </div>
+        </div>
       </section>
 
-      <section class="stats" style="grid-template-columns: 1fr 1fr; gap: 8px;">
-        <div class="stat"><span>最大风速</span><strong>{{ analysis?.max_wind_speed ?? '-' }}<small>m/s</small></strong>
+      <section class="stats" style="padding: 0; background: transparent; border: none; box-shadow: none; margin-bottom: 8px; grid-template-columns: repeat(4, 1fr); gap: 6px;">
+        <div class="stat" style="padding: 6px 2px; text-align: center; min-height: 44px; display: flex; flex-direction: column; justify-content: center; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px;">
+          <span style="color: #a1b8cb; font-size: 11px; font-weight: 600; line-height: 1; white-space: nowrap;">最大风速</span>
+          <strong style="font-size: 14px; margin-top: 6px; line-height: 1; white-space: nowrap;">{{ analysis?.max_wind_speed ?? '-' }}<small style="font-size: 10px; margin-left: 1px;">m/s</small></strong>
         </div>
-        <div class="stat"><span>平均风速</span><strong>{{ analysis?.mean_wind_speed ?? '-' }}<small>m/s</small></strong>
+        <div class="stat" style="padding: 6px 2px; text-align: center; min-height: 44px; display: flex; flex-direction: column; justify-content: center; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px;">
+          <span style="color: #a1b8cb; font-size: 11px; font-weight: 600; line-height: 1; white-space: nowrap;">平均风速</span>
+          <strong style="font-size: 14px; margin-top: 6px; line-height: 1; white-space: nowrap;">{{ analysis?.mean_wind_speed ?? '-' }}<small style="font-size: 10px; margin-left: 1px;">m/s</small></strong>
         </div>
-        <div class="stat"><span>高风险比例</span><strong>{{ analysis ? (analysis.danger_ratio * 100).toFixed(1) : '-'
-            }}<small>%</small></strong></div>
-        <div class="stat"><span>顺风路段占比</span><strong>{{ analysis ? (analysis.tailwind_ratio * 100).toFixed(1) : '-'
-            }}<small>%</small></strong></div>
+        <div class="stat" style="padding: 6px 2px; text-align: center; min-height: 44px; display: flex; flex-direction: column; justify-content: center; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px;">
+          <span style="color: #a1b8cb; font-size: 11px; font-weight: 600; line-height: 1; white-space: nowrap;">高风险比例</span>
+          <strong style="font-size: 14px; margin-top: 6px; line-height: 1; white-space: nowrap;">{{ analysis ? (analysis.danger_ratio * 100).toFixed(1) : '-' }}<small style="font-size: 10px; margin-left: 1px;">%</small></strong>
+        </div>
+        <div class="stat" style="padding: 6px 2px; text-align: center; min-height: 44px; display: flex; flex-direction: column; justify-content: center; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px;">
+          <span style="color: #a1b8cb; font-size: 11px; font-weight: 600; line-height: 1; white-space: nowrap;">顺风占比</span>
+          <strong style="font-size: 14px; margin-top: 6px; line-height: 1; white-space: nowrap;">{{ analysis ? (analysis.tailwind_ratio * 100).toFixed(1) : '-' }}<small style="font-size: 10px; margin-left: 1px;">%</small></strong>
+        </div>
       </section>
 
       <div class="stat risk" :style="riskStyle"
-        style="margin-top: 8px; min-height: 50px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+        style="margin-top: 0; margin-bottom: 8px; min-height: 44px; padding: 6px 14px; display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px;">
         <span style="color: #8099aa; font-size: 12px;">综合等级</span>
-        <strong style="margin: 0; font-size: 20px;">{{ analysis?.risk_level || '-' }}</strong>
+        <strong style="margin: 0; font-size: 18px;">{{ analysis?.risk_level || '-' }}</strong>
       </div>
 
-      <section>
-        <div class="decision-card"
+      <section style="padding: 10px 12px; margin-bottom: 8px;">
+        <div class="decision-card" style="padding: 10px; background: rgba(0,0,0,0.2); border-radius: 6px;"
           :style="{ '--decision-color': navigationDecision.color, borderColor: `${navigationDecision.color}55`, boxShadow: `inset 0 0 18px ${navigationDecision.color}18` }">
-          <div class="decision-head">
+          <div class="decision-head" style="margin-bottom: 4px;">
             <span class="decision-label">通航决策</span>
             <strong>{{ navigationDecision.level }}</strong>
           </div>
-          <p class="subtle" style="margin: 8px 0 0; font-size: 11px;">{{ navigationDecision.message }}</p>
+          <p class="subtle" style="margin: 0; font-size: 11px;">{{ navigationDecision.message }}</p>
         </div>
       </section>
 
-      <section>
-        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 4px;">
-          <h3 style="margin-bottom: 0;">航线风速与顺逆风分析</h3>
+      <section style="padding: 10px 12px; margin-bottom: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 2px;">
+          <h3 style="margin-bottom: 0;">航线风速与顺逆风</h3>
         </div>
         <p class="subtle" style="margin-top: 0; font-size: 10px; margin-bottom: 4px;">
-          点击图例筛选；蓝色曲线代表总风速，底部柱状图代表顺风(绿)或逆风(红)分量。</p>
-        <div ref="chartEl" class="chart"></div>
+          点击图例筛选；蓝线为总风速，底部柱状图为顺风(绿)或逆风(红)。</p>
+        <div ref="chartEl" class="chart" style="height: 140px; margin-top: 4px;"></div>
       </section>
     </div>
   </aside>

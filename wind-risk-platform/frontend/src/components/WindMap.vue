@@ -125,7 +125,12 @@ const renderHeatmap = () => {
     if (activeBlocks.value.length > 0) {
       filterRanges = activeBlocks.value.map(i => [heatBlocks.value[i].min, heatBlocks.value[i].max])
     }
-    heatLayer = createWindSpeedCanvasLayer(props.heatmap.wind_speed, { filterRanges }).addTo(map)
+    heatLayer = createWindSpeedCanvasLayer(props.heatmap.wind_speed, { 
+      filterRanges, 
+      windVelocity: props.wind?.velocity, 
+      thresholds: props.thresholds,
+      showMutation: props.layers.mutation
+    }).addTo(map)
   }
 }
 
@@ -226,7 +231,7 @@ const focusArea = (target) => {
 
 defineExpose({ clearRoute, clearDrawnRoute, focusArea })
 watch(() => [props.wind, props.layers.velocity, props.thresholds], renderWind, { deep: true })
-watch(() => [props.heatmap, props.layers.heatmap], renderHeatmap, { deep: true })
+watch(() => [props.heatmap, props.layers.heatmap, props.layers.mutation], renderHeatmap, { deep: true })
 watch(() => [props.analysis, props.layers.route, props.planner?.startText, props.planner?.endText], renderRoute, { deep: true })
 
 onMounted(() => {

@@ -9,8 +9,8 @@ import WindMap from './components/WindMap.vue'
 const options = reactive({ cycles: [], forecast_hours: [], valid_times: [], levels: [], source: '' })
 const DEFAULT_LOOKAHEAD_HOURS = 3
 const selection = reactive({ source: 'gfs', cycle: '', forecastHour: DEFAULT_LOOKAHEAD_HOURS, validTime: '', level: '100m AGL' })
-const layers = reactive({ heatmap: false, velocity: true, route: true })
-const thresholds = reactive({ safe: 1.5, notice: 3.3, warning: 5.4, danger: 7.9 })
+const layers = reactive({ heatmap: false, velocity: true, route: true, mutation: true })
+const thresholds = reactive({ safe: 1.5, notice: 3.3, warning: 5.4, danger: 7.9, mutationLevelDiff: 3, mutationAngle: 90 })
 const wind = ref()
 const heatmap = ref()
 const analysis = ref()
@@ -539,8 +539,8 @@ onBeforeUnmount(() => {
 <template>
   <div class="app-shell">
     <header class="app-title">
-      <h1>面向低空无人机通航决策的风场预报平台</h1>
-      <p class="en-title">LOW-ALTITUDE UAV FLIGHT DECISION WIND FORECAST PLATFORM</p>
+      <h1>御风智航-面向低空无人机通航决策的风场预报平台</h1>
+      <p class="en-title">YUFENG SMART FLIGHT - LOW-ALTITUDE UAV FLIGHT DECISION WIND FORECAST PLATFORM</p>
     </header>
     <ControlPanel ref="controlPanelRef" :options="options" :selection="selection" :layers="layers" :thresholds="thresholds" :planner="planner" :saved-routes="savedRoutes" :area-selection="areaSelection" :area-presets="areaPresets" :loading="loading" :picking="picking" @reload="loadWindField" @clear-route="clearRoute" @pick-start="picking = 'start'" @pick-end="picking = 'end'" @plan-route="runPlan" @save-route="persistRoute" @load-routes="refreshRoutes" @delete-route="removeRoute" @focus-area="focusArea" @import-json-route="importJsonRoute" />
     <WindMap ref="mapRef" :wind="wind" :heatmap="heatmap" :layers="layers" :thresholds="thresholds" :analysis="analysis" :planner="planner" @point-click="handleMapClick" @route-created="runRouteAnalysis" @zoom-changed="useZoomDefaultLayer" />
