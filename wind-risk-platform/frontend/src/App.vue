@@ -238,7 +238,7 @@ const showPointPopup = (point, lon, lat, map) => {
 const runRouteAnalysis = async (points) => {
   routePoints = points
   activeRouteId.value = ''
-  analysis.value = await analyzeRoute(selection, points, thresholds, windShear)
+  analysis.value = await analyzeRoute(selection, points, thresholds)
 }
 
 const queryPoint = async ({ lon, lat, map }) => {
@@ -341,7 +341,7 @@ const applyRouteToPlanner = async (name, points, { persist = false, routeId = ''
   routePoints = normalizedPoints
   activeRouteId.value = routeId || ''
   try {
-    analysis.value = await analyzeRoute(selection, normalizedPoints, thresholds, windShear)
+    analysis.value = await analyzeRoute(selection, normalizedPoints, thresholds)
   } catch (reason) {
     console.warn('导入航线分析失败:', reason)
     analysis.value = undefined
@@ -388,28 +388,13 @@ const runPlan = async (savedRoute) => {
       planner.algorithm,
       planner.aircraftModel,
       planner.strategy,
-      windShear,
     )
     planner.points = result.points
     routePoints = result.points
     activeRouteId.value = ''
     analysis.value = result.analysis
-  } catch (reason) {
-    const detail = reason.response?.data?.detail
-    if (detail?.reason === 'wind_shear_blocked') {
-      planner.points = []
-      routePoints = []
-      activeRouteId.value = ''
-      mapRef.value?.clearDrawnRoute?.()
-      analysis.value = {
-        wind_shear_failure: detail,
-        wind_shear: {
-          highest_shear_level: '禁飞',
-          blocked_by_wind_shear_count: detail.blocked_by_wind_shear_count,
-        },
-      }
-    }
-    error.value = apiErrorMessage(reason)
+  } catch (reason) { 
+    error.value = reason.response?.data?.detail || reason.message
     setTimeout(() => { error.value = '' }, 3000)
   } finally {
     planner.planning = false
@@ -536,11 +521,6 @@ watch(() => [planner.algorithm, planner.strategy], () => {
   clearPlannedRoute({ keepEndpoints: true })
 })
 
-watch([thresholds, windShear], () => {
-  if (suppressPlannerAutoClear) return
-  clearPlannedRoute({ keepEndpoints: true })
-}, { deep: true })
-
 watch(() => [planner.startText, planner.endText], () => {
   if (suppressPlannerAutoClear) return
   clearPlannedRoute({ keepEndpoints: true })
@@ -562,7 +542,7 @@ onBeforeUnmount(() => {
       <h1>御风智航-面向低空无人机通航决策的风场预报平台</h1>
       <p class="en-title">YUFENG SMART FLIGHT - LOW-ALTITUDE UAV FLIGHT DECISION WIND FORECAST PLATFORM</p>
     </header>
-    <ControlPanel ref="controlPanelRef" :options="options" :selection="selection" :layers="layers" :thresholds="thresholds" :wind-shear="windShear" :planner="planner" :saved-routes="savedRoutes" :area-selection="areaSelection" :area-presets="areaPresets" :loading="loading" :picking="picking" @reload="loadWindField" @clear-route="clearRoute" @pick-start="picking = 'start'" @pick-end="picking = 'end'" @plan-route="runPlan" @save-route="persistRoute" @load-routes="refreshRoutes" @delete-route="removeRoute" @focus-area="focusArea" @import-json-route="importJsonRoute" />
+    <ControlPanel ref="controlPanelRef" :options="options" :selection="selection" :layers="layers" :thresholds="thresholds" :planner="planner" :saved-routes="savedRoutes" :area-selection="areaSelection" :area-presets="areaPresets" :loading="loading" :picking="picking" @reload="loadWindField" @clear-route="clearRoute" @pick-start="picking = 'start'" @pick-end="picking = 'end'" @plan-route="runPlan" @save-route="persistRoute" @load-routes="refreshRoutes" @delete-route="removeRoute" @focus-area="focusArea" @import-json-route="importJsonRoute" />
     <WindMap ref="mapRef" :wind="wind" :heatmap="heatmap" :layers="layers" :thresholds="thresholds" :analysis="analysis" :planner="planner" @point-click="handleMapClick" @route-created="runRouteAnalysis" @zoom-changed="useZoomDefaultLayer" />
     <AnalysisPanel :metadata="metadata" :analysis="analysis" :thresholds="thresholds" />
     <div v-if="error" class="error-toast" @click="error = ''">{{ error }}</div>

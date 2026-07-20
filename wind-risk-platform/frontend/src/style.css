@@ -401,8 +401,6 @@ button:disabled { opacity: .4; cursor: not-allowed; transform: none !important; 
 
 .threshold-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 8px; }
 .threshold-grid label { margin: 4px 0; }
-.shear-thresholds { margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(0, 243, 255, 0.12); }
-.shear-threshold-head { display: flex; align-items: center; justify-content: space-between; color: #b9cddd; font-size: 11px; }
 
 .metadata { display: grid; gap: 6px; }
 .metadata div { display: flex; justify-content: space-between; align-items: center; padding-bottom: 4px; border-bottom: 1px dashed rgba(255,255,255,0.05); }

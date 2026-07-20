@@ -1,5 +1,27 @@
 import L from 'leaflet'
 
+let cachedHatchPattern = null
+const getHatchPattern = (context) => {
+  if (!cachedHatchPattern) {
+    const canvas = document.createElement('canvas')
+    canvas.width = 16
+    canvas.height = 16
+    const ctx = canvas.getContext('2d')
+    ctx.strokeStyle = 'rgba(0, 243, 255, 0.7)'
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.moveTo(0, 16)
+    ctx.lineTo(16, 0)
+    ctx.moveTo(-8, 8)
+    ctx.lineTo(8, -8)
+    ctx.moveTo(8, 24)
+    ctx.lineTo(24, 8)
+    ctx.stroke()
+    cachedHatchPattern = context.createPattern(canvas, 'repeat')
+  }
+  return cachedHatchPattern
+}
+
 const COLOR_STOPS = [
   [0, [37, 99, 235]],
   [1.5, [34, 197, 94]],
@@ -111,6 +133,8 @@ export const createWindSpeedCanvasLayer = (windSpeed, options = {}) => {
           return 4
         }
 
+        const hatchPattern = getHatchPattern(context)
+
         for (let row = rowStart; row <= rowEnd; row += 1) {
           const north = northEdge - row * dy
           const south = north - dy
@@ -130,17 +154,16 @@ export const createWindSpeedCanvasLayer = (windSpeed, options = {}) => {
             const level = getLevel(speed)
             const u1 = uData[i]
             const v1 = vData[i]
+            let highlight = false
 
             const neighbors = [
-              { nr: row - 1, nc: col, edge: 'top' },
-              { nr: row + 1, nc: col, edge: 'bottom' },
-              { nr: row, nc: col - 1, edge: 'left' },
-              { nr: row, nc: col + 1, edge: 'right' }
+              [row - 1, col, 'top'],
+              [row + 1, col, 'bottom'],
+              [row, col - 1, 'left'],
+              [row, col + 1, 'right']
             ]
 
-            const edgesToDraw = []
-
-            for (const { nr, nc, edge } of neighbors) {
+            for (const [nr, nc, edge] of neighbors) {
               if (nr >= 0 && nr < ny && nc >= 0 && nc < nx) {
                 const ni = nr * nx + nc
                 const speed2 = this.windSpeed.data[ni]
@@ -168,47 +191,51 @@ export const createWindSpeedCanvasLayer = (windSpeed, options = {}) => {
                 }
 
                 if (isMutation) {
-                  edgesToDraw.push(edge)
+                  // Only draw if we are looking right or bottom, OR if the neighbor would be filtered out
+                  let neighborFiltered = false
+                  if (this.options.filterRanges && this.options.filterRanges.length > 0) {
+                    neighborFiltered = !this.options.filterRanges.some(([min, max]) => speed2 >= min && speed2 <= max)
+                  }
+                  
+                  const isForward = nr > row || nc > col
+                  if (isForward || neighborFiltered) {
+                    const west = westEdge + col * dx
+                    const east = west + dx
+                    const x1 = this.map.latLngToLayerPoint([la1, west]).x - topLeft.x
+                    const x2 = this.map.latLngToLayerPoint([la1, east]).x - topLeft.x
+                    
+                    const rectX = Math.floor(x1)
+                    const rectY = Math.floor(y1)
+                    const rectW = Math.ceil(x2 - x1) + 1
+                    const rectH = Math.ceil(y2 - y1) + 1
+                    
+                    context.beginPath()
+                    if (edge === 'top') {
+                      context.moveTo(rectX, rectY)
+                      context.lineTo(rectX + rectW, rectY)
+                    } else if (edge === 'bottom') {
+                      context.moveTo(rectX, rectY + rectH)
+                      context.lineTo(rectX + rectW, rectY + rectH)
+                    } else if (edge === 'left') {
+                      context.moveTo(rectX, rectY)
+                      context.lineTo(rectX, rectY + rectH)
+                    } else if (edge === 'right') {
+                      context.moveTo(rectX + rectW, rectY)
+                      context.lineTo(rectX + rectW, rectY + rectH)
+                    }
+                    
+                    // Outer glow
+                    context.strokeStyle = 'rgba(0, 243, 255, 0.4)'
+                    context.lineWidth = 6
+                    context.stroke()
+                    
+                    // Inner bright line
+                    context.strokeStyle = '#00f3ff'
+                    context.lineWidth = 2
+                    context.stroke()
+                  }
                 }
               }
-            }
-
-            if (edgesToDraw.length > 0) {
-              const west = westEdge + col * dx
-              const east = west + dx
-              const x1 = this.map.latLngToLayerPoint([la1, west]).x - topLeft.x
-              const x2 = this.map.latLngToLayerPoint([la1, east]).x - topLeft.x
-              
-              const rectX = Math.floor(x1)
-              const rectY = Math.floor(y1)
-              const rectX2 = rectX + Math.ceil(x2 - x1)
-              const rectY2 = rectY + Math.ceil(y2 - y1)
-
-              context.save()
-              context.strokeStyle = '#00f3ff'
-              context.lineWidth = 2.5
-              context.shadowColor = '#00f3ff'
-              context.shadowBlur = 5
-              context.beginPath()
-              
-              if (edgesToDraw.includes('top')) {
-                context.moveTo(rectX, rectY)
-                context.lineTo(rectX2, rectY)
-              }
-              if (edgesToDraw.includes('bottom')) {
-                context.moveTo(rectX, rectY2)
-                context.lineTo(rectX2, rectY2)
-              }
-              if (edgesToDraw.includes('left')) {
-                context.moveTo(rectX, rectY)
-                context.lineTo(rectX, rectY2)
-              }
-              if (edgesToDraw.includes('right')) {
-                context.moveTo(rectX2, rectY)
-                context.lineTo(rectX2, rectY2)
-              }
-              context.stroke()
-              context.restore()
             }
           }
         }
