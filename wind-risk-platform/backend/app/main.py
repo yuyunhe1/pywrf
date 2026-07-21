@@ -6,13 +6,22 @@ import math
 
 import numpy as np
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import Body, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, FileResponse
 import json
 from datetime import datetime
 from pathlib import Path
 from .models import ExportedRouteRenameRequest, RouteAnalyzeRequest, RouteDecisionRequest, RoutePlanRequest, RouteRecord
+from .qgc_waypoints import (
+    QGC_WPL_FIELDS,
+    QGC_WPL_HEADER,
+    build_qgc_mission_items,
+    normalize_qgc_item,
+    parse_qgc_waypoints,
+    route_points_from_qgc_items,
+    serialize_qgc_waypoints,
+)
 
 EXPORT_DIR = Path("data/exported_routes")
 EXPORT_DIR.mkdir(parents=True, exist_ok=True)
@@ -36,12 +45,18 @@ def _safe_export_name(name: str | None) -> str:
 def _unique_export_path(route_name: str, timestamp: str, exclude: Path | None = None) -> Path:
     safe_name = _safe_export_name(route_name)
     file_path = EXPORT_DIR / f"{safe_name}_{timestamp}.json"
-    if not file_path.exists() or (exclude is not None and file_path == exclude):
+    if (
+        (not file_path.exists() or (exclude is not None and file_path == exclude))
+        and not file_path.with_suffix(".waypoints").exists()
+    ):
         return file_path
     index = 1
     while True:
         candidate = EXPORT_DIR / f"{safe_name}_{index}_{timestamp}.json"
-        if not candidate.exists() or (exclude is not None and candidate == exclude):
+        if (
+            (not candidate.exists() or (exclude is not None and candidate == exclude))
+            and not candidate.with_suffix(".waypoints").exists()
+        ):
             return candidate
         index += 1
 
@@ -50,6 +65,13 @@ def _exported_route_path(file_name: str) -> Path:
     requested = Path(file_name)
     if requested.name != file_name or requested.suffix.lower() != ".json":
         raise HTTPException(status_code=400, detail="非法 JSON 文件名")
+    return EXPORT_DIR / requested.name
+
+
+def _exported_waypoint_path(file_name: str) -> Path:
+    requested = Path(file_name)
+    if requested.name != file_name or requested.suffix.lower() != ".waypoints":
+        raise HTTPException(status_code=400, detail="非法航点文件名")
     return EXPORT_DIR / requested.name
 
 
@@ -68,12 +90,25 @@ def _safe_json_file_name(file_name: str | None) -> str:
 
 def _unique_export_file_path(file_name: str, exclude: Path | None = None) -> Path:
     target_path = EXPORT_DIR / _safe_json_file_name(file_name)
-    if not target_path.exists() or (exclude is not None and target_path == exclude):
+    excluded_waypoint_path = exclude.with_suffix(".waypoints") if exclude is not None else None
+    if (
+        (not target_path.exists() or (exclude is not None and target_path == exclude))
+        and (
+            not target_path.with_suffix(".waypoints").exists()
+            or target_path.with_suffix(".waypoints") == excluded_waypoint_path
+        )
+    ):
         return target_path
     index = 1
     while True:
         candidate = EXPORT_DIR / f"{target_path.stem}_{index}.json"
-        if not candidate.exists() or (exclude is not None and candidate == exclude):
+        if (
+            (not candidate.exists() or (exclude is not None and candidate == exclude))
+            and (
+                not candidate.with_suffix(".waypoints").exists()
+                or candidate.with_suffix(".waypoints") == excluded_waypoint_path
+            )
+        ):
             return candidate
         index += 1
 
@@ -105,6 +140,9 @@ def _exported_route_record(file: Path) -> dict:
             pass
     return {
         "file_name": file.name,
+        "waypoint_file_name": file.with_suffix(".waypoints").name
+        if file.with_suffix(".waypoints").exists()
+        else None,
         "route_name": name,
         "route_id": route_id,
         "time": formatted_time,
@@ -147,10 +185,11 @@ def _export_files_for_route(route_id: str):
 
 def delete_export_files_for_route(route_id: str) -> None:
     for file in _export_files_for_route(route_id):
-        try:
-            file.unlink()
-        except FileNotFoundError:
-            pass
+        for paired_file in (file, file.with_suffix(".waypoints")):
+            try:
+                paired_file.unlink()
+            except FileNotFoundError:
+                pass
 
 
 def export_route_to_json(record: RouteRecord, route_id: str | None = None):
@@ -211,6 +250,17 @@ def export_route_to_json(record: RouteRecord, route_id: str | None = None):
     
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
     file_path = _unique_export_path(record.name, timestamp)
+    waypoint_file_path = file_path.with_suffix(".waypoints")
+    if record.mission_items:
+        mission_items = [
+            normalize_qgc_item(item, index)
+            for index, item in enumerate(record.mission_items)
+        ]
+    else:
+        mission_items = build_qgc_mission_items(
+            record.points,
+            default_agl_m=default_agl if default_agl is not None else 100.0,
+        )
     payload = {
         "route_id": route_id,
         "mission_name": record.name,
@@ -228,10 +278,18 @@ def export_route_to_json(record: RouteRecord, route_id: str | None = None):
             "altitude_amsl_m": "terrain_height_m + altitude_agl_m",
         },
         "waypoints": waypoints,
+        "qgc_wpl": {
+            "format": QGC_WPL_HEADER,
+            "fields": list(QGC_WPL_FIELDS),
+            "waypoint_file_name": waypoint_file_path.name,
+        },
+        "mission_items": mission_items,
     }
     
     with open(file_path, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
+    with open(waypoint_file_path, "w", encoding="utf-8", newline="") as f:
+        f.write(serialize_qgc_waypoints(mission_items))
     return _exported_route_record(file_path)
 
 from .data_provider import (
@@ -953,7 +1011,26 @@ def route_decision(request: RouteDecisionRequest):
 def create_route(record: RouteRecord):
     result = route_storage.save_route(record.model_dump())
     exported = export_route_to_json(record, result["route_id"])
-    return {**result, "exported_json": exported}
+    return {
+        **result,
+        "exported_json": exported,
+        "exported_waypoints": {"file_name": exported.get("waypoint_file_name")},
+    }
+
+
+@app.post("/api/waypoints/parse")
+def parse_waypoint_file(content: str = Body(..., media_type="text/plain")):
+    """Parse a QGC WPL 110 file and expose both mission rows and map points."""
+    try:
+        mission_items = parse_qgc_waypoints(content)
+        return {
+            "format": QGC_WPL_HEADER,
+            "fields": list(QGC_WPL_FIELDS),
+            "mission_items": mission_items,
+            "points": route_points_from_qgc_items(mission_items),
+        }
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.get("/api/routes")
@@ -976,7 +1053,11 @@ def update_route(route_id: str, record: RouteRecord):
     if result is None:
         raise HTTPException(status_code=404, detail="未找到该航线记录")
     exported = export_route_to_json(record, route_id)
-    return {**result, "exported_json": exported}
+    return {
+        **result,
+        "exported_json": exported,
+        "exported_waypoints": {"file_name": exported.get("waypoint_file_name")},
+    }
 
 @app.delete("/api/routes/{route_id}", status_code=204)
 def delete_route(route_id: str):
@@ -1000,6 +1081,14 @@ def get_exported_route(file_name: str):
         raise HTTPException(status_code=404, detail="文件不存在")
     return FileResponse(file_path, media_type="application/json", filename=file_name)
 
+
+@app.get("/api/exported-waypoints/{file_name}")
+def get_exported_waypoint(file_name: str):
+    file_path = _exported_waypoint_path(file_name)
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="航点文件不存在")
+    return FileResponse(file_path, media_type="text/plain; charset=utf-8", filename=file_name)
+
 @app.put("/api/exported-routes/{file_name}/rename")
 def rename_exported_route(file_name: str, request: ExportedRouteRenameRequest):
     file_path = _exported_route_path(file_name)
@@ -1008,7 +1097,10 @@ def rename_exported_route(file_name: str, request: ExportedRouteRenameRequest):
     if request.file_name:
         target_path = _unique_export_file_path(request.file_name, exclude=file_path)
         if target_path != file_path:
+            waypoint_path = file_path.with_suffix(".waypoints")
             file_path.rename(target_path)
+            if waypoint_path.exists():
+                waypoint_path.rename(target_path.with_suffix(".waypoints"))
         return _exported_route_record(target_path)
     elif request.route_name:
         route_name = request.route_name.strip()
@@ -1035,6 +1127,10 @@ def delete_exported_route(file_name: str):
         route_id = _export_route_payload_route_id(file_path)
         if not route_id:
             route_id = _unique_route_id_by_name(_exported_route_record(file_path).get("route_name"))
+        try:
+            file_path.with_suffix(".waypoints").unlink()
+        except FileNotFoundError:
+            pass
         file_path.unlink()
         if route_id:
             route_storage.delete_route(route_id)

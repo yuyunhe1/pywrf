@@ -1,5 +1,7 @@
 """API request models."""
 
+from typing import Any
+
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 
@@ -117,6 +119,7 @@ class RouteRecord(BaseModel):
     level: str
     cycle: str | None = None
     forecast_hour: int | None = None
+    mission_items: list[dict[str, Any]] | None = None
 
 
 class ExportedRouteRenameRequest(BaseModel):

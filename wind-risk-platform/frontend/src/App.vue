@@ -1,7 +1,7 @@
 <script setup>
 import L from 'leaflet'
 import { nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import { analyzeRoute, deleteRoute, getExportedRouteUrl, getGfsDownloadStatus, getHeatmap, getPoint, getTimes, getWind, listRoutes, planRoute, saveRoute } from './api'
+import { analyzeRoute, deleteRoute, getExportedRouteUrl, getExportedWaypointUrl, getGfsDownloadStatus, getHeatmap, getPoint, getTimes, getWind, listRoutes, planRoute, saveRoute } from './api'
 import AnalysisPanel from './components/AnalysisPanel.vue'
 import ControlPanel from './components/ControlPanel.vue'
 import WindMap from './components/WindMap.vue'
@@ -30,6 +30,7 @@ const planner = reactive({
   startText: '',
   endText: '',
   points: [],
+  missionItems: [],
   planning: false,
 })
 const savedRoutes = ref([])
@@ -264,6 +265,7 @@ const clearPlannedRoute = ({ keepEndpoints = true } = {}) => {
   routePoints = []
   analysis.value = undefined
   planner.points = []
+  planner.missionItems = []
   activeRouteId.value = ''
   mapRef.value?.clearDrawnRoute?.()
   if (!keepEndpoints) {
@@ -328,16 +330,17 @@ const normalizeRoutePoints = (points) => {
   }).filter(([lon, lat]) => Number.isFinite(lon) && Number.isFinite(lat))
 }
 
-const applyRouteToPlanner = async (name, points, { persist = false, routeId = '' } = {}) => {
+const applyRouteToPlanner = async (name, points, { persist = false, routeId = '', missionItems = null } = {}) => {
   const normalizedPoints = normalizeRoutePoints(points)
-  if (normalizedPoints.length < 2) throw new Error('导入的 JSON 至少需要包含 2 个有效航点')
+  if (normalizedPoints.length < 2) throw new Error('导入的航线至少需要包含 2 个有效航点')
   const start = lonLatPair(normalizedPoints[0])
   const end = lonLatPair(normalizedPoints[normalizedPoints.length - 1])
-  if (!start || !end) throw new Error('导入的 JSON 航点缺少有效经纬度')
+  if (!start || !end) throw new Error('导入的航点缺少有效经纬度')
   planner.name = name || '导入航线'
   planner.startText = start.join(', ')
   planner.endText = end.join(', ')
   planner.points = normalizedPoints
+  planner.missionItems = Array.isArray(missionItems) ? missionItems.map((item) => ({ ...item })) : []
   routePoints = normalizedPoints
   activeRouteId.value = routeId || ''
   try {
@@ -355,16 +358,17 @@ const applyRouteToPlanner = async (name, points, { persist = false, routeId = ''
       level: selection.level,
       cycle: selection.cycle || null,
       forecast_hour: selection.forecastHour,
+      mission_items: planner.missionItems.length ? planner.missionItems : null,
     })
     activeRouteId.value = saved.route_id || ''
     savedRoutes.value = await listRoutes()
   }
 }
 
-const downloadExportedJson = (fileName) => {
+const downloadExportedFile = (url, fileName) => {
   if (!fileName) return
   const link = document.createElement('a')
-  link.href = getExportedRouteUrl(fileName)
+  link.href = url
   link.download = fileName
   link.style.display = 'none'
   document.body.appendChild(link)
@@ -372,14 +376,29 @@ const downloadExportedJson = (fileName) => {
   link.remove()
 }
 
+const downloadExportedFiles = (saved) => {
+  const jsonFileName = saved?.exported_json?.file_name
+  const waypointFileName = saved?.exported_waypoints?.file_name || saved?.exported_json?.waypoint_file_name
+  if (jsonFileName) downloadExportedFile(getExportedRouteUrl(jsonFileName), jsonFileName)
+  if (waypointFileName) {
+    window.setTimeout(() => {
+      downloadExportedFile(getExportedWaypointUrl(waypointFileName), waypointFileName)
+    }, 120)
+  }
+}
+
 const runPlan = async (savedRoute) => {
   try {
     planner.planning = true
     if (savedRoute && Array.isArray(savedRoute.points)) {
-      await runWithPlannerAutoClearSuppressed(() => applyRouteToPlanner(savedRoute.name || '默认航线 A', savedRoute.points, { routeId: savedRoute.route_id }))
+      await runWithPlannerAutoClearSuppressed(() => applyRouteToPlanner(savedRoute.name || '默认航线 A', savedRoute.points, {
+        routeId: savedRoute.route_id,
+        missionItems: savedRoute.mission_items,
+      }))
       return
     }
     activeRouteId.value = ''
+    planner.missionItems = []
     const result = await planRoute(
       selection,
       parsePoint(planner.startText),
@@ -415,19 +434,28 @@ const persistRoute = async () => {
     const points = normalizeRoutePoints(planner.points)
     const start = lonLatPair(points[0]) || parsePoint(planner.startText)
     const end = lonLatPair(points[points.length - 1]) || parsePoint(planner.endText)
-    const saved = await saveRoute({ name: planner.name, start, end, points, level: selection.level, cycle: selection.cycle, forecast_hour: selection.forecastHour })
+    const saved = await saveRoute({
+      name: planner.name,
+      start,
+      end,
+      points,
+      level: selection.level,
+      cycle: selection.cycle,
+      forecast_hour: selection.forecastHour,
+      mission_items: planner.missionItems.length ? planner.missionItems : null,
+    })
     activeRouteId.value = saved.route_id || ''
     savedRoutes.value = await listRoutes()
-    downloadExportedJson(saved.exported_json?.file_name)
+    downloadExportedFiles(saved)
   } catch (reason) { 
     error.value = reason.response?.data?.detail || reason.message
     setTimeout(() => { error.value = '' }, 3000)
   }
 }
 
-const importJsonRoute = async ({ name, points }) => {
+const importRouteFile = async ({ name, points, missionItems }) => {
   try {
-    await runWithPlannerAutoClearSuppressed(() => applyRouteToPlanner(name, points, { persist: true }))
+    await runWithPlannerAutoClearSuppressed(() => applyRouteToPlanner(name, points, { persist: true, missionItems }))
   } catch (reason) {
     error.value = reason.response?.data?.detail || reason.message
     setTimeout(() => { error.value = '' }, 4000)
@@ -542,7 +570,7 @@ onBeforeUnmount(() => {
       <h1>御风智航-面向低空无人机通航决策的风场预报平台</h1>
       <p class="en-title">YUFENG SMART FLIGHT - LOW-ALTITUDE UAV FLIGHT DECISION WIND FORECAST PLATFORM</p>
     </header>
-    <ControlPanel ref="controlPanelRef" :options="options" :selection="selection" :layers="layers" :thresholds="thresholds" :planner="planner" :saved-routes="savedRoutes" :area-selection="areaSelection" :area-presets="areaPresets" :loading="loading" :picking="picking" @reload="loadWindField" @clear-route="clearRoute" @pick-start="picking = 'start'" @pick-end="picking = 'end'" @plan-route="runPlan" @save-route="persistRoute" @load-routes="refreshRoutes" @delete-route="removeRoute" @focus-area="focusArea" @import-json-route="importJsonRoute" />
+    <ControlPanel ref="controlPanelRef" :options="options" :selection="selection" :layers="layers" :thresholds="thresholds" :planner="planner" :saved-routes="savedRoutes" :area-selection="areaSelection" :area-presets="areaPresets" :loading="loading" :picking="picking" @reload="loadWindField" @clear-route="clearRoute" @pick-start="picking = 'start'" @pick-end="picking = 'end'" @plan-route="runPlan" @save-route="persistRoute" @load-routes="refreshRoutes" @delete-route="removeRoute" @focus-area="focusArea" @import-route-file="importRouteFile" />
     <WindMap ref="mapRef" :wind="wind" :heatmap="heatmap" :layers="layers" :thresholds="thresholds" :analysis="analysis" :planner="planner" @point-click="handleMapClick" @route-created="runRouteAnalysis" @zoom-changed="useZoomDefaultLayer" />
     <AnalysisPanel :metadata="metadata" :analysis="analysis" :thresholds="thresholds" />
     <div v-if="error" class="error-toast" @click="error = ''">{{ error }}</div>

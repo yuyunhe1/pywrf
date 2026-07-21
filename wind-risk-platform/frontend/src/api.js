@@ -53,6 +53,15 @@ export const getExportedRouteUrl = (fileName) => {
   return `${api.defaults.baseURL}/exported-routes/${encodeURIComponent(fileName)}`
 }
 
+export const getExportedWaypointUrl = (fileName) => {
+  return `${api.defaults.baseURL}/exported-waypoints/${encodeURIComponent(fileName)}`
+}
+
+export const parseWaypointText = (content) =>
+  api.post('/waypoints/parse', content, {
+    headers: { 'Content-Type': 'text/plain' },
+  }).then(({ data }) => data)
+
 export const deleteExportedRoute = async (fileName) => {
   await api.delete(`/exported-routes/${encodeURIComponent(fileName)}`)
 }

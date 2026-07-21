@@ -228,9 +228,22 @@ GFS 读取 surface `HGT/orog/gh` 作为地形高程；WRF `.npz` 缓存会尝试
 altitude_amsl_m = terrain_height_m + altitude_agl_m
 ```
 
-导出的 JSON 为任务对象，包含 `mission_name / coordinate_system / altitude_mode / waypoints`。
-每个航点至少包含 `lon, lat, altitude_agl_m, terrain_height_m, altitude_amsl_m, heading_deg, speed_mps`；
-其中兼容字段 `ele` 表示海拔高度 AMSL，便于后续转换到无人机或飞控任务文件。
+导出航线时会同时下载同名的 JSON 和 `.waypoints` 文件。JSON 任务对象包含
+`mission_name / coordinate_system / altitude_mode / waypoints / mission_items`；每个地图航点至少包含
+`lon, lat, altitude_agl_m, terrain_height_m, altitude_amsl_m, heading_deg, speed_mps`，其中兼容字段
+`ele` 表示海拔高度 AMSL。
+
+`.waypoints` 使用任务规划软件通用的 `QGC WPL 110` 文本格式。首行固定为 `QGC WPL 110`，
+之后每行按 Tab 分隔以下 12 列：
+
+```text
+index current frame command param1 param2 param3 param4 latitude longitude altitude autocontinue
+```
+
+平台生成的任务包含 Home（命令 16）、Takeoff（命令 22）、中间航点（命令 16）和 Land（命令 21）。
+“历史航线列表”中的导入按钮同时接受 `.json` 和 `.waypoints`。导入 QGC 文件时，平台会保留包括
+`DO_JUMP` 在内的完整任务项；地图和风场分析只使用带有效经纬度的任务项。再次保存或导出时，完整
+`mission_items` 会写回 JSON 和航点文件，不会因地图显示过滤而丢失任务命令。
 
 ### 风切变风险与硬约束
 

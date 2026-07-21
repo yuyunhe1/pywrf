@@ -11,13 +11,18 @@ DB_PATH = Path(__file__).resolve().parents[1] / "routes.sqlite3"
 def _connect():
     connection = sqlite3.connect(DB_PATH)
     connection.row_factory = sqlite3.Row
-    connection.execute("CREATE TABLE IF NOT EXISTS routes (route_id TEXT PRIMARY KEY, name TEXT NOT NULL, start_json TEXT NOT NULL, end_json TEXT NOT NULL, points_json TEXT NOT NULL, level TEXT NOT NULL, cycle TEXT, forecast_hour INTEGER, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)")
+    connection.execute("CREATE TABLE IF NOT EXISTS routes (route_id TEXT PRIMARY KEY, name TEXT NOT NULL, start_json TEXT NOT NULL, end_json TEXT NOT NULL, points_json TEXT NOT NULL, level TEXT NOT NULL, cycle TEXT, forecast_hour INTEGER, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, mission_items_json TEXT)")
+    columns = {row["name"] for row in connection.execute("PRAGMA table_info(routes)")}
+    if "mission_items_json" not in columns:
+        connection.execute("ALTER TABLE routes ADD COLUMN mission_items_json TEXT")
     return connection
 
 def _row(row):
     if row is None: return None
     item = dict(row)
     for key in ("start", "end", "points"): item[key] = json.loads(item.pop(f"{key}_json"))
+    mission_items = item.pop("mission_items_json", None)
+    item["mission_items"] = json.loads(mission_items) if mission_items else None
     return item
 
 def list_routes():
@@ -33,7 +38,22 @@ def save_route(payload, route_id=None):
         exists = db.execute("SELECT created_at FROM routes WHERE route_id=?", (route_id,)).fetchone()
         if route_id and exists is None and payload.get("_update"): return None
         created = exists["created_at"] if exists else now
-        db.execute("INSERT OR REPLACE INTO routes VALUES (?,?,?,?,?,?,?,?,?,?)", (route_id, payload["name"], json.dumps(payload["start"]), json.dumps(payload["end"]), json.dumps(payload["points"]), payload["level"], payload.get("cycle"), payload.get("forecast_hour"), created, now))
+        db.execute(
+            "INSERT OR REPLACE INTO routes (route_id, name, start_json, end_json, points_json, level, cycle, forecast_hour, created_at, updated_at, mission_items_json) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+            (
+                route_id,
+                payload["name"],
+                json.dumps(payload["start"]),
+                json.dumps(payload["end"]),
+                json.dumps(payload["points"]),
+                payload["level"],
+                payload.get("cycle"),
+                payload.get("forecast_hour"),
+                created,
+                now,
+                json.dumps(payload.get("mission_items")) if payload.get("mission_items") else None,
+            ),
+        )
     return get_route(route_id)
 
 def update_route_name(route_id, name):

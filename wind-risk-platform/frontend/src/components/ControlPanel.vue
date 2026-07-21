@@ -1,6 +1,14 @@
 <script setup>
 import { ref } from 'vue'
-import { listExportedRoutes, getExportedRouteUrl, deleteExportedRoute, renameExportedRouteFile, renameExportedRouteName } from '../api'
+import {
+  deleteExportedRoute,
+  getExportedRouteUrl,
+  getExportedWaypointUrl,
+  listExportedRoutes,
+  parseWaypointText,
+  renameExportedRouteFile,
+  renameExportedRouteName,
+} from '../api'
 
 const dataSources = [
   { value: 'gfs', label: 'GFS 原始数据' },
@@ -48,7 +56,7 @@ const vFocus = {
   }
 }
 
-const emit = defineEmits(['reload', 'clear-route', 'pick-start', 'pick-end', 'plan-route', 'save-route', 'load-routes', 'delete-route', 'focus-area', 'import-json-route'])
+const emit = defineEmits(['reload', 'clear-route', 'pick-start', 'pick-end', 'plan-route', 'save-route', 'load-routes', 'delete-route', 'focus-area', 'import-route-file'])
 
 const handleAreaChange = (kind, value) => {
   emit('focus-area', { kind, value })
@@ -99,8 +107,24 @@ const refreshJsonDialog = async () => {
   }
 }
 
-const viewJsonFile = (fileName) => {
-  window.open(getExportedRouteUrl(fileName), '_blank')
+const downloadFile = (url, fileName) => {
+  const link = document.createElement('a')
+  link.href = url
+  link.download = fileName
+  link.style.display = 'none'
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+}
+
+const exportRouteFiles = (routeFile) => {
+  if (!routeFile?.file_name) return
+  downloadFile(getExportedRouteUrl(routeFile.file_name), routeFile.file_name)
+  if (routeFile.waypoint_file_name) {
+    window.setTimeout(() => {
+      downloadFile(getExportedWaypointUrl(routeFile.waypoint_file_name), routeFile.waypoint_file_name)
+    }, 120)
+  }
 }
 
 const triggerExportByName = async (routeName) => {
@@ -108,9 +132,9 @@ const triggerExportByName = async (routeName) => {
     const files = await listExportedRoutes()
     const targetFile = files.find(f => f.route_name === routeName)
     if (targetFile) {
-      viewJsonFile(targetFile.file_name)
+      exportRouteFiles(targetFile)
     } else {
-      window.alert('未找到该航线对应的 JSON 文件')
+      window.alert('未找到该航线对应的导出文件')
     }
   } catch (error) {
     console.error('查找导出文件失败', error)
@@ -121,8 +145,8 @@ const triggerJsonImport = () => {
   jsonImportInput.value?.click()
 }
 
-const nameFromJsonFile = (fileName) => {
-  return fileName.replace(/\.json$/i, '').replace(/_\d{14}$/, '') || '导入航线'
+const nameFromRouteFile = (fileName) => {
+  return fileName.replace(/\.(json|waypoints)$/i, '').replace(/_\d{14}$/, '') || '导入航线'
 }
 
 const extractRoutePoints = (payload) => {
@@ -159,15 +183,21 @@ const handleJsonImport = async (event) => {
   const file = event.target.files?.[0]
   if (!file) return
   try {
-    const payload = JSON.parse(await file.text())
+    const isWaypointFile = /\.waypoints$/i.test(file.name)
+    const isJsonFile = /\.json$/i.test(file.name)
+    if (!isWaypointFile && !isJsonFile) throw new Error('请选择 .json 或 .waypoints 航线文件')
+    const payload = isWaypointFile
+      ? await parseWaypointText(await file.text())
+      : JSON.parse(await file.text())
     const points = extractRoutePoints(payload)
-    if (points.length < 2) throw new Error('JSON 至少需要包含 2 个有效航点')
-    const name = payload?.mission_name || payload?.name || payload?.route_name || nameFromJsonFile(file.name)
-    emit('import-json-route', { name, points, raw: payload })
+    if (points.length < 2) throw new Error('航线文件至少需要包含 2 个有效航点')
+    const name = payload?.mission_name || payload?.name || payload?.route_name || nameFromRouteFile(file.name)
+    const missionItems = Array.isArray(payload?.mission_items) ? payload.mission_items : null
+    emit('import-route-file', { name, points, missionItems, raw: payload })
     showJsonDialog.value = false
   } catch (error) {
-    console.error('导入 JSON 航线失败', error)
-    window.alert(error.message || '导入 JSON 航线失败')
+    console.error('导入航线文件失败', error)
+    window.alert(error.response?.data?.detail || error.message || '导入航线文件失败')
   } finally {
     event.target.value = ''
   }
@@ -252,9 +282,9 @@ defineExpose({ refreshJsonDialog })
     <div style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
       <button class="ghost" style="width: auto; padding: 4px 10px; margin: 0; font-size: 11px; display: flex; align-items: center; gap: 4px;" @click="triggerJsonImport">
         <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-        导入 JSON
+        导入航线文件
       </button>
-      <input type="file" ref="jsonImportInput" style="display: none;" accept=".json" @change="handleJsonImport" />
+      <input type="file" ref="jsonImportInput" style="display: none;" accept=".json,.waypoints" @change="handleJsonImport" />
     </div>
     <el-table :data="jsonFiles" class="glass-table" style="width: 100%" height="400">
       <el-table-column label="航线名称" min-width="120">
@@ -272,8 +302,9 @@ defineExpose({ refreshJsonDialog })
           <div v-if="editingJsonFile === scope.row.file_name" style="display: flex; gap: 4px; align-items: center;">
             <input class="glass-input-inline" v-model="editingJsonFileName" v-focus @blur="confirmRenameJsonFile(scope.row)" @keyup.enter="confirmRenameJsonFile(scope.row)" />
           </div>
-          <div v-else @click="startRenameJsonRoute(scope.row)" style="cursor: pointer; width: 100%; min-height: 24px; display: flex; align-items: center;">
-            {{ scope.row.file_name }}
+          <div v-else @click="startRenameJsonRoute(scope.row)" style="cursor: pointer; width: 100%; min-height: 24px; display: flex; flex-direction: column; justify-content: center; align-items: flex-start;">
+            <span>{{ scope.row.file_name }}</span>
+            <span v-if="scope.row.waypoint_file_name" class="subtle" style="font-size: 10px;">{{ scope.row.waypoint_file_name }}</span>
           </div>
         </template>
       </el-table-column>
@@ -282,7 +313,7 @@ defineExpose({ refreshJsonDialog })
         <template #default="scope">
           <div style="display: flex; justify-content: center; gap: 8px;">
             <el-button type="primary" link size="small" class="glass-table-btn"
-              @click="viewJsonFile(scope.row.file_name)">
+              @click="exportRouteFiles(scope.row)">
               导出
             </el-button>
             <el-button type="success" link size="small" class="glass-table-btn"
