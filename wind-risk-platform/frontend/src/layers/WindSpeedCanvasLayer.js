@@ -125,14 +125,6 @@ export const createWindSpeedCanvasLayer = (windSpeed, options = {}) => {
         const vData = vSource.data
         const thresholds = this.options.thresholds
         
-        const getLevel = (s) => {
-          if (s <= thresholds.safe) return 0
-          if (s <= thresholds.notice) return 1
-          if (s <= thresholds.warning) return 2
-          if (s <= thresholds.danger) return 3
-          return 4
-        }
-
         const hatchPattern = getHatchPattern(context)
 
         for (let row = rowStart; row <= rowEnd; row += 1) {
@@ -151,7 +143,6 @@ export const createWindSpeedCanvasLayer = (windSpeed, options = {}) => {
               if (!inRange) continue
             }
 
-            const level = getLevel(speed)
             const u1 = uData[i]
             const v1 = vData[i]
             let highlight = false
@@ -169,26 +160,14 @@ export const createWindSpeedCanvasLayer = (windSpeed, options = {}) => {
                 const speed2 = this.windSpeed.data[ni]
                 if (!Number.isFinite(speed2)) continue
                 
-                let isMutation = false
-                const level2 = getLevel(speed2)
-                const levelDiffThreshold = thresholds.mutationLevelDiff !== undefined ? thresholds.mutationLevelDiff : 3
-                if (Math.abs(level - level2) >= levelDiffThreshold) {
-                  isMutation = true
-                } else {
-                  const u2 = uData[ni]
-                  const v2 = vData[ni]
-                  const angleThreshold = thresholds.mutationAngle !== undefined ? thresholds.mutationAngle : 90
-                  const dotProduct = u1 * u2 + v1 * v2
-                  const mag1 = Math.hypot(u1, v1)
-                  const mag2 = Math.hypot(u2, v2)
-                  if (mag1 > 0.1 && mag2 > 0.1) {
-                    const cosTheta = Math.max(-1, Math.min(1, dotProduct / (mag1 * mag2)))
-                    const angle = Math.acos(cosTheta) * (180 / Math.PI)
-                    if (angle >= angleThreshold) {
-                      isMutation = true
-                    }
-                  }
-                }
+                const u2 = Number(uData[ni])
+                const v2 = Number(vData[ni])
+                if (![u1, v1, u2, v2].every(Number.isFinite)) continue
+                const shearThreshold = thresholds.maxHorizontalWindShear !== undefined
+                  ? Number(thresholds.maxHorizontalWindShear)
+                  : 5.4
+                const vectorDifference = Math.hypot(u2 - u1, v2 - v1)
+                const isMutation = vectorDifference >= shearThreshold
 
                 if (isMutation) {
                   // Only draw if we are looking right or bottom, OR if the neighbor would be filtered out

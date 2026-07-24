@@ -365,7 +365,7 @@ defineExpose({ refreshJsonDialog })
             @click="layers.heatmap = true; layers.velocity = false">风速热力图</button>
         </div>
         <div v-if="layers.heatmap" style="margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: rgba(0, 0, 0, 0.2); border-radius: 4px; border: 1px solid rgba(0, 243, 255, 0.1);">
-          <span style="color: #00f3ff; font-size: 12px;">突变高危区高亮</span>
+          <span style="color: #00f3ff; font-size: 12px;">水平风切变区域高亮</span>
           <div class="cyber-switch" :class="{ 'is-active': layers.mutation }" @click="layers.mutation = !layers.mutation">
             <div class="switch-handle"></div>
           </div>
@@ -509,8 +509,7 @@ defineExpose({ refreshJsonDialog })
           <label>二级风<input v-model.number="thresholds.notice" type="number" min="0" step="0.5" /></label>
           <label>三级风<input v-model.number="thresholds.warning" type="number" min="0" step="0.5" /></label>
           <label>四级风<input v-model.number="thresholds.danger" type="number" min="0" step="0.5" /></label>
-          <label>级差突变<input v-model.number="thresholds.mutationLevelDiff" type="number" min="1" step="1" title="相邻网格风级差大于等于此值时高亮" /></label>
-          <label>夹角突变<input v-model.number="thresholds.mutationAngle" type="number" min="0" max="180" step="5" title="相邻网格风向夹角大于此值时高亮" /></label>
+          <label class="threshold-wide">最大水平风切变 (m/s)<input v-model.number="thresholds.maxHorizontalWindShear" type="number" min="0.1" step="0.1" title="相邻网格点风矢量差 sqrt((Δu)^2 + (Δv)^2) 的最大允许值（m/s）" /></label>
         </div>
       </section>
     </div>

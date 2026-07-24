@@ -127,6 +127,33 @@ def _node_point(grid: WindGrid, node: Node) -> tuple[float, float]:
     return float(grid.lons[col]), float(grid.lats[row])
 
 
+def _endpoint_hard_wind_summary(
+    grid: WindGrid,
+    start_point: tuple[float, float],
+    end_point: tuple[float, float],
+    hard_limit_ms: float,
+) -> dict[str, Any] | None:
+    values = []
+    blocked_names = []
+    for name, point in (("起点", start_point), ("终点", end_point)):
+        row, col = _nearest_node(grid, point)
+        speed = float(hypot(grid.u[row, col], grid.v[row, col]))
+        values.append(speed)
+        if not np.isfinite(speed) or speed >= hard_limit_ms:
+            blocked_names.append(name)
+    if not blocked_names:
+        return None
+    finite_values = [value for value in values if np.isfinite(value)]
+    return {
+        "blocked_names": blocked_names,
+        "max_wind_speed": max(finite_values) if finite_values else None,
+        "reason": (
+            f"{'、'.join(blocked_names)}风速达到或超过 {float(hard_limit_ms):g} m/s 硬上限，"
+            "禁止通航，已跳过航线图搜索"
+        ),
+    }
+
+
 def _nodes_from_points(grid: WindGrid, points: Iterable[tuple[float, float]]) -> list[Node]:
     nodes: list[Node] = []
     for point in points:
@@ -373,6 +400,36 @@ def evaluate_candidate(
     config: DecisionConfig,
 ) -> CandidateEvaluation:
     try:
+        endpoint_block = _endpoint_hard_wind_summary(
+            candidate.wind_field,
+            start_point,
+            end_point,
+            config.planner_hard_max_wind_speed,
+        )
+        if endpoint_block is not None:
+            return CandidateEvaluation(
+                forecast_time=candidate.forecast_time,
+                available=True,
+                decision_feasible=False,
+                decision_hint="禁止通航",
+                reason=endpoint_block["reason"],
+                path=[],
+                recommended_height=candidate.height or getattr(candidate.wind_field, "level", None),
+                risk_level=RISK_UNAVAILABLE,
+                path_summary={
+                    "path_length": 0.0,
+                    "total_cost": None,
+                    "max_wind_speed": endpoint_block["max_wind_speed"],
+                    "max_headwind": None,
+                    "max_crosswind": None,
+                    "max_rain": None,
+                    "min_agl_height": None,
+                    "cumulative_cost": None,
+                    "high_risk_cell_count": None,
+                    "planning_skipped": True,
+                    "planning_skip_reason": "endpoint_wind_speed",
+                },
+            )
         path, path_nodes, planner_total_cost = _plan_candidate(candidate, start_point, end_point, config)
         summary = _path_summary(candidate, path_nodes, config, planner_total_cost)
         feasible, reasons, risk_level = _candidate_reasons(summary, config)
@@ -380,7 +437,7 @@ def evaluate_candidate(
             forecast_time=candidate.forecast_time,
             available=True,
             decision_feasible=feasible,
-            decision_hint="可通航" if feasible else "风险较高",
+            decision_hint="允许通航" if feasible else "禁止通航",
             reason="；".join(reasons),
             path=path,
             recommended_height=candidate.height or getattr(candidate.wind_field, "level", None),
@@ -392,7 +449,7 @@ def evaluate_candidate(
             forecast_time=candidate.forecast_time,
             available=False,
             decision_feasible=False,
-            decision_hint="无可行路径",
+            decision_hint="禁止通航",
             reason=f"该时效无可行路径：{exc}",
             path=[],
             recommended_height=candidate.height or getattr(candidate.wind_field, "level", None),
@@ -471,6 +528,8 @@ def decide_navigation(
 
     return {
         "decision": decision,
+        "navigation_allowed": current.decision_feasible,
+        "navigation_decision": "允许通航" if current.decision_feasible else "禁止通航",
         "recommended_start_time": recommended.forecast_time if decision != DECISION_PAUSE else None,
         "recommended_height": recommended.recommended_height,
         "best_path": recommended.path if decision != DECISION_PAUSE else [],

@@ -28,14 +28,6 @@ let heatLegend
 // WRF/WPS domain center near Wuhu Aerospace Industrial Park, about 10 km x 10 km.
 const CHINA_INITIAL_BOUNDS = [[18.0, 73.0], [54.0, 135.0]]
 
-const riskColor = (risk) => ({
-  一级风: '#00b84b', // 加深、加重的绿色
-  二级风: '#e6a100', // 加深、加重的土黄色
-  三级风: '#e66b00', // 加深、加重的深橙色
-  四级风: '#c21e1f', // 加深、加重的暗红色
-  大于四级: '#6a1b9a', // 加深、加重的深紫色
-}[risk] || '#eaf5ff')
-
 const renderWind = () => {
   if (!map) return
   velocityLayers.forEach((layer) => map.removeLayer(layer))
@@ -231,7 +223,11 @@ const focusArea = (target) => {
 
 defineExpose({ clearRoute, clearDrawnRoute, focusArea })
 watch(() => [props.wind, props.layers.velocity, props.thresholds], renderWind, { deep: true })
-watch(() => [props.heatmap, props.layers.heatmap, props.layers.mutation], renderHeatmap, { deep: true })
+watch(
+  () => [props.heatmap, props.layers.heatmap, props.layers.mutation, props.thresholds.maxHorizontalWindShear],
+  renderHeatmap,
+  { deep: true },
+)
 watch(() => [props.analysis, props.layers.route, props.planner?.startText, props.planner?.endText], renderRoute, { deep: true })
 
 onMounted(() => {

@@ -82,7 +82,7 @@ def test_route_plan_returns_wind_shear_analysis_and_validates_thresholds():
         "wind_shear": {
             "enabled": False,
             "vertical": {"hard_delta_v_10m_ms": 3.0, "hard_delta_v_30m_ms": 6.0},
-            "horizontal": {"hard_delta_v_1km_ms": 2.6, "hard_direction_change_deg": 45.0},
+            "horizontal": {"hard_delta_wind_vector_ms": 5.4},
         },
     }
     response = client.post("/api/route/plan", json=payload)
@@ -93,9 +93,13 @@ def test_route_plan_returns_wind_shear_analysis_and_validates_thresholds():
     assert result["wind_shear"] == result["analysis"]["wind_shear"]
     assert result["wind_shear"]["mode"] == "horizontal_edges_only"
     assert result["wind_shear"]["vertical_status"] == "disabled"
-    assert "max_horizontal_delta_v_1km_ms" in result["wind_shear"]
+    assert result["max_horizontal_wind_shear_unit"] == "m/s"
+    assert result["horizontal_wind_shear_profile"] == result["wind_shear"]["horizontal_wind_shear_profile"]
+    assert result["analysis"]["max_horizontal_wind_shear"] == result["max_horizontal_wind_shear"]
     assert result["wind_shear"]["note"].startswith("项目实验性风险阈值")
+    assert result["analysis"]["navigation_decision"] == "允许通航"
+    assert result["analysis"]["navigation_allowed"] is True
 
-    payload["wind_shear"]["horizontal"]["hard_delta_v_1km_ms"] = -1
+    payload["wind_shear"]["horizontal"]["hard_delta_wind_vector_ms"] = -1
     invalid = client.post("/api/route/plan", json=payload)
     assert invalid.status_code == 422

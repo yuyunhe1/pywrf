@@ -58,6 +58,8 @@ class EdgeCost:
     blocked: bool = False
     reason: str | None = None
     horizontal_shear_s1: float | None = None
+    horizontal_wind_shear_ms: float | None = None
+    horizontal_delta_wind_vector_ms: float | None = None
     horizontal_delta_v_1km_ms: float | None = None
     horizontal_direction_change_deg: float | None = None
 
@@ -292,6 +294,45 @@ def is_node_flyable(
     )
 
 
+def _horizontal_shear_between_nodes(
+    node_from: Any,
+    node_to: Any,
+    wind_field,
+    wind_shear_environment: WindShearEnvironment,
+) -> dict[str, Any]:
+    u_from, v_from, _ = _wind_at(wind_field, node_from)
+    u_to, v_to, _ = _wind_at(wind_field, node_to)
+    return compute_horizontal_wind_shear(
+        _cell_point(wind_field, node_from),
+        _cell_point(wind_field, node_to),
+        u_from,
+        v_from,
+        u_to,
+        v_to,
+        wind_shear_environment.config,
+    )
+
+
+def _blocked_horizontal_shear_cost(horizontal_shear: dict[str, Any]) -> EdgeCost:
+    return EdgeCost(
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        float("inf"),
+        True,
+        "horizontal_wind_shear",
+        horizontal_shear_s1=horizontal_shear["horizontal_shear_s1"],
+        horizontal_wind_shear_ms=horizontal_shear["horizontal_wind_shear_ms"],
+        horizontal_delta_wind_vector_ms=horizontal_shear["delta_wind_vector_ms"],
+        horizontal_delta_v_1km_ms=horizontal_shear["delta_v_1km_ms"],
+        horizontal_direction_change_deg=horizontal_shear["direction_change_deg"],
+    )
+
+
 def calculate_edge_cost(
     node_from: Any,
     node_to: Any,
@@ -330,40 +371,22 @@ def calculate_edge_cost(
     end = _cell_point(wind_field, node_to)
     horizontal_shear = None
     same_horizontal_layer = _same_horizontal_layer(node_from, node_to, wind_field)
-    if (
+    horizontal_shear_active = (
         wind_shear_environment is not None
         and wind_shear_environment.config.enabled
         and wind_shear_environment.config.horizontal.enabled
         and same_horizontal_layer
         and (from_row, from_col) != (to_row, to_col)
-    ):
-        u_from, v_from, _ = _wind_at(wind_field, node_from)
-        u_to, v_to, _ = _wind_at(wind_field, node_to)
-        horizontal_shear = compute_horizontal_wind_shear(
-            start,
-            end,
-            u_from,
-            v_from,
-            u_to,
-            v_to,
-            wind_shear_environment.config,
+    )
+    if horizontal_shear_active:
+        horizontal_shear = _horizontal_shear_between_nodes(
+            node_from,
+            node_to,
+            wind_field,
+            wind_shear_environment,
         )
         if horizontal_shear.get("is_flyable") is False:
-            return EdgeCost(
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                float("inf"),
-                True,
-                "horizontal_wind_shear",
-                horizontal_shear_s1=horizontal_shear["horizontal_shear_s1"],
-                horizontal_delta_v_1km_ms=horizontal_shear["delta_v_1km_ms"],
-                horizontal_direction_change_deg=horizontal_shear["direction_change_deg"],
-            )
+            return _blocked_horizontal_shear_cost(horizontal_shear)
     risk_nodes: list[Any] = [node_to]
     if abs(to_row - from_row) == 1 and abs(to_col - from_col) == 1:
         # A diagonal centre-to-centre edge touches both side-adjacent cells.
@@ -395,6 +418,31 @@ def calculate_edge_cost(
                 True,
                 str(blocked_side["blocked_reason"] or "diagonal_corner"),
             )
+        if horizontal_shear_active:
+            # A diagonal move crosses the corner shared by four grid cells.
+            # Checking only its two endpoints can hide a shear boundary when
+            # the diagonal cells have similar wind but either side cell does
+            # not.  Require every orthogonal edge around that corner to pass
+            # the same hard vector-difference constraint.
+            corner_edges = (
+                (node_from, side_nodes[0]),
+                (side_nodes[0], node_to),
+                (node_from, side_nodes[1]),
+                (side_nodes[1], node_to),
+            )
+            for corner_from, corner_to in corner_edges:
+                corner_shear = _horizontal_shear_between_nodes(
+                    corner_from,
+                    corner_to,
+                    wind_field,
+                    wind_shear_environment,
+                )
+                if corner_shear.get("is_flyable") is False:
+                    return _blocked_horizontal_shear_cost(corner_shear)
+                corner_delta = corner_shear.get("delta_wind_vector_ms")
+                current_delta = None if horizontal_shear is None else horizontal_shear.get("delta_wind_vector_ms")
+                if corner_delta is not None and (current_delta is None or corner_delta > current_delta):
+                    horizontal_shear = corner_shear
         # Even flyable side cells contribute risk.  Using the worst value is
         # conservative, but prevents a diagonal shortcut from hiding a windy,
         # rainy or terrain-constrained cell that the real segment may enter.
@@ -447,6 +495,8 @@ def calculate_edge_cost(
         rain_cost=rain_cost,
         total_cost=float(total),
         horizontal_shear_s1=None if horizontal_shear is None else horizontal_shear["horizontal_shear_s1"],
+        horizontal_wind_shear_ms=None if horizontal_shear is None else horizontal_shear["horizontal_wind_shear_ms"],
+        horizontal_delta_wind_vector_ms=None if horizontal_shear is None else horizontal_shear["delta_wind_vector_ms"],
         horizontal_delta_v_1km_ms=None if horizontal_shear is None else horizontal_shear["delta_v_1km_ms"],
         horizontal_direction_change_deg=None if horizontal_shear is None else horizontal_shear["direction_change_deg"],
     )

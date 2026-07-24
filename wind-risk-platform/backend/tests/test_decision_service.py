@@ -31,6 +31,7 @@ def test_decision_suitable_for_current_time():
     assert result["decision"] == DECISION_SUITABLE
     assert result["recommended_start_time"] == "2026-06-15 03:00 UTC"
     assert result["path_summary"]["max_wind_speed"] < 5.4
+    assert result["navigation_decision"] == "允许通航"
 
 
 def test_decision_delays_when_current_exceeds_business_threshold_but_is_plannable():
@@ -88,3 +89,27 @@ def test_decision_changes_when_user_wind_threshold_changes():
 
     assert low_threshold["decision"] == DECISION_PAUSE
     assert high_threshold["decision"] == DECISION_SUITABLE
+
+
+def test_endpoint_hard_wind_skips_candidate_graph_search(monkeypatch):
+    from app import decision_service
+
+    grid = _grid(3.0)
+    grid.u[3, 0] = 8.2
+
+    def fail_if_planner_runs(*args, **kwargs):
+        raise AssertionError("graph search should be skipped for a hard-blocked endpoint")
+
+    monkeypatch.setattr(decision_service, "_plan_candidate", fail_if_planner_runs)
+    result = decision_service.decide_navigation(
+        (0.0, 3.0),
+        (6.0, 3.0),
+        [grid],
+        planner_type="wa_lpa_star",
+        planner_hard_max_wind_speed=7.9,
+    )
+
+    assert result["navigation_decision"] == "禁止通航"
+    assert result["navigation_allowed"] is False
+    assert result["candidate_results"][0]["decision_hint"] == "禁止通航"
+    assert "已跳过航线图搜索" in result["candidate_results"][0]["reason"]

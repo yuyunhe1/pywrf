@@ -36,8 +36,7 @@ class VerticalWindShearConfig:
 @dataclass(frozen=True)
 class HorizontalWindShearConfig:
     enabled: bool = True
-    hard_delta_v_1km_ms: float = 2.6
-    hard_direction_change_deg: float = 45.0
+    hard_delta_wind_vector_ms: float = 5.4
     hard_constraint_enabled: bool = True
 
 
@@ -118,10 +117,23 @@ def _mapping(value: Any) -> dict[str, Any]:
 def ensure_wind_shear_config(value: Any | None = None) -> WindShearConfig:
     source = _mapping(value)
     vertical_source = {**DEFAULT_WIND_SHEAR_CONFIG.get("vertical", {}), **_mapping(source.get("vertical"))}
-    horizontal_source = {**DEFAULT_WIND_SHEAR_CONFIG.get("horizontal", {}), **_mapping(source.get("horizontal"))}
+    horizontal_overrides = _mapping(source.get("horizontal"))
+    if "hard_delta_wind_vector_ms" not in horizontal_overrides:
+        for legacy_name in ("hard_horizontal_wind_shear_ms_per_km", "hard_delta_v_1km_ms"):
+            if legacy_name in horizontal_overrides:
+                horizontal_overrides = {
+                    **horizontal_overrides,
+                    "hard_delta_wind_vector_ms": horizontal_overrides[legacy_name],
+                }
+                break
+    horizontal_source = {**DEFAULT_WIND_SHEAR_CONFIG.get("horizontal", {}), **horizontal_overrides}
     merged = {**DEFAULT_WIND_SHEAR_CONFIG, **source}
     vertical = VerticalWindShearConfig(**vertical_source)
-    horizontal = HorizontalWindShearConfig(**horizontal_source)
+    horizontal = HorizontalWindShearConfig(
+        enabled=bool(horizontal_source.get("enabled", True)),
+        hard_delta_wind_vector_ms=float(horizontal_source.get("hard_delta_wind_vector_ms", 5.4)),
+        hard_constraint_enabled=bool(horizontal_source.get("hard_constraint_enabled", True)),
+    )
     config = WindShearConfig(
         enabled=bool(merged.get("enabled", True)),
         min_wind_speed_for_direction_ms=float(merged.get("min_wind_speed_for_direction_ms", 0.5)),
@@ -141,8 +153,7 @@ def validate_wind_shear_config(config: WindShearConfig) -> None:
         config.vertical.hard_delta_v_30m_ms,
         config.vertical.caution_direction_change_deg,
         config.vertical.hard_direction_change_deg,
-        config.horizontal.hard_delta_v_1km_ms,
-        config.horizontal.hard_direction_change_deg,
+        config.horizontal.hard_delta_wind_vector_ms,
     ]
     if any(not math.isfinite(value) or value < 0 for value in values):
         raise ValueError("风切变阈值必须是非负有限数值")
@@ -152,7 +163,7 @@ def validate_wind_shear_config(config: WindShearConfig) -> None:
         raise ValueError("垂直风向谨慎阈值必须小于硬约束阈值")
     if config.vertical.hard_delta_v_10m_ms <= 0 or config.vertical.hard_delta_v_30m_ms <= 0:
         raise ValueError("垂直风切变硬约束阈值必须大于0")
-    if config.horizontal.hard_delta_v_1km_ms <= 0 or config.horizontal.hard_direction_change_deg <= 0:
+    if config.horizontal.hard_delta_wind_vector_ms <= 0:
         raise ValueError("水平风切变硬约束阈值必须大于0")
 
 
@@ -183,6 +194,7 @@ def _missing_result(kind: str, reason: str) -> dict[str, Any]:
         "delta_v_10m_ms": None,
         "delta_v_30m_ms": None,
         "horizontal_distance_m": None,
+        "horizontal_wind_shear_ms": None,
         "delta_v_1km_ms": None,
         "direction_change_deg": None,
         "direction_is_valid": False,
@@ -300,9 +312,7 @@ def compute_horizontal_wind_shear(
         cfg.min_wind_speed_for_direction_ms,
     )
     horizontal = cfg.horizontal
-    hard = delta1km >= horizontal.hard_delta_v_1km_ms
-    if direction is not None:
-        hard = hard or direction >= horizontal.hard_direction_change_deg
+    hard = delta >= horizontal.hard_delta_wind_vector_ms
     level = SHEAR_NO_FLY if hard else SHEAR_SAFE
     flyable = not (cfg.enabled and horizontal.enabled and horizontal.hard_constraint_enabled and hard)
     return {
@@ -310,6 +320,7 @@ def compute_horizontal_wind_shear(
         "horizontal_shear_s1": shear,
         "horizontal_distance_m": distance_m,
         "delta_wind_vector_ms": delta,
+        "horizontal_wind_shear_ms": delta,
         "delta_v_1km_ms": delta1km,
         "direction_change_deg": direction,
         "direction_is_valid": direction is not None,
@@ -490,7 +501,13 @@ def analyze_route_wind_shear(
         )
 
     horizontal_results: list[tuple[int, tuple[float, float], dict[str, Any]]] = []
+    horizontal_profile: list[dict[str, Any]] = []
+    cumulative_distance_km = 0.0
     for index, (left, right) in enumerate(zip(node_values, node_values[1:])):
+        segment_distance_km = haversine_km(left[0], right[0])
+        start_distance_km = cumulative_distance_km
+        end_distance_km = start_distance_km + segment_distance_km
+        cumulative_distance_km = end_distance_km
         if left[5] is not None and right[5] is not None and not math.isclose(left[5], right[5]):
             # This is an altitude transition, not an edge between adjacent
             # horizontal nodes on one layer.
@@ -498,6 +515,22 @@ def analyze_route_wind_shear(
         result = compute_horizontal_wind_shear(left[0], right[0], left[3], left[4], right[3], right[4], environment.config)
         midpoint = ((left[0][0] + right[0][0]) / 2.0, (left[0][1] + right[0][1]) / 2.0)
         horizontal_results.append((index, midpoint, result))
+        if result["status"] == "valid":
+            horizontal_profile.append(
+                {
+                    "segment_index": index,
+                    "start_distance_km": round(start_distance_km, 3),
+                    "end_distance_km": round(end_distance_km, 3),
+                    "center_distance_km": round((start_distance_km + end_distance_km) / 2.0, 3),
+                    "segment_distance_km": round(segment_distance_km, 3),
+                    "horizontal_wind_shear": round(result["delta_wind_vector_ms"], 6),
+                    "delta_wind_vector_ms": round(result["delta_wind_vector_ms"], 6),
+                    "start_lon": round(left[0][0], 6),
+                    "start_lat": round(left[0][1], 6),
+                    "end_lon": round(right[0][0], 6),
+                    "end_lat": round(right[0][1], 6),
+                }
+            )
 
     valid_horizontal = [item for item in horizontal_results if item[2]["status"] == "valid"]
 
@@ -505,8 +538,10 @@ def analyze_route_wind_shear(
         values = [(item, item[2].get(key)) for item in items if item[2].get(key) is not None]
         return max(values, key=lambda pair: pair[1])[0] if values else None
 
-    max_horizontal = maximum(valid_horizontal, "horizontal_shear_s1")
+    max_horizontal = maximum(valid_horizontal, "delta_wind_vector_ms")
+    max_horizontal_gradient = maximum(valid_horizontal, "horizontal_shear_s1")
     max_horizontal_direction = maximum(valid_horizontal, "direction_change_deg")
+    max_profile_item = max(horizontal_profile, key=lambda item: item["horizontal_wind_shear"], default=None)
     rank = {SHEAR_MISSING: -1, SHEAR_SAFE: 0, SHEAR_CAUTION: 1, SHEAR_NO_FLY: 2}
     horizontal_active = bool(environment.config.enabled and environment.config.horizontal.enabled)
     horizontal_level = max(
@@ -539,9 +574,26 @@ def analyze_route_wind_shear(
         "max_vertical_delta_v_10m_ms": None,
         "max_vertical_delta_v_30m_ms": None,
         "max_vertical_direction_change_deg": None,
-        "max_horizontal_shear_s1": None if max_horizontal is None else round(max_horizontal[2]["horizontal_shear_s1"], 6),
+        "max_horizontal_shear_s1": None if max_horizontal_gradient is None else round(max_horizontal_gradient[2]["horizontal_shear_s1"], 6),
+        "max_horizontal_delta_wind_vector_ms": None if max_horizontal is None else round(max_horizontal[2]["delta_wind_vector_ms"], 3),
         "max_horizontal_delta_v_1km_ms": None if not valid_horizontal else round(max(item[2]["delta_v_1km_ms"] for item in valid_horizontal), 3),
         "max_horizontal_direction_change_deg": None if max_horizontal_direction is None else round(max_horizontal_direction[2]["direction_change_deg"], 2),
+        "max_horizontal_wind_shear": None if max_profile_item is None else max_profile_item["horizontal_wind_shear"],
+        "max_horizontal_wind_shear_unit": "m/s",
+        "max_horizontal_wind_shear_segment": None if max_profile_item is None else {
+            key: max_profile_item[key]
+            for key in (
+                "segment_index",
+                "start_distance_km",
+                "end_distance_km",
+                "start_lon",
+                "start_lat",
+                "end_lon",
+                "end_lat",
+            )
+        },
+        "horizontal_wind_shear_profile": horizontal_profile,
+        "final_route_available": True,
         "vertical_shear_warning_count": 0,
         "horizontal_shear_warning_count": sum(item[2]["shear_level"] == SHEAR_NO_FLY for item in horizontal_results)
         if horizontal_active else 0,

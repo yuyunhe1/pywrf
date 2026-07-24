@@ -48,9 +48,18 @@ class VerticalWindShearSettings(BaseModel):
 
 class HorizontalWindShearSettings(BaseModel):
     enabled: bool = True
-    hard_delta_v_1km_ms: float = Field(default=2.6, gt=0)
-    hard_direction_change_deg: float = Field(default=45.0, gt=0, le=180)
+    hard_delta_wind_vector_ms: float = Field(default=5.4, gt=0)
     hard_constraint_enabled: bool = True
+
+    @model_validator(mode="before")
+    @classmethod
+    def accept_legacy_threshold_name(cls, value):
+        if isinstance(value, dict) and "hard_delta_wind_vector_ms" not in value:
+            for legacy_name in ("hard_horizontal_wind_shear_ms_per_km", "hard_delta_v_1km_ms"):
+                if legacy_name in value:
+                    value = {**value, "hard_delta_wind_vector_ms": value[legacy_name]}
+                    break
+        return value
 
 
 class WindShearSettings(BaseModel):

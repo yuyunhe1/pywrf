@@ -1,6 +1,14 @@
 <script setup>
 import * as echarts from 'echarts'
-import { nextTick, onBeforeUnmount, ref, watch, computed } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import {
+  buildHorizontalWindShearChartModel,
+  formatMaxHorizontalWindShear,
+} from '../utils/horizontalWindShearChart'
+import {
+  buildNavigationDecision,
+  hasHorizontalWindShearRisk,
+} from '../utils/navigationDecision'
 
 const props = defineProps({
   metadata: Object,
@@ -8,8 +16,12 @@ const props = defineProps({
   thresholds: Object,
 })
 
-const chartEl = ref()
-let chart
+const panelEl = ref()
+const windChartEl = ref()
+const shearChartEl = ref()
+let windChart
+let shearChart
+let resizeObserver
 
 const riskColorMap = {
   '一级风': '#28c76f',
@@ -28,59 +40,39 @@ const riskStyle = computed(() => {
   }
 })
 
-const navigationDecision = computed(() => {
-  if (!props.analysis) {
-    return {
-      level: '待评估',
-      color: '#00f3ff',
-      message: '生成规划航线后，系统会根据综合风级、连续高风险里程和顺逆风情况自动给出通航建议。',
-    }
-  }
-
-  if (props.analysis.wind_shear_fallback) {
-    return {
-      level: '高水平风切变警告',
-      color: '#ea5455',
-      message: props.analysis.wind_shear_fallback.message,
-    }
-  }
-
-  if (props.analysis.wind_shear_failure || props.analysis.wind_shear?.highest_shear_level === '禁飞') {
-    return {
-      level: '水平风切变风险',
-      color: '#ea5455',
-      message: props.analysis.wind_shear_failure?.message || '航线上存在超过实验阈值的水平风切变边，建议重新规划或暂缓飞行。',
-    }
-  }
-
-  const level = props.analysis.risk_level
-  if (level === '大于四级') {
-    return {
-      level: '不建议飞行',
-      color: '#ea5455',
-      message: '航线整体综合已超过四级风，存在明显失控和偏航风险，建议直接停飞或重新规划航线。',
-    }
-  }
-  if (level === '四级风') {
-    return {
-      level: '建议暂缓',
-      color: '#ff9f43',
-      message: '航线已接近通航上限，建议仅在必要任务下谨慎执行，并优先规避连续高风险路段。',
-    }
-  }
-  if (level === '三级风') {
-    return {
-      level: '谨慎通航',
-      color: '#f4c95d',
-      message: '整体可评估飞行，但需重点关注局地阵风、逆风段和续航余量，建议降低任务强度。',
-    }
-  }
-  return {
-    level: '可以通航',
-    color: '#28c76f',
-    message: '航线整体风场处于可控范围内，可按常规流程执行任务，飞行中仍需关注实时风场变化。',
-  }
+const horizontalWindShear = computed(() => props.analysis?.wind_shear)
+const horizontalWindShearProfile = computed(() => horizontalWindShear.value?.horizontal_wind_shear_profile)
+const shearPlanningBlocked = computed(() => Boolean(
+  props.analysis?.wind_shear_fallback || props.analysis?.wind_shear_failure,
+))
+const shearChartModel = computed(() => buildHorizontalWindShearChartModel(
+  horizontalWindShearProfile.value,
+  props.thresholds?.maxHorizontalWindShear,
+))
+const shearChartStatus = computed(() => {
+  if (shearPlanningBlocked.value) return 'blocked'
+  if (!Array.isArray(horizontalWindShearProfile.value)) return 'missing'
+  return shearChartModel.value.events.length > 0 ? 'ready' : 'no-events'
 })
+const shearChartMessage = computed(() => ({
+  blocked: '存在超过水平风切变阈值的阻断航段，当前条件下未生成可行航线。',
+  missing: '暂无水平风切变数据',
+  'no-events': '该航线未检测到明显水平风切变',
+}[shearChartStatus.value] || ''))
+const maxHorizontalWindShearDisplay = computed(() => formatMaxHorizontalWindShear(
+  horizontalWindShear.value?.max_horizontal_wind_shear,
+  shearPlanningBlocked.value,
+))
+const horizontalWindShearRisk = computed(() => hasHorizontalWindShearRisk(props.analysis))
+const horizontalWindShearRiskStyle = {
+  '--risk-color': '#ea5455',
+  borderColor: '#ea54554D',
+}
+
+const navigationDecision = computed(() => buildNavigationDecision(
+  props.analysis,
+  props.thresholds?.danger,
+))
 
 const toBeijingTime = (utcText, bjText) => {
   if (bjText) return bjText
@@ -97,12 +89,12 @@ const toBeijingTime = (utcText, bjText) => {
   }).format(date)} 北京时间`
 }
 
-const renderChart = async () => {
+const renderWindChart = async () => {
   await nextTick()
-  if (!chartEl.value) return
-  chart ||= echarts.init(chartEl.value)
+  if (!windChartEl.value) return
+  windChart ||= echarts.init(windChartEl.value)
   const samples = props.analysis?.samples || []
-  chart.setOption({
+  windChart.setOption({
     grid: { left: 35, right: 35, top: 30, bottom: 20 },
     legend: {
       data: [
@@ -215,17 +207,116 @@ const renderChart = async () => {
       }
     ],
   })
-  chart.resize()
+  windChart.resize()
 }
 
-watch(() => props.analysis, renderChart, { deep: true })
+const renderShearChart = async () => {
+  await nextTick()
+  if (shearChartStatus.value !== 'ready' || !shearChartEl.value) {
+    shearChart?.dispose()
+    shearChart = undefined
+    return
+  }
+
+  const model = shearChartModel.value
+  shearChart ||= echarts.init(shearChartEl.value)
+  shearChart.setOption({
+    animationDuration: 250,
+    grid: { left: 46, right: 18, top: 28, bottom: 34, containLabel: false },
+    tooltip: {
+      trigger: 'item',
+      backgroundColor: 'rgba(10, 25, 41, 0.96)',
+      borderColor: 'rgba(68, 215, 182, 0.35)',
+      textStyle: { color: '#eaf5ff', fontSize: 11 },
+      formatter: ({ data }) => {
+        const item = data?.profile
+        if (!item) return ''
+        return [
+          `航线里程：${Number(item.start_distance_km).toFixed(1)}～${Number(item.end_distance_km).toFixed(1)} km`,
+          `水平风切变：${Number(item.horizontal_wind_shear).toFixed(2)} m/s`,
+          `风矢量变化：${Number(item.delta_wind_vector_ms).toFixed(2)} m/s`,
+          `航段长度：${Number(item.segment_distance_km).toFixed(2)} km`,
+        ].join('<br>')
+      },
+    },
+    xAxis: {
+      type: 'value',
+      min: 0,
+      max: model.routeDistanceKm > 0 ? model.routeDistanceKm : undefined,
+      name: '累计里程 (km)',
+      nameLocation: 'middle',
+      nameGap: 24,
+      axisLabel: { color: '#8fa6b9', fontSize: 9 },
+      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.14)' } },
+      splitLine: { show: false },
+      nameTextStyle: { color: '#6b8296', fontSize: 9 },
+    },
+    yAxis: {
+      type: 'value',
+      min: 0,
+      name: 'm/s',
+      axisLabel: { color: '#8fa6b9', fontSize: 9 },
+      axisLine: { show: true, lineStyle: { color: 'rgba(255,255,255,0.14)' } },
+      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.06)', type: 'dashed' } },
+      nameTextStyle: { color: '#6b8296', fontSize: 9 },
+    },
+    series: [{
+      name: '水平风切变',
+      type: 'bar',
+      data: model.barData,
+      barWidth: 10,
+      itemStyle: {
+        color: '#00c2d7',
+        borderColor: '#78f4ff',
+        borderWidth: 1,
+        borderRadius: [2, 2, 0, 0],
+      },
+      emphasis: { itemStyle: { color: '#44d7b6' } },
+      markLine: model.threshold === null ? undefined : {
+        silent: true,
+        symbol: 'none',
+        lineStyle: { color: '#ea5455', width: 1.5, type: 'dashed' },
+        label: {
+          show: true,
+          formatter: `硬约束阈值 ${model.threshold.toFixed(2)}`,
+          color: '#ea5455',
+          fontSize: 9,
+          position: 'insideEndTop',
+        },
+        data: [{ yAxis: model.threshold }],
+      },
+    }],
+  }, true)
+  shearChart.resize()
+}
+
+const resizeCharts = () => {
+  windChart?.resize()
+  shearChart?.resize()
+}
+
+watch(() => props.analysis, () => {
+  renderWindChart()
+  renderShearChart()
+}, { deep: true })
+watch(() => props.thresholds?.maxHorizontalWindShear, renderShearChart)
+onMounted(() => {
+  renderWindChart()
+  renderShearChart()
+  if (typeof ResizeObserver !== 'undefined' && panelEl.value) {
+    resizeObserver = new ResizeObserver(resizeCharts)
+    resizeObserver.observe(panelEl.value)
+  }
+})
 onBeforeUnmount(() => {
-  chart?.dispose()
+  resizeObserver?.disconnect()
+  windChart?.dispose()
+  shearChart?.dispose()
 })
 </script>
 
 <template>
-  <aside class="panel analysis-panel">
+  <aside ref="panelEl" class="panel analysis-panel">
     <div class="panel-content" style="padding-bottom: 4px;">
       <div style="margin-bottom: 8px;">
         <p class="eyebrow">ROUTE ANALYSIS</p>
@@ -255,22 +346,26 @@ onBeforeUnmount(() => {
         </div>
       </section>
 
-      <section class="stats" style="padding: 0; background: transparent; border: none; box-shadow: none; margin-bottom: 8px; grid-template-columns: repeat(4, 1fr); gap: 6px;">
-        <div class="stat" style="padding: 6px 2px; text-align: center; min-height: 44px; display: flex; flex-direction: column; justify-content: center; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px;">
-          <span style="color: #a1b8cb; font-size: 11px; font-weight: 600; line-height: 1; white-space: nowrap;">最大风速</span>
-          <strong style="font-size: 14px; margin-top: 6px; line-height: 1; white-space: nowrap;">{{ analysis?.max_wind_speed ?? '-' }}<small style="font-size: 10px; margin-left: 1px;">m/s</small></strong>
+      <section class="stats route-metrics" style="padding: 0; background: transparent; border: none; box-shadow: none; margin-bottom: 8px;">
+        <div class="stat route-metric">
+          <span class="route-metric-label">最大风速</span>
+          <strong class="route-metric-value">{{ analysis?.max_wind_speed ?? '-' }}<small>m/s</small></strong>
         </div>
-        <div class="stat" style="padding: 6px 2px; text-align: center; min-height: 44px; display: flex; flex-direction: column; justify-content: center; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px;">
-          <span style="color: #a1b8cb; font-size: 11px; font-weight: 600; line-height: 1; white-space: nowrap;">平均风速</span>
-          <strong style="font-size: 14px; margin-top: 6px; line-height: 1; white-space: nowrap;">{{ analysis?.mean_wind_speed ?? '-' }}<small style="font-size: 10px; margin-left: 1px;">m/s</small></strong>
+        <div class="stat route-metric">
+          <span class="route-metric-label">最大风切变</span>
+          <strong class="route-metric-value">{{ maxHorizontalWindShearDisplay.value }}<small v-if="maxHorizontalWindShearDisplay.unit">{{ maxHorizontalWindShearDisplay.unit }}</small></strong>
         </div>
-        <div class="stat" style="padding: 6px 2px; text-align: center; min-height: 44px; display: flex; flex-direction: column; justify-content: center; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px;">
-          <span style="color: #a1b8cb; font-size: 11px; font-weight: 600; line-height: 1; white-space: nowrap;">高风险比例</span>
-          <strong style="font-size: 14px; margin-top: 6px; line-height: 1; white-space: nowrap;">{{ analysis ? (analysis.danger_ratio * 100).toFixed(1) : '-' }}<small style="font-size: 10px; margin-left: 1px;">%</small></strong>
+        <div class="stat route-metric">
+          <span class="route-metric-label">平均风速</span>
+          <strong class="route-metric-value">{{ analysis?.mean_wind_speed ?? '-' }}<small>m/s</small></strong>
         </div>
-        <div class="stat" style="padding: 6px 2px; text-align: center; min-height: 44px; display: flex; flex-direction: column; justify-content: center; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px;">
-          <span style="color: #a1b8cb; font-size: 11px; font-weight: 600; line-height: 1; white-space: nowrap;">顺风占比</span>
-          <strong style="font-size: 14px; margin-top: 6px; line-height: 1; white-space: nowrap;">{{ analysis ? (analysis.tailwind_ratio * 100).toFixed(1) : '-' }}<small style="font-size: 10px; margin-left: 1px;">%</small></strong>
+        <div class="stat route-metric">
+          <span class="route-metric-label">高风险比例</span>
+          <strong class="route-metric-value">{{ analysis ? (analysis.danger_ratio * 100).toFixed(1) : '-' }}<small>%</small></strong>
+        </div>
+        <div class="stat route-metric">
+          <span class="route-metric-label">顺风占比</span>
+          <strong class="route-metric-value">{{ analysis ? (analysis.tailwind_ratio * 100).toFixed(1) : '-' }}<small>%</small></strong>
         </div>
       </section>
 
@@ -278,6 +373,12 @@ onBeforeUnmount(() => {
         style="margin-top: 0; margin-bottom: 8px; min-height: 44px; padding: 6px 14px; display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px;">
         <span style="color: #8099aa; font-size: 12px;">综合等级</span>
         <strong style="margin: 0; font-size: 18px;">{{ analysis?.risk_level || '-' }}</strong>
+      </div>
+
+      <div v-if="horizontalWindShearRisk" class="stat risk" :style="horizontalWindShearRiskStyle"
+        style="margin-top: 0; margin-bottom: 8px; min-height: 44px; padding: 6px 14px; display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); border-radius: 6px;">
+        <span style="color: #8099aa; font-size: 12px;">风切变提示</span>
+        <strong style="margin: 0; font-size: 15px;">存在水平风切变风险</strong>
       </div>
 
       <section style="padding: 10px 12px; margin-bottom: 8px;">
@@ -297,8 +398,75 @@ onBeforeUnmount(() => {
         </div>
         <p class="subtle" style="margin-top: 0; font-size: 10px; margin-bottom: 4px;">
           点击图例筛选；蓝线为总风速，底部柱状图为顺风(绿)或逆风(红)。</p>
-        <div ref="chartEl" class="chart" style="height: 140px; margin-top: 4px;"></div>
+        <div ref="windChartEl" class="chart" style="height: 140px; margin-top: 4px;"></div>
+      </section>
+
+      <section style="padding: 10px 12px; margin-bottom: 0;">
+        <h3 style="margin-bottom: 6px;">航线水平风切变</h3>
+        <div v-if="shearChartStatus === 'ready'" ref="shearChartEl" class="chart" style="height: 200px;"></div>
+        <div v-else class="shear-chart-message">{{ shearChartMessage }}</div>
       </section>
     </div>
   </aside>
 </template>
+
+<style scoped>
+.route-metrics {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.route-metric {
+  min-width: 0;
+  min-height: 48px;
+  padding: 5px 1px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+}
+
+.route-metric .route-metric-label {
+  min-height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #a1b8cb;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1.15;
+  white-space: normal;
+}
+
+.route-metric .route-metric-value {
+  max-width: 100%;
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.route-metric .route-metric-value small {
+  margin-left: 1px;
+  font-size: 8px;
+}
+
+.shear-chart-message {
+  min-height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  color: #8fa6b9;
+  font-size: 12px;
+  line-height: 1.6;
+  text-align: center;
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.14);
+}
+</style>

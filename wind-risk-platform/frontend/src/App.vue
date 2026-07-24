@@ -10,7 +10,7 @@ const options = reactive({ cycles: [], forecast_hours: [], valid_times: [], leve
 const DEFAULT_LOOKAHEAD_HOURS = 3
 const selection = reactive({ source: 'gfs', cycle: '', forecastHour: DEFAULT_LOOKAHEAD_HOURS, validTime: '', level: '100m AGL' })
 const layers = reactive({ heatmap: false, velocity: true, route: true, mutation: true })
-const thresholds = reactive({ safe: 1.5, notice: 3.3, warning: 5.4, danger: 7.9, mutationLevelDiff: 3, mutationAngle: 90 })
+const thresholds = reactive({ safe: 1.5, notice: 3.3, warning: 5.4, danger: 7.9, maxHorizontalWindShear: 5.4 })
 const wind = ref()
 const heatmap = ref()
 const analysis = ref()
@@ -236,10 +236,19 @@ const showPointPopup = (point, lon, lat, map) => {
     .openOn(map)
 }
 
+const currentWindShearSettings = () => ({
+  enabled: true,
+  horizontal: {
+    enabled: true,
+    hard_delta_wind_vector_ms: Number(thresholds.maxHorizontalWindShear),
+    hard_constraint_enabled: true,
+  },
+})
+
 const runRouteAnalysis = async (points) => {
   routePoints = points
   activeRouteId.value = ''
-  analysis.value = await analyzeRoute(selection, points, thresholds)
+  analysis.value = await analyzeRoute(selection, points, thresholds, currentWindShearSettings())
 }
 
 const queryPoint = async ({ lon, lat, map }) => {
@@ -344,7 +353,7 @@ const applyRouteToPlanner = async (name, points, { persist = false, routeId = ''
   routePoints = normalizedPoints
   activeRouteId.value = routeId || ''
   try {
-    analysis.value = await analyzeRoute(selection, normalizedPoints, thresholds)
+    analysis.value = await analyzeRoute(selection, normalizedPoints, thresholds, currentWindShearSettings())
   } catch (reason) {
     console.warn('导入航线分析失败:', reason)
     analysis.value = undefined
@@ -407,6 +416,7 @@ const runPlan = async (savedRoute) => {
       planner.algorithm,
       planner.aircraftModel,
       planner.strategy,
+      currentWindShearSettings(),
     )
     planner.points = result.points
     routePoints = result.points

@@ -323,10 +323,12 @@ from .route_service import (
     anchor_route_endpoints,
     haversine_km,
     include_wind_shear_in_high_risk_ratio,
+    risk_name,
     sample_route,
 )
 from .wind_provider import WindGrid, parse_bbox, point_value
 from .wind_shear import (
+    SHEAR_NO_FLY,
     WindShearBlockedError,
     WindShearEnvironment,
     analyze_route_wind_shear,
@@ -463,6 +465,171 @@ def build_route_wind_shear_environment(
     del route_bbox, base_grid, stride
     config = ensure_wind_shear_config(request.wind_shear)
     return WindShearEnvironment(config=config)
+
+
+def horizontal_wind_shear_response(shear_analysis: dict) -> dict:
+    """Expose the final-route horizontal-shear profile at the API level."""
+
+    return {
+        "max_horizontal_wind_shear": shear_analysis.get("max_horizontal_wind_shear"),
+        "max_horizontal_wind_shear_unit": shear_analysis.get(
+            "max_horizontal_wind_shear_unit", "m/s"
+        ),
+        "max_horizontal_wind_shear_segment": shear_analysis.get(
+            "max_horizontal_wind_shear_segment"
+        ),
+        "horizontal_wind_shear_profile": shear_analysis.get(
+            "horizontal_wind_shear_profile", []
+        ),
+    }
+
+
+def apply_navigation_decision(analysis: dict, thresholds) -> dict:
+    """Attach one binary navigation decision and keep risk details separate."""
+
+    shear = analysis.get("wind_shear") or {}
+    horizontal_shear_risk = bool(
+        analysis.get("wind_shear_fallback")
+        or analysis.get("wind_shear_failure")
+        or shear.get("highest_shear_level") == SHEAR_NO_FLY
+        or int(shear.get("horizontal_shear_warning_count", 0) or 0) > 0
+    )
+    endpoint_block = analysis.get("endpoint_hard_block")
+    max_wind_speed = analysis.get("max_wind_speed")
+    hard_wind_risk = bool(
+        max_wind_speed is not None
+        and math.isfinite(float(max_wind_speed))
+        and float(max_wind_speed) >= float(thresholds.danger)
+    )
+    prohibited = bool(endpoint_block or horizontal_shear_risk or hard_wind_risk)
+
+    if endpoint_block:
+        reason = endpoint_block["message"]
+    elif horizontal_shear_risk:
+        reason = "存在达到硬约束阈值的水平风切变，禁止通航。"
+    elif hard_wind_risk:
+        reason = f"航线最大风速达到或超过 {float(thresholds.danger):g} m/s，禁止通航。"
+    else:
+        reason = "航线未触发风速或水平风切变硬约束，允许通航。"
+
+    analysis.update(
+        {
+            "navigation_allowed": not prohibited,
+            "navigation_decision": "禁止通航" if prohibited else "允许通航",
+            "navigation_decision_reason": reason,
+            "horizontal_wind_shear_risk": horizontal_shear_risk,
+        }
+    )
+    return analysis
+
+
+def endpoint_hard_wind_block(
+    grid: WindGrid,
+    start: tuple[float, float],
+    end: tuple[float, float],
+    hard_limit_ms: float,
+) -> dict | None:
+    """Return endpoint hard-limit details before any graph search starts."""
+
+    endpoints = []
+    for name, point in (("起点", start), ("终点", end)):
+        wind = point_value(grid, point[0], point[1])
+        speed = float(wind["wind_speed"])
+        endpoints.append(
+            {
+                "name": name,
+                "lon": float(point[0]),
+                "lat": float(point[1]),
+                "wind_speed": round(speed, 3) if math.isfinite(speed) else None,
+                "blocked": not math.isfinite(speed) or speed >= hard_limit_ms,
+            }
+        )
+    blocked = [item for item in endpoints if item["blocked"]]
+    if not blocked:
+        return None
+    blocked_names = "、".join(item["name"] for item in blocked)
+    return {
+        "active": True,
+        "reason": "endpoint_wind_speed",
+        "hard_limit_ms": float(hard_limit_ms),
+        "endpoints": endpoints,
+        "message": f"{blocked_names}风速达到或超过 {float(hard_limit_ms):g} m/s 硬上限，禁止通航，已跳过航线图搜索。",
+    }
+
+
+def endpoint_blocked_route_response(
+    request: RoutePlanRequest,
+    raw_grid: WindGrid,
+    route_bbox: str,
+    endpoint_block: dict,
+    shear_environment: WindShearEnvironment,
+    aircraft_model: str,
+    planning_strategy: str,
+    planner_type: str,
+    cost_config: dict,
+) -> dict:
+    """Build a complete fast-fail response without inventing a route."""
+
+    endpoint_speeds = [
+        float(item["wind_speed"])
+        for item in endpoint_block["endpoints"]
+        if item["wind_speed"] is not None
+    ]
+    max_wind_speed = max(endpoint_speeds) if endpoint_speeds else None
+    mean_wind_speed = float(np.mean(endpoint_speeds)) if endpoint_speeds else None
+    high_risk_count = sum(
+        speed > float(request.thresholds.warning) for speed in endpoint_speeds
+    )
+    shear_analysis = analyze_route_wind_shear([], raw_grid, shear_environment)
+    shear_analysis.update(
+        {
+            "max_horizontal_wind_shear": None,
+            "max_horizontal_wind_shear_segment": None,
+            "horizontal_wind_shear_profile": [],
+            "final_route_available": False,
+        }
+    )
+    analysis = {
+        "max_wind_speed": None if max_wind_speed is None else round(max_wind_speed, 2),
+        "mean_wind_speed": None if mean_wind_speed is None else round(mean_wind_speed, 2),
+        "danger_ratio": round(high_risk_count / len(endpoint_speeds), 3) if endpoint_speeds else 0.0,
+        "wind_only_danger_ratio": round(high_risk_count / len(endpoint_speeds), 3) if endpoint_speeds else 0.0,
+        "wind_shear_risk_ratio": 0.0,
+        "high_risk_evaluation_count": high_risk_count,
+        "risk_evaluation_count": len(endpoint_speeds),
+        "risk_level": "-" if max_wind_speed is None else risk_name(max_wind_speed, request.thresholds),
+        "total_distance_km": 0.0,
+        "max_continuous_danger_km": 0.0,
+        "tailwind_ratio": 0.0,
+        "samples": [],
+        "endpoint_hard_block": endpoint_block,
+        "wind_shear": shear_analysis,
+        **horizontal_wind_shear_response(shear_analysis),
+    }
+    apply_navigation_decision(analysis, request.thresholds)
+    return {
+        "points": [],
+        "segments": [],
+        "cost": None,
+        "distance_km": 0.0,
+        "level": raw_grid.level,
+        "planner_type": planner_type,
+        "aircraft_model": aircraft_model,
+        "aircraft_model_label": describe_aircraft_model(aircraft_model),
+        "planning_strategy": planning_strategy,
+        "planning_strategy_label": describe_strategy(planning_strategy),
+        "cost_config": cost_config,
+        "search_bbox": [float(value) for value in route_bbox.split(",")],
+        "search_grid_stride": 1,
+        "multi_altitude": False,
+        "planning_skipped": True,
+        "planning_skip_reason": "endpoint_wind_speed",
+        "endpoint_hard_block": endpoint_block,
+        **horizontal_wind_shear_response(shear_analysis),
+        "wind_shear": shear_analysis,
+        "analysis": analysis,
+        "metadata": metadata(raw_grid),
+    }
 
 
 def load_candidate_route_grids(request: RoutePlanRequest, route_bbox: str) -> list[WindGrid]:
@@ -832,11 +999,13 @@ def route_analyze(request: RouteAnalyzeRequest):
         shear_analysis,
         request.thresholds,
     )
-    return {
+    response = {
         **route_risk,
+        **horizontal_wind_shear_response(shear_analysis),
         "wind_shear": shear_analysis,
         "metadata": metadata(grid),
     }
+    return apply_navigation_decision(response, request.thresholds)
 
 
 @app.post("/api/route/plan")
@@ -849,10 +1018,28 @@ def route_plan(request: RoutePlanRequest):
         cost_config = build_strategy_cost_config(planning_strategy)
         route_bbox = route_planning_bbox(request.start, request.end, planning_strategy)
         raw_grid = load_grid(request.cycle, request.forecast_hour, request.level, route_bbox, request.valid_time, request.source)
-        grid, route_grid_stride = thin_route_planning_grid(raw_grid)
         raw_shear_environment = build_route_wind_shear_environment(request, route_bbox, raw_grid)
-        planner_shear_environment = raw_shear_environment
         planner_type = request.planner_type.lower().replace("-", "_")
+        endpoint_block = endpoint_hard_wind_block(
+            raw_grid,
+            request.start,
+            request.end,
+            float(request.thresholds.danger),
+        )
+        if endpoint_block is not None:
+            return endpoint_blocked_route_response(
+                request,
+                raw_grid,
+                route_bbox,
+                endpoint_block,
+                raw_shear_environment,
+                aircraft_model,
+                planning_strategy,
+                planner_type,
+                cost_config,
+            )
+        grid, route_grid_stride = thin_route_planning_grid(raw_grid)
+        planner_shear_environment = raw_shear_environment
         candidate_grids = load_candidate_route_grids(request, route_bbox) if _env_enabled("ROUTE_PLAN_MULTI_ALTITUDE", False) else []
         result = None
         multi_altitude_error = None
@@ -948,6 +1135,19 @@ def route_plan(request: RoutePlanRequest):
     route_analysis = analyze_route(samples, request.thresholds)
     shear_analysis_points = result.pop("shear_analysis_points", result["points"])
     shear_analysis = analyze_route_wind_shear(shear_analysis_points, raw_grid, raw_shear_environment)
+    if wind_shear_fallback is not None:
+        # The returned geometry is only a reference route after the constrained
+        # search failed, so it must not be presented as a final-route profile.
+        shear_analysis.update(
+            {
+                "max_horizontal_wind_shear": None,
+                "max_horizontal_wind_shear_segment": None,
+                "horizontal_wind_shear_profile": [],
+                "final_route_available": False,
+            }
+        )
+    else:
+        shear_analysis["final_route_available"] = True
     route_analysis = include_wind_shear_in_high_risk_ratio(
         route_analysis,
         samples,
@@ -955,10 +1155,13 @@ def route_plan(request: RoutePlanRequest):
         request.thresholds,
     )
     route_analysis["wind_shear"] = shear_analysis
+    route_analysis.update(horizontal_wind_shear_response(shear_analysis))
     if wind_shear_fallback is not None:
         route_analysis["wind_shear_fallback"] = wind_shear_fallback
+    apply_navigation_decision(route_analysis, request.thresholds)
     return {
         **result,
+        **horizontal_wind_shear_response(shear_analysis),
         "wind_shear": shear_analysis,
         "analysis": route_analysis,
         "metadata": metadata(raw_grid),
