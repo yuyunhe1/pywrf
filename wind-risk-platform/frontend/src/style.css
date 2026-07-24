@@ -601,3 +601,60 @@ button:disabled { opacity: .4; cursor: not-allowed; transform: none !important; 
 .glass-table .el-button--danger:hover {
   color: #ff6b81 !important;
 }
+
+.route-export-popover.el-popover.el-popper {
+  min-width: 156px;
+  padding: 6px;
+  border: 1px solid rgba(77, 208, 225, 0.26);
+  background: rgba(13, 28, 39, 0.98);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.36);
+}
+
+.route-export-popover.el-popper .el-popper__arrow::before {
+  border-color: rgba(77, 208, 225, 0.26);
+  background: rgba(13, 28, 39, 0.98);
+}
+
+.route-export-options {
+  display: grid;
+  gap: 4px;
+}
+
+.route-export-option {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  align-items: center;
+  min-height: 34px;
+  width: 100%;
+  margin: 0;
+  padding: 5px 8px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: #d9e8f2;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.route-export-option:hover:not(:disabled) {
+  border-color: rgba(0, 243, 255, 0.24);
+  background: rgba(0, 243, 255, 0.1);
+  color: #fff;
+}
+
+.route-export-option:disabled {
+  color: #637887;
+  cursor: not-allowed;
+}
+
+.route-export-option-icon {
+  color: #00f3ff;
+  font-family: monospace;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.route-export-option:disabled .route-export-option-icon {
+  color: #526672;
+}

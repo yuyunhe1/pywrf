@@ -127,6 +127,16 @@ const exportRouteFiles = (routeFile) => {
   }
 }
 
+const exportRouteFile = (routeFile, format) => {
+  if (format === 'waypoints') {
+    if (!routeFile?.waypoint_file_name) return
+    downloadFile(getExportedWaypointUrl(routeFile.waypoint_file_name), routeFile.waypoint_file_name)
+    return
+  }
+  if (!routeFile?.file_name) return
+  downloadFile(getExportedRouteUrl(routeFile.file_name), routeFile.file_name)
+}
+
 const triggerExportByName = async (routeName) => {
   try {
     const files = await listExportedRoutes()
@@ -312,10 +322,31 @@ defineExpose({ refreshJsonDialog })
       <el-table-column label="操作" width="220" fixed="right" align="center">
         <template #default="scope">
           <div style="display: flex; justify-content: center; gap: 8px;">
-            <el-button type="primary" link size="small" class="glass-table-btn"
-              @click="exportRouteFiles(scope.row)">
-              导出
-            </el-button>
+            <el-popover
+              placement="bottom-end"
+              trigger="click"
+              :width="156"
+              popper-class="route-export-popover">
+              <template #reference>
+                <el-button type="primary" link size="small" class="glass-table-btn">
+                  导出
+                </el-button>
+              </template>
+              <div class="route-export-options">
+                <button type="button" class="route-export-option" @click="exportRouteFile(scope.row, 'json')">
+                  <span class="route-export-option-icon">JSON</span>
+                  <span>导出 JSON</span>
+                </button>
+                <button
+                  type="button"
+                  class="route-export-option"
+                  :disabled="!scope.row.waypoint_file_name"
+                  @click="exportRouteFile(scope.row, 'waypoints')">
+                  <span class="route-export-option-icon">WPT</span>
+                  <span>导出航点文件</span>
+                </button>
+              </div>
+            </el-popover>
             <el-button type="success" link size="small" class="glass-table-btn"
               @click="playRouteFromDialog(scope.row)">
               回放
