@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+from io import StringIO
 
 
 def _empty_availability():
@@ -67,3 +68,35 @@ def test_missing_gfs_grid_starts_download_and_returns_503(monkeypatch):
     assert response.status_code == 503
     assert calls == ["no GFS GRIB2 file"]
     assert response.json()["detail"]["download"]["running"] is True
+
+
+def test_connection_refused_detection_supports_windows_error():
+    from app import gfs_downloader
+
+    assert gfs_downloader._is_connection_refused(
+        "<urlopen error [WinError 10061] 由于目标计算机积极拒绝，无法连接。>"
+    )
+
+
+def test_downloader_output_is_mirrored_and_failed_count_is_parsed(capsys):
+    from app import gfs_downloader
+
+    class FakeProcess:
+        stdout = iter(
+            [
+                "[ERROR] f012 attempt 3/3: <urlopen error [WinError 10061]>\n",
+                "[SUMMARY] total=12, downloaded=0, fallback=0, skipped=0, failed=12\n",
+            ]
+        )
+
+    log_file = StringIO()
+    connection_refused, failed_files = gfs_downloader._stream_process_output(
+        FakeProcess(), log_file
+    )
+
+    terminal = capsys.readouterr()
+    assert connection_refused is True
+    assert failed_files == 12
+    assert "[ERROR] f012 attempt 3/3" in terminal.out
+    assert "[GFS 网络提示]" in terminal.err
+    assert "[GFS 网络提示]" in log_file.getvalue()

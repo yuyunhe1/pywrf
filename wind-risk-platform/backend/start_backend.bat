@@ -13,6 +13,14 @@ if not defined GFS_REALTIME_START_FHOUR set "GFS_REALTIME_START_FHOUR=1"
 if not defined GFS_REALTIME_END_FHOUR set "GFS_REALTIME_END_FHOUR=12"
 if not defined GFS_REALTIME_CYCLE_COUNT set "GFS_REALTIME_CYCLE_COUNT=1"
 if not defined GFS_REALTIME_WIND_MAP_ONLY set "GFS_REALTIME_WIND_MAP_ONLY=0"
+rem Proxy for NOAA/NOMADS. Override GFS_PROXY before startup when needed.
+if not defined GFS_PROXY set "GFS_PROXY=http://127.0.0.1:10081"
+rem Use the local HTTP/Mixed proxy address even though the target URL is HTTPS.
+if defined GFS_PROXY (
+  set "HTTP_PROXY=%GFS_PROXY%"
+  set "HTTPS_PROXY=%GFS_PROXY%"
+  echo [GFS] Proxy enabled for NOAA/NOMADS downloads.
+)
 
 rem WRF platform cache mirror settings.
 rem Prefer SSH key authentication. If a password is required, set WRF_CACHE_REMOTE_PASSWORD

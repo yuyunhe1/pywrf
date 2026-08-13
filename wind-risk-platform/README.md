@@ -176,6 +176,28 @@ $env:GFS_REALTIME_WIND_MAP_ONLY="0"
 $env:GFS_AUTO_DOWNLOAD="0"
 ```
 
+下载过程会同时输出到后端终端和日志。如果出现 `WinError 10061`、`Connection refused`
+等连接拒绝错误，终端会显示醒目的 `GFS 网络提示`，并在下载状态中标记失败，不会再仅在
+`data/gfs_download_logs/` 中留下错误。
+
+在无法直连 NOAA/NOMADS 的网络环境中，可先为当前 PowerShell 会话设置本机代理，再启动后端：
+
+```powershell
+$env:GFS_PROXY="http://127.0.0.1:10081"
+.\start_backend.bat
+```
+
+启动脚本当前默认使用本机 `10081` 端口；如端口发生变化，请把 `10081` 换成代理软件提供的
+HTTP 或 Mixed 端口。即使下载地址是 HTTPS，常见本地
+代理的地址仍应写成 `http://127.0.0.1:端口`，不要误写成 `https://`。`start_backend.bat`
+会把 `GFS_PROXY` 同时传给 `HTTP_PROXY` 和 `HTTPS_PROXY`；该设置只在当前终端及其启动的
+后端进程中生效，关闭终端后不会永久保存。
+
+如果不希望本地使用代理，也可以将下载任务部署在能够稳定访问 NOAA 的服务器，下载后再同步
+GRIB2 文件到 `GFS_REALTIME_DOWNLOAD_DIR`。NOAA 还通过 AWS Open Data 公布 GFS 数据，且读取
+公开桶不要求 AWS 账号；不过该来源提供的是完整 GRIB2 对象，若要维持当前按变量/层次的小文件
+下载方式，需要另行实现 `.idx` 索引解析和 HTTP Range 分段下载，不能直接替换当前 NOMADS URL。
+
 全球地图试验建议只下载低空 U/V，避免同时下载大量等压面变量：
 
 ```powershell

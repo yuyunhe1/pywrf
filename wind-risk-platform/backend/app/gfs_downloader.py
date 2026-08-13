@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -27,6 +28,18 @@ _STATE: dict[str, Any] = {
     "command": None,
     "log_path": None,
 }
+
+_CONNECTION_REFUSED_MARKERS = (
+    "winerror 10061",
+    "actively refused",
+    "积极拒绝",
+    "connection refused",
+)
+_NETWORK_HINT = (
+    "[GFS 网络提示] 无法连接 NOAA/NOMADS 下载服务器（连接被拒绝）。"
+    "当前网络可能无法直连该站点，请检查网络或在启动后端前配置 HTTP_PROXY/HTTPS_PROXY；"
+    "详细日志见上方 log_path。"
+)
 
 
 def _utc_now_text() -> str:
@@ -138,12 +151,45 @@ def _finish(return_code: int | None, message: str) -> None:
         )
 
 
+def _is_connection_refused(line: str) -> bool:
+    normalized = line.casefold()
+    return any(marker in normalized for marker in _CONNECTION_REFUSED_MARKERS)
+
+
+def _stream_process_output(process: subprocess.Popen[str], log_file: Any) -> tuple[bool, int]:
+    """Mirror downloader output to both the backend terminal and its log file."""
+    connection_refused = False
+    failed_files = 0
+    if process.stdout is None:
+        return connection_refused, failed_files
+
+    for line in process.stdout:
+        log_file.write(line)
+        log_file.flush()
+        print(line, end="", flush=True)
+
+        if not connection_refused and _is_connection_refused(line):
+            connection_refused = True
+            notice = _NETWORK_HINT + "\n"
+            log_file.write(notice)
+            log_file.flush()
+            print(notice, end="", file=sys.stderr, flush=True)
+
+        summary_match = re.search(r"\bfailed=(\d+)\b", line)
+        if summary_match:
+            failed_files = int(summary_match.group(1))
+
+    return connection_refused, failed_files
+
+
 def _run(command: list[str], log_path: Path) -> None:
     env = os.environ.copy()
     env.setdefault("PYTHONIOENCODING", "utf-8")
+    env.setdefault("PYTHONUNBUFFERED", "1")
     try:
         log_path.parent.mkdir(parents=True, exist_ok=True)
         output_dir().mkdir(parents=True, exist_ok=True)
+        print(f"[GFS] 后台下载已启动，日志：{log_path}", flush=True)
         with log_path.open("w", encoding="utf-8", errors="replace") as log_file:
             log_file.write("$ " + " ".join(command) + "\n")
             log_file.flush()
@@ -151,13 +197,24 @@ def _run(command: list[str], log_path: Path) -> None:
                 command,
                 cwd=str(REPOSITORY_ROOT),
                 env=env,
-                stdout=log_file,
+                stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                bufsize=1,
             )
+            connection_refused, failed_files = _stream_process_output(process, log_file)
             return_code = process.wait()
-        if return_code == 0:
+        if return_code == 0 and failed_files == 0:
             refresh_after_external_download()
             _finish(return_code, "download completed")
+        elif connection_refused:
+            refresh_after_external_download()
+            _finish(return_code or 1, "GFS download failed: NOAA/NOMADS connection refused; configure proxy or check network")
+        elif failed_files:
+            refresh_after_external_download()
+            _finish(return_code or 1, f"download finished with {failed_files} failed file(s); see terminal/log")
         else:
             _finish(return_code, f"download failed with exit code {return_code}")
     except Exception as exc:  # pragma: no cover - defensive status reporting
