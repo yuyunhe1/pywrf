@@ -231,11 +231,12 @@ watch(
 watch(() => [props.analysis, props.layers.route, props.planner?.startText, props.planner?.endText], renderRoute, { deep: true })
 
 onMounted(() => {
-  map = L.map('wind-map', { zoomControl: true, attributionControl: false }).fitBounds(CHINA_INITIAL_BOUNDS, { padding: [12, 12] })
+  map = L.map('wind-map', { zoomControl: true, attributionControl: true }).fitBounds(CHINA_INITIAL_BOUNDS, { padding: [12, 12] })
   map.createPane('windHeatPane')
   map.getPane('windHeatPane').style.zIndex = 350
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  L.tileLayer('/api/map-tiles/{z}/{x}/{y}.png', {
     maxZoom: 18,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   }).addTo(map)
   routeGroup = L.featureGroup().addTo(map)
   drawnGroup = L.featureGroup().addTo(map)

@@ -89,6 +89,33 @@ npm run dev
 浏览器打开 <http://127.0.0.1:5173>。Vite 会把 `/api` 代理到
 `http://127.0.0.1:8000`。
 
+### 临时公网展示与国内底图访问
+
+通过 Cloudflare Quick Tunnel 临时展示平台时，只需公开前端 `5173`。前端的 `/api` 请求仍由
+Vite 转发至本机后端 `8000`：
+
+```powershell
+cd D:\yyh\pywrf
+.\cloudflared\cloudflared-windows-amd64.exe tunnel `
+  --url http://127.0.0.1:5173 `
+  --http-host-header localhost:5173 `
+  --protocol http2 `
+  --no-autoupdate
+```
+
+地图底图不再由访客浏览器直接访问境外 OpenStreetMap 瓦片地址，而是请求同源接口
+`/api/map-tiles/{z}/{x}/{y}.png`。后端通过已配置的 HTTP/HTTPS 代理获取 WGS84 兼容底图并缓存到
+`data/map_tile_cache/`；因此国内访客无需 VPN，也不会出现高德 GCJ-02 与 GFS/WRF WGS84 数据错位。
+修改后需要重新启动后端。默认代理及缓存目录由 `backend/start_backend.bat` 设置：
+
+```text
+GFS_PROXY=http://127.0.0.1:10081
+MAP_TILE_CACHE_DIR=data/map_tile_cache
+```
+
+首次浏览某一区域时后端需要下载瓦片，加载会略慢；之后相同区域直接使用本地缓存。演示期间请保持
+代理、后端、前端和 Cloudflare Tunnel 四者运行。停止 Tunnel 时在其终端按 `Ctrl+C`。
+
 运行前端数据处理测试和生产构建：
 
 ```powershell

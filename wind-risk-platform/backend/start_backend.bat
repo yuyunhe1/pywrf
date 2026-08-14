@@ -21,6 +21,9 @@ if defined GFS_PROXY (
   set "HTTPS_PROXY=%GFS_PROXY%"
   echo [GFS] Proxy enabled for NOAA/NOMADS downloads.
 )
+rem Map tiles are proxied through the backend and cached locally, so remote users
+rem do not need direct access to OpenStreetMap. The same HTTP(S) proxy is reused.
+if not defined MAP_TILE_CACHE_DIR set "MAP_TILE_CACHE_DIR=%~dp0..\..\data\map_tile_cache"
 
 rem WRF platform cache mirror settings.
 rem Prefer SSH key authentication. If a password is required, set WRF_CACHE_REMOTE_PASSWORD

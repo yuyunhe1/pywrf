@@ -22,6 +22,7 @@ from .qgc_waypoints import (
     route_points_from_qgc_items,
     serialize_qgc_waypoints,
 )
+from . import map_tiles
 
 EXPORT_DIR = Path("data/exported_routes")
 EXPORT_DIR.mkdir(parents=True, exist_ok=True)
@@ -867,6 +868,22 @@ def health(source: str | None = None):
         return {"status": "ok", **diagnostics(source)}
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@app.get("/api/map-tiles/{z}/{x}/{y}.png", include_in_schema=False)
+def map_tile(z: int, x: int, y: int):
+    """Proxy and cache WGS84-compatible OSM tiles for restricted client networks."""
+    try:
+        tile_path, _ = map_tiles.get_cached_tile(z, x, y)
+    except map_tiles.TileCoordinateError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except map_tiles.TileDownloadError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    return FileResponse(
+        tile_path,
+        media_type="image/png",
+        headers={"Cache-Control": "public, max-age=604800, immutable"},
+    )
 
 
 @app.get("/api/times")
