@@ -1,0 +1,4 @@
+# Preserve frozen bytes, including upstream line endings and whitespace.
+# These files are validated against their SHA256 manifests instead of reformatted.
+backend/planners/wrf_v3/vendor/** -text -whitespace
+backend/server_wrf_10min/upstream/** -text -whitespace

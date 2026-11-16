@@ -1,0 +1,21 @@
+backend/.venv/
+backend/.pytest_cache/
+backend/**/__pycache__/
+frontend/node_modules/
+frontend/dist/
+frontend/.cache/
+frontend/.releases/
+data/
+backend/*-server*.log
+frontend/*-server*.log
+.DS_Store
+
+# Local diagnostics and standalone research demos outside the platform runtime.
+backend/check_sandbox_status.py
+backend/native/strrt_star_demo/
+backend/scripts/build_strrt_star_native.ps1
+backend/scripts/run_strrt_star_reproduction.py
+docs/组会汇报稿_*.md
+
+# Keep the captured production configuration despite the repository WRF/ rule.
+!backend/server_wrf_10min/upstream/WRF/

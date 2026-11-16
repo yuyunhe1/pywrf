@@ -1,4 +1,5 @@
 import argparse
+import os
 import json
 import math
 import re
@@ -21,30 +22,15 @@ import pandas as pd
 warnings.filterwarnings("ignore", message="Workbook contains no default style")
 
 NOMADS_FILTER_URL = "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25_1hr.pl"
+_PREFER_S3 = False
+_DOWNLOAD_SOURCES = {}
 GDEX_BASE_URL = "https://singapore.nationalresearchplatform.org:8443/ncar/gdex/d084001"
 BEIJING_TZ = timezone(timedelta(hours=8))
+CHINA_BOUNDS = {"leftlon": 73.0, "bottomlat": 18.0, "rightlon": 135.0, "toplat": 54.0}
 
 # HGT on isobaric levels is the key variable for mapping pressure levels to
 # geometric height. HGT:surface is used to convert MSL height to AGL height.
-WIND_CHECK_VARS = [
-    "APCP",
-    "CAPE",
-    "CIN",
-    "GUST",
-    "HGT",
-    "HPBL",
-    "MSLET",
-    "PRATE",
-    "PRES",
-    "RH",
-    "SOILW",
-    "SPFH",
-    "TMP",
-    "TSOIL",
-    "UGRD",
-    "VGRD",
-    "VVEL",
-]
+WIND_CHECK_VARS = ["UGRD", "VGRD", "HGT"]
 WIND_CHECK_PRESSURE_LEVELS_HPA = [
     1000,
     975,
@@ -198,12 +184,12 @@ def build_nomads_url(
     return f"{NOMADS_FILTER_URL}?{urllib.parse.urlencode(params)}"
 
 
-def output_path(output_dir, cycle_dt, forecast_hour, global_region=False):
+def output_path(output_dir, cycle_dt, forecast_hour, global_region=False, region=None):
     valid_dt = cycle_dt + timedelta(hours=forecast_hour)
     valid_prefix = valid_dt.strftime("%m%d")
     ymd = cycle_dt.strftime("%Y%m%d")
     hh = cycle_dt.strftime("%H")
-    region = "global" if global_region else "point"
+    region = "global" if global_region else (region or "point")
     name = f"{valid_prefix}_gfs_{ymd}_{hh}z_f{forecast_hour:03d}_{region}_windcheck.grib2"
     return Path(output_dir) / name
 
@@ -232,16 +218,77 @@ def is_valid_file(path, min_bytes):
     return path.exists() and path.stat().st_size >= min_bytes
 
 
+def requested_bounds(args):
+    if args.global_region:
+        return {"toplat": 90.0, "bottomlat": -90.0, "leftlon": -180.0, "rightlon": 180.0}
+    return {key: getattr(args, key) for key in CHINA_BOUNDS}
+
+
+def has_matching_selection(meta, args):
+    """Do not reuse files downloaded with a different selection or region."""
+    variables, levels = requested_variables_and_levels(args)
+    return (
+        isinstance(meta.get("variables"), list)
+        and isinstance(meta.get("levels"), list)
+        and set(meta["variables"]) == set(variables)
+        and set(meta["levels"]) == set(levels)
+        and all(meta.get(key) == value for key, value in requested_bounds(args).items())
+    )
+
+
 def download(url, target, retries=3, timeout=180, min_bytes=1024):
+    global _PREFER_S3
     target = Path(target)
     target.parent.mkdir(parents=True, exist_ok=True)
     tmp = target.with_suffix(target.suffix + ".tmp")
+    transport = os.getenv("GFS_DOWNLOAD_TRANSPORT", "auto").strip().lower()
+    mirror_allowed = transport != "nomads" and urllib.parse.urlsplit(url).hostname == "nomads.ncep.noaa.gov"
+    mirror_attempted = False
+
+    def commit():
+        if tmp.stat().st_size < min_bytes:
+            raise RuntimeError("下载文件过小，可能该时效尚未发布")
+        with tmp.open("rb") as stream:
+            signature = stream.read(4)
+            stream.seek(-4, 2)
+            ending = stream.read(4)
+        if signature != b"GRIB" or ending != b"7777":
+            raise RuntimeError("下载响应不是完整 GRIB 数据，可能是错误页面或传输中断")
+        tmp.replace(target)
+        _DOWNLOAD_SOURCES[str(target)] = "nomads"
+        print(f"[DONE] {target} ({target.stat().st_size / 1024:.1f} KiB)")
+        return True
+
+    def mirror():
+        nonlocal mirror_attempted
+        global _PREFER_S3
+        from gfs_s3_fallback import download_from_s3
+        mirror_attempted = True
+        print(f"[S3] Switching to NOAA official mirror for {target.name}", flush=True)
+        download_from_s3(url, tmp, timeout=timeout, retries=retries)
+        result = commit()
+        _DOWNLOAD_SOURCES[str(target)] = "noaa_s3"
+        _PREFER_S3 = True
+        return result
+
+    if mirror_allowed and (transport == "s3" or _PREFER_S3):
+        try:
+            return mirror()
+        except Exception as exc:
+            if tmp.exists():
+                tmp.unlink()
+            print(f"[S3 ERROR] {target.name}: {exc}", file=sys.stderr)
+            if transport == "s3" or (isinstance(exc, urllib.error.HTTPError) and exc.code in {404, 410}):
+                return False
 
     for attempt in range(1, retries + 1):
         try:
             print(f"[DOWNLOAD] {target.name}")
             print(f"  {url}")
-            with urllib.request.urlopen(url, timeout=timeout) as response:
+            request = urllib.request.Request(
+                url, headers={"User-Agent": "Mozilla/5.0 (compatible; GFSWindDownloader/1.0)"}
+            )
+            with urllib.request.urlopen(request, timeout=timeout) as response:
                 status = getattr(response, "status", 200)
                 if status != 200:
                     raise RuntimeError(f"HTTP status={status}")
@@ -253,13 +300,7 @@ def download(url, target, retries=3, timeout=180, min_bytes=1024):
                             break
                         f.write(chunk)
 
-            if tmp.stat().st_size < min_bytes:
-                text = tmp.read_bytes()[:500].decode("utf-8", errors="ignore")
-                raise RuntimeError(f"下载文件过小，可能该时效尚未发布。前 500 字节: {text}")
-
-            tmp.replace(target)
-            print(f"[DONE] {target} ({target.stat().st_size / 1024:.1f} KiB)")
-            return True
+            return commit()
         except (
             urllib.error.URLError,
             urllib.error.HTTPError,
@@ -268,9 +309,24 @@ def download(url, target, retries=3, timeout=180, min_bytes=1024):
             socket.timeout,
             ConnectionError,
         ) as exc:
-            print(f"[ERROR] {target.name} attempt {attempt}/{retries}: {exc}", file=sys.stderr)
             if tmp.exists():
                 tmp.unlink()
+            if isinstance(exc, urllib.error.HTTPError) and exc.code in {404, 410}:
+                print(
+                    f"[UNAVAILABLE] {target.name}: HTTP {exc.code}（该起报点/时效尚未发布或已过期）",
+                    file=sys.stderr,
+                )
+                return False
+            print(f"[ERROR] {target.name} attempt {attempt}/{retries}: {exc}", file=sys.stderr)
+            if mirror_allowed and not mirror_attempted and not isinstance(exc, RuntimeError):
+                try:
+                    return mirror()
+                except Exception as mirror_exc:
+                    if tmp.exists():
+                        tmp.unlink()
+                    print(f"[S3 ERROR] {target.name}: {mirror_exc}", file=sys.stderr)
+                    if isinstance(mirror_exc, urllib.error.HTTPError) and mirror_exc.code in {404, 410}:
+                        return False
             if attempt < retries:
                 time.sleep(10 * attempt)
 
@@ -285,7 +341,9 @@ def make_source_plan(target_cycle_dt, target_forecast_hour, use_fallback=True, s
         "target_cycle_dt": target_cycle_dt,
         "target_forecast_hour": target_forecast_hour,
     }
-    if source_mode == "preferred" or not use_fallback:
+    # Publishing f001 does not guarantee every later hour exists yet. Retain
+    # the configured previous-cycle fallback for individual missing hours.
+    if not use_fallback:
         return [preferred]
 
     fallback = {
@@ -311,23 +369,25 @@ def format_plan_item(item):
 
 
 def sync_target(args, target_cycle_dt, target_forecast_hour, source_mode="auto"):
-    target = output_path(args.output_dir, target_cycle_dt, target_forecast_hour, args.global_region)
+    region = "china" if not args.global_region and requested_bounds(args) == CHINA_BOUNDS else None
+    target = output_path(args.output_dir, target_cycle_dt, target_forecast_hour, args.global_region, region=region)
     existing_meta = read_meta(target)
     existing_kind = existing_meta.get("kind")
+    existing_matches = is_valid_file(target, args.min_bytes) and has_matching_selection(existing_meta, args)
 
-    if is_valid_file(target, args.min_bytes) and existing_kind == "preferred" and source_mode != "fallback":
+    if existing_matches and existing_kind == "preferred" and source_mode != "fallback":
         print(f"[SKIP] {target.name} (preferred already exists)")
         return "skipped_preferred"
 
-    if is_valid_file(target, args.min_bytes) and existing_kind == "fallback_previous_cycle" and source_mode == "fallback":
+    if existing_matches and existing_kind == "fallback_previous_cycle" and source_mode == "fallback":
         print(f"[SKIP] {target.name} (fallback already exists)")
         return "skipped_fallback"
 
-    if is_valid_file(target, args.min_bytes) and existing_kind == "fallback_previous_cycle":
+    if existing_matches and existing_kind == "fallback_previous_cycle":
         print(f"[CHECK] {target.name} 当前是 fallback，尝试用最新起报点正式数据覆盖")
 
     for item in make_source_plan(target_cycle_dt, target_forecast_hour, args.fallback_previous_cycle, source_mode):
-        if item["kind"] == "fallback_previous_cycle" and is_valid_file(target, args.min_bytes):
+        if item["kind"] == "fallback_previous_cycle" and existing_matches:
             print(f"[SKIP] {target.name} 最新正式数据暂不可用，已有 fallback 文件")
             return "skipped_fallback"
 
@@ -364,21 +424,12 @@ def write_grib_meta(target, item, args):
     source_cycle_dt = item["source_cycle_dt"]
     source_forecast_hour = item["source_forecast_hour"]
     variables, levels = requested_variables_and_levels(args)
-    bounds = {
-        "toplat": 90.0,
-        "bottomlat": -90.0,
-        "leftlon": -180.0,
-        "rightlon": 180.0,
-    } if args.global_region else {
-        "toplat": args.toplat,
-        "bottomlat": args.bottomlat,
-        "leftlon": args.leftlon,
-        "rightlon": args.rightlon,
-    }
+    bounds = requested_bounds(args)
     write_meta(
         target,
         {
             "kind": item["kind"],
+            "download_source": _DOWNLOAD_SOURCES.get(str(target), "nomads"),
             "source_cycle_utc": source_cycle_dt.strftime("%Y%m%d%H"),
             "source_forecast_hour": source_forecast_hour,
             "target_cycle_utc": item["target_cycle_dt"].strftime("%Y%m%d%H"),
@@ -476,7 +527,7 @@ def download_range(args):
     for cycle_dt in cycles:
         for forecast_hour in forecast_hours:
             target = output_path(args.output_dir, cycle_dt, forecast_hour, args.global_region)
-            if is_valid_file(target, args.min_bytes):
+            if is_valid_file(target, args.min_bytes) and has_matching_selection(read_meta(target), args):
                 print(f"[SKIP] {target.name} already exists")
                 update_counts("skipped_preferred", counts)
                 continue
@@ -1042,7 +1093,7 @@ def add_common_download_args(parser):
         action="store_true",
         help="仅下载地图展示所需的 10/20/30/40/50/80/100m AGL UGRD/VGRD，适合全球范围",
     )
-    parser.add_argument("--subregion", action="store_true", help="使用子区域参数")
+    parser.add_argument("--subregion", action="store_true", help="使用 --toplat/--bottomlat/--leftlon/--rightlon 指定的子区域")
     parser.add_argument("--toplat", type=float, default=31.125)
     parser.add_argument("--bottomlat", type=float, default=30.875)
     parser.add_argument("--leftlon", type=float, default=118.375)
@@ -1108,7 +1159,7 @@ def build_parser():
     subset_parser.add_argument("--bottomlat", type=float, default=30.875)
     subset_parser.add_argument("--leftlon", type=float, default=118.375)
     subset_parser.add_argument("--rightlon", type=float, default=118.625)
-    subset_parser.add_argument("--match-regex", default=None, help="自定义 wgrib2 -match 正则；默认抽取 HGT/PRES/UGRD/VGRD 及所需层次")
+    subset_parser.add_argument("--match-regex", default=None, help="自定义 wgrib2 -match 正则；默认抽取 HGT/UGRD/VGRD 及所需层次")
     subset_parser.add_argument("--wgrib2", default=None, help="wgrib2 或 wgrib2.exe 路径")
     subset_parser.add_argument("--min-bytes", type=int, default=1024)
 
@@ -1131,7 +1182,7 @@ def run_realtime(args):
     if args.subregion:
         args.global_region = False
 
-    if not args.global_region:
+    if not args.global_region and not args.subregion:
         half_box = args.box_degrees / 2
         args.toplat = args.lat + half_box
         args.bottomlat = args.lat - half_box

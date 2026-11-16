@@ -1,0 +1,747 @@
+{
+  "version": "WRF_V3_PLATFORM_V1",
+  "upstream_artifact_sha256": "7642c11673ae9b163de420a8958b2cf72636eb62ba73eb92ad8bc5dedcd9cb4f",
+  "source_inventory": "D:\\yyh\\wind_aware_flight\\reviews\\best_wrf_code_inventory_20261101_v1\\CODE_FILE_LIST.json",
+  "files": [
+    {
+      "path": "phase2b4/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase2b4\\__init__.py"
+    },
+    {
+      "path": "phase2b4/solver_a/__init__.py",
+      "sha256": "fc49603b76ae6f7cd8f1ba9a5969b58159750a8797e98d7d69701d3a148a716d",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase2b4\\solver_a\\__init__.py"
+    },
+    {
+      "path": "phase2b4/solver_a/general.py",
+      "sha256": "94714f46508ef9f5a428b0f9a07a587a9e5b8138007e00596d9c4b38f068b0a0",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase2b4\\solver_a\\general.py"
+    },
+    {
+      "path": "phase2b4/solver_a/general_wind_connector/__init__.py",
+      "sha256": "567aea78144bb41a71508cccc19bbff85a6d32a894e6d18aad2be2db67580a42",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase2b4\\solver_a\\general_wind_connector\\__init__.py"
+    },
+    {
+      "path": "phase2b4/solver_a/general_wind_connector/connector.py",
+      "sha256": "f64945f5563283e8dc55d1913f0bd7a52aaa84f6bb1e6398aaf04e798842589c",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase2b4\\solver_a\\general_wind_connector\\connector.py"
+    },
+    {
+      "path": "phase2b4/solver_a/roots.py",
+      "sha256": "7664366c2a619d7bdda9e04041ce1ee3a30a3bc17a7f69db115346b672afae5b",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase2b4\\solver_a\\roots.py"
+    },
+    {
+      "path": "phase2b4/validator/__init__.py",
+      "sha256": "181d977a713ae98134085c07edc499ac51a3241a44575c633a98429bb47c129c",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase2b4\\validator\\__init__.py"
+    },
+    {
+      "path": "phase2b4/validator/independent.py",
+      "sha256": "ba52ca11dc521f4a940f8deeb3f6f7d0d35583c3aaef4d1a3c0c2f179dc35f23",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase2b4\\validator\\independent.py"
+    },
+    {
+      "path": "phase3a_implementation/__init__.py",
+      "sha256": "975795c0f25519e7be5b5d72a790fbdaa9c100b77f4273d96a5417cebdbf0ed1",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase3a_implementation\\__init__.py"
+    },
+    {
+      "path": "phase3a_implementation/adapter.py",
+      "sha256": "e04a1fd569bb0ece0fc8ed068b15bba73ca90880e627342012796c891a08ffd0",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase3a_implementation\\adapter.py"
+    },
+    {
+      "path": "phase3a_implementation/connector.py",
+      "sha256": "abfeeff710feeadf26d0199fb42fd6e9012335a3a3d6333a9585dfbf273f9e8a",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase3a_implementation\\connector.py"
+    },
+    {
+      "path": "phase3a_implementation/coordinates.py",
+      "sha256": "2aa7172416f6605a1ac9f5d9f63ced53d3b567c15d5a05d978549138a53d535e",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase3a_implementation\\coordinates.py"
+    },
+    {
+      "path": "phase3a_implementation/domain.py",
+      "sha256": "fc88d5542588787d308d9ee28c71c4dcfa7d3e2ce0c2f3226d6b7962f7fe006e",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase3a_implementation\\domain.py"
+    },
+    {
+      "path": "phase3a_implementation/synthetic.py",
+      "sha256": "29d85ac0625a633c647be0f3721052178fd09288bd38b4ca58690675ac82ac61",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase3a_implementation\\synthetic.py"
+    },
+    {
+      "path": "phase3b/__init__.py",
+      "sha256": "c08a483f7ef350b3e54b63191bbf800b26e480cb21a1d4045801793c27f55594",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase3b\\__init__.py"
+    },
+    {
+      "path": "phase3b/connector.py",
+      "sha256": "6aea83bdab551ab7a06408d479f03f3e4575df95386e02b05abcaea06d12a35a",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase3b\\connector.py"
+    },
+    {
+      "path": "phase3b/evaluator.py",
+      "sha256": "0307f81a9a455d049abd18ea54c3b31ff7cd47b8b813e571859ff76b9ab77446",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase3b\\evaluator.py"
+    },
+    {
+      "path": "phase3b/integrator.py",
+      "sha256": "796895b1ffc32483ff3e712b920958267e7cf86e08f88d4f9339f86d33e61a1b",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase3b\\integrator.py"
+    },
+    {
+      "path": "phase3b/validator.py",
+      "sha256": "ac4849e1bc1bfd320ebda74c88a61c1874d661953ac2ad5b226cea151a9a3283",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase3b\\validator.py"
+    },
+    {
+      "path": "phase3c/__init__.py",
+      "sha256": "8f64c95628fdfb6f5a1c5796d2fcf7349ebc405175b291e215044cbc14d5efd3",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase3c\\__init__.py"
+    },
+    {
+      "path": "phase4a_design/__init__.py",
+      "sha256": "684100a2dee07c72592aa965e934572c44bf9579937372ffe838562850539793",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase4a_design\\__init__.py"
+    },
+    {
+      "path": "phase4a_design/mock_contract.py",
+      "sha256": "b7d65f96b2d2e7371139a9e91f04af44df013e40ddcb36fecaddb246d9592135",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase4a_design\\mock_contract.py"
+    },
+    {
+      "path": "phase4b/__init__.py",
+      "sha256": "678f38f54e423fccb85344a0e9d77a7b42c86328158159d5c42c241282d0c49a",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase4b\\__init__.py"
+    },
+    {
+      "path": "phase4b/collision/__init__.py",
+      "sha256": "988eccc6be177ef8aeeacd7a7db0a3e6f162e03a5398c96ba749387c04a58125",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase4b\\collision\\__init__.py"
+    },
+    {
+      "path": "phase4b/collision/checker.py",
+      "sha256": "6bb1f1f9b027e24c5ebd8bcf0d8ad87f9a7c023affb63defd891b6ffcf5e1ded",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase4b\\collision\\checker.py"
+    },
+    {
+      "path": "phase4b/collision/masks.py",
+      "sha256": "05d710f46a7cf4d101dd1aea82ef418fd46f4b315ab46cb7af312a8a48a7de51",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase4b\\collision\\masks.py"
+    },
+    {
+      "path": "phase4e/__init__.py",
+      "sha256": "fefe3c92435977b4254f99eaab48330e9c9c2fac63774ee32d31ec63baffc6e7",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase4e\\__init__.py"
+    },
+    {
+      "path": "phase4e/acceleration/integration.py",
+      "sha256": "dd72f7e43a6b273f88a72e305cd7572344f86751540b8f75c72ecdf8a507a45a",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase4e\\acceleration\\integration.py"
+    },
+    {
+      "path": "phase4e/acceleration/wind.py",
+      "sha256": "3e92ce107a1e2b6cac9df0878d5e2163f2f0e73c7e24ba119875061ad555d8bc",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase4e\\acceleration\\wind.py"
+    },
+    {
+      "path": "phase4i/__init__.py",
+      "sha256": "ed8cb554846edbde87acb5d564f24285c181cb313fbb481927cb3a13384e34d1",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase4i\\__init__.py"
+    },
+    {
+      "path": "phase4m/__init__.py",
+      "sha256": "8ac1b722867cae609e015ab17fef9c5bec45439c4483164ee6db43d72d6882c3",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase4m\\__init__.py"
+    },
+    {
+      "path": "phase4o/ownership.py",
+      "sha256": "0b9ee95a3913fbb24c9a70c88138ffbbf30508a10b8aabf95815e2ec40ad7135",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase4o\\ownership.py"
+    },
+    {
+      "path": "phase4t/amendment_v1/__init__.py",
+      "sha256": "bb59761312b9090f72c1feec51874cae7f1b838c863de73fe9269f070bd788ca",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase4t\\amendment_v1\\__init__.py"
+    },
+    {
+      "path": "phase4t/amendment_v1/controller.py",
+      "sha256": "c46f4b105217265405a7b3db8047bd04d8de28a287a1b118e0440bd5f89326e0",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase4t\\amendment_v1\\controller.py"
+    },
+    {
+      "path": "phase4t/amendment_v1/model.py",
+      "sha256": "b31e7b53174a99c7afbd49e0828bbc94487230fbdd19a71a7cbc4ccfdee682fe",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase4t\\amendment_v1\\model.py"
+    },
+    {
+      "path": "phase4t/capture_g4_20261020/__init__.py",
+      "sha256": "8dd8df9b37f8f38cbc7ef6cf496083e2e11679a9d4e238c27f2b81fb64e7387e",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase4t\\capture_g4_20261020\\__init__.py"
+    },
+    {
+      "path": "phase4t/capture_g4_20261020/capture.py",
+      "sha256": "4a7d29dbe830dfc541e9e61b812c3084fc1e450401aeee10cc23efc48b7c82d1",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase4t\\capture_g4_20261020\\capture.py"
+    },
+    {
+      "path": "phase4t/capture_g4_20261020/controller.py",
+      "sha256": "52bf250292a91a050079318702bc3987e7fdd4338e464b50865bc647f55cfe22",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase4t\\capture_g4_20261020\\controller.py"
+    },
+    {
+      "path": "phase4t/execution_v2_20261020/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase4t\\execution_v2_20261020\\__init__.py"
+    },
+    {
+      "path": "phase4t/execution_v2_20261020/journal_v3.py",
+      "sha256": "542a7e0651240cceba069ccd46237f6d8b233740b2c9a9f30bd897497468660c",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase4t\\execution_v2_20261020\\journal_v3.py"
+    },
+    {
+      "path": "phase4t/recovery_g_20261020/__init__.py",
+      "sha256": "356ff208caf03e564361bb31add8a466c075c8015f029ecd312f50f77f1750bb",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase4t\\recovery_g_20261020\\__init__.py"
+    },
+    {
+      "path": "phase4t/recovery_g_20261020/desired_rate.py",
+      "sha256": "e5b113d7f7d84afd88f5f4566f1092c69254f68ec7fe62643f68c8123de70229",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase4t\\recovery_g_20261020\\desired_rate.py"
+    },
+    {
+      "path": "phase4t/repair_v1/__init__.py",
+      "sha256": "c36800ccec7e840098cf21b23cb5ba8e0b20cd52789f1f52fb4b2de116fc97d5",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase4t\\repair_v1\\__init__.py"
+    },
+    {
+      "path": "phase4t/repair_v1/common.py",
+      "sha256": "c06c2b99fc5707da36a892f56cc76cfdcab6800d130bf9a39b48631e40bded73",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase4t\\repair_v1\\common.py"
+    },
+    {
+      "path": "phase4t/repair_v1/contract.py",
+      "sha256": "fc20663f370ecd011c83e949a07caba3dd00c7d90a58f2ce32dbad03bf0e1a5e",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase4t\\repair_v1\\contract.py"
+    },
+    {
+      "path": "phase4t/repair_v1/progress.py",
+      "sha256": "b45a1f01237e4260fa4fe0f8d12d4f1504e237d1adb792eb6063da63e5964132",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase4t\\repair_v1\\progress.py"
+    },
+    {
+      "path": "phase4t_g5/__init__.py",
+      "sha256": "d65d22cd9f6b09e384ddd5be5759b51059498006fcccfcbb2898c499d91372d7",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase4t_g5\\__init__.py"
+    },
+    {
+      "path": "phase4t_g61/remediation_v1/obstacle_route.py",
+      "sha256": "61307111c50f7b7c01c43eee07a29bdea35f2081671f619f1b7b4ab10b2d6cca",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase4t_g61\\remediation_v1\\obstacle_route.py"
+    },
+    {
+      "path": "phase4t_g61/wrf_feasibility_validation_v1/runtime/__init__.py",
+      "sha256": "230aaa1d784fc7180af8f9b25c7d08dd11671904e7bfe2eae3ebf037a37b435f",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase4t_g61\\wrf_feasibility_validation_v1\\runtime\\__init__.py"
+    },
+    {
+      "path": "phase4t_g61/wrf_feasibility_validation_v1/runtime/accuracy.py",
+      "sha256": "9b33c1a683f16cb75ad403201213b562a542cb2b14adb8c1cf41bf2e7349ff82",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase4t_g61\\wrf_feasibility_validation_v1\\runtime\\accuracy.py"
+    },
+    {
+      "path": "phase4t_g61/wrf_feasibility_validation_v1/runtime/boundaries.py",
+      "sha256": "130992551505159a3c4e0ac08fa6aea1d144fa438c91f433b6ed829d5ab86ff5",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase4t_g61\\wrf_feasibility_validation_v1\\runtime\\boundaries.py"
+    },
+    {
+      "path": "phase4t_g61/wrf_feasibility_validation_v1/runtime/common.py",
+      "sha256": "ad72df677759e28c8fba4f06441248ec4340be8db9793bfd507442345c613f7e",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase4t_g61\\wrf_feasibility_validation_v1\\runtime\\common.py"
+    },
+    {
+      "path": "phase4t_g61/wrf_feasibility_validation_v1/runtime/contract.py",
+      "sha256": "11dffc1dd67469bb835302ca4f266e04bea6278778d6f1d7897a2f8bb1c19d35",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase4t_g61\\wrf_feasibility_validation_v1\\runtime\\contract.py"
+    },
+    {
+      "path": "phase4t_g61/wrf_feasibility_validation_v1/runtime/integrity.py",
+      "sha256": "8b3997e4665261c0b358d98038436122326deb516497d457a23bd574dee57b12",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase4t_g61\\wrf_feasibility_validation_v1\\runtime\\integrity.py"
+    },
+    {
+      "path": "phase4t_g61/wrf_feasibility_validation_v1/runtime/ordered.py",
+      "sha256": "0f20d0d3c9dd0941db3a479648eaf6094b2a3acd5e22e2af699ce8d822b20fec",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase4t_g61\\wrf_feasibility_validation_v1\\runtime\\ordered.py"
+    },
+    {
+      "path": "phase4t_g61/wrf_feasibility_validation_v1/runtime/prefix.py",
+      "sha256": "7dfab752b0d6e4bdbbab9e0cd0f21b0f2990670d704d4b02a29266032ff44e26",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase4t_g61\\wrf_feasibility_validation_v1\\runtime\\prefix.py"
+    },
+    {
+      "path": "phase4t_g61/wrf_feasibility_validation_v1/runtime/trace.py",
+      "sha256": "95766f8fb1e5636073a85b570f0633517193c1c0bb273063f94fdc0379ec00c9",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase4t_g61\\wrf_feasibility_validation_v1\\runtime\\trace.py"
+    },
+    {
+      "path": "phase_g61/common.py",
+      "sha256": "7e964c8e5bea2d00360ca255cb94f31b44fc1bf9fab7b3c4efdaa53862714b78",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\common.py"
+    },
+    {
+      "path": "phase_g61/common_research_entry_v1/local_native.py",
+      "sha256": "a9717080a14d187aa290f929d34e613e549834d0a47fee3e7f3f438520a24ecb",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\common_research_entry_v1\\local_native.py"
+    },
+    {
+      "path": "phase_g61/common_research_entry_v1/native_clock.py",
+      "sha256": "0a6a87b42c5fcc71cdf144e07d875eab29a422f49d6757c3b3610be93462b8b5",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\common_research_entry_v1\\native_clock.py"
+    },
+    {
+      "path": "phase_g61/common_research_entry_v1/work.py",
+      "sha256": "5eb15d605cbdb0a95cdc543cbac5e04b4d34c2918819838611c03362224f1768",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\common_research_entry_v1\\work.py"
+    },
+    {
+      "path": "phase_g61/dynamic_wind/partition.py",
+      "sha256": "862def24d298042f20333daddd8112d33a8e1c7ae069cfe7568c2e80a20429be",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\dynamic_wind\\partition.py"
+    },
+    {
+      "path": "phase_g61/dynamic_wind/provider.py",
+      "sha256": "75b4f4cebddf221dc3bc01a6175114931baef105d7fc9668b42c4c695e409532",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\dynamic_wind\\provider.py"
+    },
+    {
+      "path": "phase_g61/midflight_environment_coverage_v1/temporal_rate/kernel.py",
+      "sha256": "6ec5660798523fd40697a33e4f7119549d7f0dfd7efccc2a2a783c12d8471cb8",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\midflight_environment_coverage_v1\\temporal_rate\\kernel.py"
+    },
+    {
+      "path": "phase_g61/online_execution_repair_v1/compensated_dop853.py",
+      "sha256": "0b6c71f3ae834c2fb85ca250e48595ee9eb42e958916f33795b1f76f5978c6e0",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\online_execution_repair_v1\\compensated_dop853.py"
+    },
+    {
+      "path": "phase_g61/online_execution_repair_v1/guarded_velocity.py",
+      "sha256": "3cb6a77038975f71501dfbe2392dec56d029a4cb5819212c3cbbe273db23f7ad",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\online_execution_repair_v1\\guarded_velocity.py"
+    },
+    {
+      "path": "phase_g61/online_execution_repair_v1/heading_model.py",
+      "sha256": "f5458a2b70d7a253ec8479b12fd40596cb3da08765fa9d586ee6b9453cf239ea",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\online_execution_repair_v1\\heading_model.py"
+    },
+    {
+      "path": "phase_g61/online_execution_repair_v1/rewound_heading_model.py",
+      "sha256": "e85cd1d21b555f269a7113b9bbb09288899d5e68f7287b262810151d03d55455",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\online_execution_repair_v1\\rewound_heading_model.py"
+    },
+    {
+      "path": "phase_g61/online_execution_repair_v1/two_segment_model.py",
+      "sha256": "361f9215677b223f9593b27a355a5f3e8e8aa13fe1a9f64103143c92f0aa01e4",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\online_execution_repair_v1\\two_segment_model.py"
+    },
+    {
+      "path": "phase_g61/online_execution_repair_v1/two_segment_recovery.py",
+      "sha256": "6e87bdd51dd2766638ebd448c89e26c3c9338895241acca3a844697e727be614",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\online_execution_repair_v1\\two_segment_recovery.py"
+    },
+    {
+      "path": "phase_g61/online_execution_repair_v1/velocity_provider.py",
+      "sha256": "c9efbc7a78c9e7899d1a7c0023f69265d074c3c3bb3ef8883667575393e91ef7",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\online_execution_repair_v1\\velocity_provider.py"
+    },
+    {
+      "path": "phase_g61/ordered_acceptance_cost_v1/publication_barrier.py",
+      "sha256": "b2b94b63de64914e90d4dbe417ab825ef8b3e4365de841518d5c26f4f05f12d4",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\ordered_acceptance_cost_v1\\publication_barrier.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/active_closure.py",
+      "sha256": "00cf35aac294a5b1db462ac85145f2790009225f1b0a5c580e9865d35ea3c2bc",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\active_closure.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/checked_admission.py",
+      "sha256": "21a555e884deb2ee85c4f80d49b9a0659e112039f3a8960e7eb037286da84a10",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\checked_admission.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/cli.py",
+      "sha256": "c45bbf9a3a330586addb6245df6c6fb3f741c6bca6db75dfe1dfb93d20fd6489",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\cli.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/CODE_ARTIFACT.json",
+      "sha256": "7642c11673ae9b163de420a8958b2cf72636eb62ba73eb92ad8bc5dedcd9cb4f",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\CODE_ARTIFACT.json"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/dense_material.py",
+      "sha256": "f61baaaf404af3a9b32f471d287b899624d97a1b3b54231845af16c71ecd2973",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\dense_material.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/dispatch.py",
+      "sha256": "aaeaa89b5dca53676f3aaf8078f82928889163662641f2d7085d9ed53f6c8190",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\dispatch.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/disturbance_policy.py",
+      "sha256": "4038ab6bc4a82f947ba063e76ced3e35c4b64d6a20847745ec5b4bb1bf84f4e6",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\disturbance_policy.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/early_ack.py",
+      "sha256": "51a00a46e1ac40d978fb5dbb65388e48b794829cd66bb58f287a09644ba28f82",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\early_ack.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/engine/array_helpers.py",
+      "sha256": "cc1b8deb00a774dd3d637b0caaba680f50cd35222d45693dbbe016e799e79458",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\engine\\array_helpers.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/engine/boundary_clock.py",
+      "sha256": "13df721e3869627c314576120bc42084839d65ff2d9ea3aac39a488facd96ce9",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\engine\\boundary_clock.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/engine/contract.py",
+      "sha256": "f0b443b31cc708b04076cbe1d5a27d348d0669fb5a04f1ed7a8107da08d18362",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\engine\\contract.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/engine/controller.py",
+      "sha256": "06a2812e0140447425261f3015080125d0ba02d0000edeb4c340e4b5f931940b",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\engine\\controller.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/engine/ordered_process.py",
+      "sha256": "667ba2c23197115c4d780bdf4fc6b71e5811f71fcea0926f082a676cbfe29aa1",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\engine\\ordered_process.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/engine/reference_model.py",
+      "sha256": "edf7c61da67538c7aad3012fe1707c9dde0e111aad7a1ee032afc53a0b1c8889",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\engine\\reference_model.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/engine/run.py",
+      "sha256": "9441ba0f624aca945aa1cfadbfc0428c5471e40c48ee2621c91daa0f95d8a573",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\engine\\run.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/engine/runtime/c_origin.py",
+      "sha256": "774c76a4454b0c8750ee5af9fadc9cb8944c51b447a53ba37c847fcc85a52fe2",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\engine\\runtime\\c_origin.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/engine/runtime/commit_contract.py",
+      "sha256": "fcccb9e17e64faa8ffc8d4de45173a0922d472a19e48dff05c0ea1b65449eab7",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\engine\\runtime\\commit_contract.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/engine/runtime/common.py",
+      "sha256": "af2b7379ccbc925b758ad97316c6b9c6aa1efbb8225773b45a1f37348379c9c5",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\engine\\runtime\\common.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/engine/runtime/connector.py",
+      "sha256": "e02aa3a2cd9792cb613243b96b40988b200392556df0da364067a2030e36d72e",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\engine\\runtime\\connector.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/engine/runtime/environment.py",
+      "sha256": "d7a9070e8d024590cf49ac4ac20f7c7bbd37b9669e1ce5d3b8e6be3cada0c5c8",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\engine\\runtime\\environment.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/engine/runtime/publication.py",
+      "sha256": "41accbfe3961be32ebaf2d0af5edd4ed621e496683070ab8d6454db7ddf7a603",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\engine\\runtime\\publication.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/engine/runtime/replay.py",
+      "sha256": "941a8a6c204b6cabaa0a8d846f2f9c4e956be2a3cd315b59f07e7b45273f0f2d",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\engine\\runtime\\replay.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/engine/runtime/selection.py",
+      "sha256": "c60477e424f2757712203a46c3ab4e59a13dacf471009183c84148cf269a635e",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\engine\\runtime\\selection.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/engine/runtime/solver_worker.py",
+      "sha256": "17f8928272e29961ab86d59df0937fe81ba5d7def6a7d381567c2fcc324b8e08",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\engine\\runtime\\solver_worker.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/engine/runtime/trace.py",
+      "sha256": "7ad63ec87bded0e02b5ef0df72986f76f290b2e9be8cb5aae2682ea7d33f6108",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\engine\\runtime\\trace.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/engine/runtime/trace_copy.py",
+      "sha256": "049c3f8ae9063330d36201832db2a5245c9b23ba90f91e614a9fb21dd547e64a",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\engine\\runtime\\trace_copy.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/engine/switch.py",
+      "sha256": "a29959347665a33a5b73406438448ed065bbe6ca90e3a181d5eb6aaf38fa533d",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\engine\\switch.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/engine/warm_recovery.py",
+      "sha256": "bb0c2388f6e4b001d6c80834fdb1383485005bc5f5f19a8af5937a70f5b1e69a",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\engine\\warm_recovery.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/initial_contract.py",
+      "sha256": "c42f7798ca6abc5022cedadcd45269ba0d6d9126b5416632f520dd5e52117071",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\initial_contract.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/initial_two_zoh.py",
+      "sha256": "bdcbfec4b919a2ae91b54fb423058c916e6bf1d65603e3f60f5f0f8e0f554c9a",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\initial_two_zoh.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/initial_worker_v4.py",
+      "sha256": "7314e592f0d0653b67cdf1862add95a9b2db3a3d5181cdddfea1f85b20df976b",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\initial_worker_v4.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/io_core.py",
+      "sha256": "c62da57ba3c56413ce078ac7107dfdcb574480f0e4102b36eec3dd49ce3ae8cb",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\io_core.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/launch_v4.py",
+      "sha256": "c82d008648b3cf2192404823aa053932684ceaa2e1be7f18ace0be23253a0011",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\launch_v4.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/layout.py",
+      "sha256": "79b2fca6ee535936eccbb440aa9f75f079a96d54dc21e29a159ef4d5f98f1b7c",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\layout.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/local_native.py",
+      "sha256": "a9717080a14d187aa290f929d34e613e549834d0a47fee3e7f3f438520a24ecb",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\local_native.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/native_clock.py",
+      "sha256": "0a6a87b42c5fcc71cdf144e07d875eab29a422f49d6757c3b3610be93462b8b5",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\native_clock.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/native_material.py",
+      "sha256": "8cb297c3b4c731150810c43a1d170c659f3593ef66d1223a929f73100c299190",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\native_material.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/parent_handoff.py",
+      "sha256": "0c77d427a35f68f9d53882fc2dab8184836a240f153c4e1e57c451474a99d416",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\parent_handoff.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/phase_stamp.py",
+      "sha256": "80fca92b23f02fa12a31bcc13deac7372a04701372a7137440874b3c51a79b78",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\phase_stamp.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/pipeline_v4.py",
+      "sha256": "475005654666c7898e0492b115fb65fc7534279758a7e12d9f43153bfc48c3eb",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\pipeline_v4.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/plant.py",
+      "sha256": "54980b99a79c14ac3ff55e69360fe47e065b3d6944238546a2ccdb4b6284173c",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\plant.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/prefix_math.py",
+      "sha256": "4f29c270d70147ac727b805b13f087d99713e8cffd157b52a9cf42f49ba41933",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\prefix_math.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/prefix_receipt.py",
+      "sha256": "feb96828ffa43ad7e053a84df690039457e4bf1c113dec78eac2f94d94faed9e",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\prefix_receipt.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/reference_preview.py",
+      "sha256": "461668657030c35da65fd1f37aff331cd8c612df75adbadcd764162c1efa007a",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\reference_preview.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/registry.py",
+      "sha256": "fa56e99b797ad38d5dcd990a193b9e2f8b3c15362ff9b111907857a5a6f5ac7e",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\registry.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/request_schema.py",
+      "sha256": "e58403dc930e9319832ef1d035cf8fd1f739f735c7ced49e42bf1d38b3a6024c",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\request_schema.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/resources/INPUT_CONTEXTS.json",
+      "sha256": "40b8561fd3c47f55107d0935c774fdb1e4d5de3471d912483bd6605228cdea84",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\resources\\INPUT_CONTEXTS.json"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/resources/MATERIAL_MANIFEST.json",
+      "sha256": "f72a4af88fb97e15a6934850985b928d76e2eff3a50342c4209b2bd723bfe336",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\resources\\MATERIAL_MANIFEST.json"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/resources/PINNED_SOURCE_IDENTITY.json",
+      "sha256": "2f341e6cdd436336885cceafcef624139abb1b963d28b5849aede05eec8ae323",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\resources\\PINNED_SOURCE_IDENTITY.json"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/roles.py",
+      "sha256": "8606a7f2af683b67a024adaa21a4d99d49a0d02025aaefa2610f2638ae9d50b3",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\roles.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/stream_core.py",
+      "sha256": "0bdc03b8f40c31c884db09338f56e7586b124d40c6fe63bf6b32b427ebce2420",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\stream_core.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/stream_receipt.py",
+      "sha256": "3b9031f4d31fc17dd4ef574483efd910e93c281ebd6e5c264bf336ce0658aec8",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\stream_receipt.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/terminal_policy.py",
+      "sha256": "56823a8e4cd8a0009b31ba156f78f12de1bb0f43bbe043f9259eebb7accba9e2",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\terminal_policy.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/time_coverage_guard.py",
+      "sha256": "e3b00f162a26a0c84b2097b32d594dc27c4f19b9806282cc31e67eb5f8ab26a4",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\time_coverage_guard.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/time_refinement_v4.py",
+      "sha256": "3ddffa0d727591d6be0f5b82a3343b7326d059698f3466717fd97a3a66dc15ba",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\time_refinement_v4.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/transaction_contract.py",
+      "sha256": "e7480e17e14e66937dafc0f402d056a9844bce37125429d92571bb90d5223d88",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\transaction_contract.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/window.py",
+      "sha256": "682df2fd759a1d91fa00e0ec4ceac5e88c13f2603e3262d3970e783e53c4b0da",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\window.py"
+    },
+    {
+      "path": "phase_g61/request_runtime_confirmation_v1/runtime_v3/work.py",
+      "sha256": "b72a2507d559f3e7c688afa7ccc9de52304cd54169151083fb656fd5c318daa0",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\request_runtime_confirmation_v1\\runtime_v3\\work.py"
+    },
+    {
+      "path": "phase_g61/terminal_guard_timepilot_v1/parent_overlap_v1/engine/array_helpers.py",
+      "sha256": "cc1b8deb00a774dd3d637b0caaba680f50cd35222d45693dbbe016e799e79458",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\terminal_guard_timepilot_v1\\parent_overlap_v1\\engine\\array_helpers.py"
+    },
+    {
+      "path": "phase_g61/uncovered_environments_v1/committed_events.py",
+      "sha256": "d7b2d163371554752df6d58065a01078975c757a94f6714c93f0d45c560cafd8",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\uncovered_environments_v1\\committed_events.py"
+    },
+    {
+      "path": "phase_g61/uncovered_environments_v1/enclosed_v3/runtime/common.py",
+      "sha256": "1597602d0c83e23e4c21f51c1ce5a846c480485b21b88d816cd67a5f80bf1d0d",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\uncovered_environments_v1\\enclosed_v3\\runtime\\common.py"
+    },
+    {
+      "path": "phase_g61/uncovered_environments_v1/enclosed_v3/runtime/connector.py",
+      "sha256": "c871b71d6b89d22bfeb5469972f7e35ff68cac4e31bfcf12b0964899d70a3757",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\uncovered_environments_v1\\enclosed_v3\\runtime\\connector.py"
+    },
+    {
+      "path": "phase_g61/uncovered_environments_v1/enclosed_v3/runtime/environment.py",
+      "sha256": "1dc5b360615d7db2b0646d5fa00c88dbc07679c70a3fb2eafb62234462682d3b",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\uncovered_environments_v1\\enclosed_v3\\runtime\\environment.py"
+    },
+    {
+      "path": "phase_g61/uncovered_environments_v1/enclosed_v3/runtime/trace.py",
+      "sha256": "7ad63ec87bded0e02b5ef0df72986f76f290b2e9be8cb5aae2682ea7d33f6108",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\uncovered_environments_v1\\enclosed_v3\\runtime\\trace.py"
+    },
+    {
+      "path": "phase_g61/uncovered_environments_v1/feasible_first_root.py",
+      "sha256": "18ed688daf59e24a0578b4c2b54c99b9e7ee922b87b1d610d582518252bde12b",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\uncovered_environments_v1\\feasible_first_root.py"
+    },
+    {
+      "path": "phase_g61/uncovered_environments_v1/held_control.py",
+      "sha256": "64175822778f594652e382e460906b120933ff7f726aac4a56c483cde97104d4",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\uncovered_environments_v1\\held_control.py"
+    },
+    {
+      "path": "phase_g61/uncovered_environments_v1/initial_seed.py",
+      "sha256": "99fe644a056481fdf247a98492b7460c53f6277d74b34373153b6d13955a6e76",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\uncovered_environments_v1\\initial_seed.py"
+    },
+    {
+      "path": "phase_g61/uncovered_environments_v1/reference_model.py",
+      "sha256": "44bf53d089bce09ce491d92da8d25fa48db3b2243586275318de3e91d5023a88",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\uncovered_environments_v1\\reference_model.py"
+    },
+    {
+      "path": "phase_g61/uncovered_environments_v1/shared_geometry.py",
+      "sha256": "25316d63647a56b0c8d3dead0b8263c63f1313b1e79bd240c64bb4dbe00a4002",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\uncovered_environments_v1\\shared_geometry.py"
+    },
+    {
+      "path": "phase_g61/uncovered_environments_v1/warm_recovery.py",
+      "sha256": "1699717ce18e30f8a0166586705dbc850d8d38de07de08f6a80121cfcab8be9c",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\uncovered_environments_v1\\warm_recovery.py"
+    },
+    {
+      "path": "phase_g61/uncovered_environments_v1/wind_remainder.py",
+      "sha256": "a5c3c9914b8c31710ee9da8494979c8eea092eb4f03a20fcd57212d87a27ea16",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\uncovered_environments_v1\\wind_remainder.py"
+    },
+    {
+      "path": "phase_g61/uncovered_environments_v1/work.py",
+      "sha256": "4d4d67953325208d86ca1e783488c14ef8b1b7be4d4e9e45660f1ff13b7bf7f0",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\uncovered_environments_v1\\work.py"
+    },
+    {
+      "path": "phase_g61/wind_column_diagnostic_v1/column_v3/paired_columns.py",
+      "sha256": "49f4766889c0868c880899fd86bd21902e0c080c6118217675ff34192884928b",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\wind_column_diagnostic_v1\\column_v3\\paired_columns.py"
+    },
+    {
+      "path": "phase_g61/wind_column_diagnostic_v1/paired_columns.py",
+      "sha256": "37d5b5172d49e6a4c9e8f0eb357db2ec59a8472cf31b11b270fd67b7a6da0d98",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\wind_column_diagnostic_v1\\paired_columns.py"
+    },
+    {
+      "path": "phase_g61/wind_column_diagnostic_v1/progress_geometry.py",
+      "sha256": "9171dbe96b981f4f55b5e3390f8512a0941e06c0ef189edd3b95ad604c95c331",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\wind_column_diagnostic_v1\\progress_geometry.py"
+    },
+    {
+      "path": "phase_g61/wind_column_diagnostic_v1/work.py",
+      "sha256": "562cee748564a2818d336907261fe78f82471cc863479528ae4357d5497af51f",
+      "absolute_path": "D:\\yyh\\wind_aware_flight\\phase_g61\\wind_column_diagnostic_v1\\work.py"
+    }
+  ]
+}

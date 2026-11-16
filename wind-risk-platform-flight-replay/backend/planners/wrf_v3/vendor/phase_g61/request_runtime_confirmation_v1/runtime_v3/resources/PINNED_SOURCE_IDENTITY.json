@@ -1,0 +1,12 @@
+{
+  "class_name": "Dop853DenseOutput",
+  "github_tag": "v1.15.3",
+  "local_rk_path": "D:\\GoodTools\\anaconda3\\Lib\\site-packages\\scipy\\integrate\\_ivp\\rk.py",
+  "local_rk_sha256": "fa5d6300917f4f949e699b116f59ae147159d5c6147d55d940dc9d3303891056",
+  "ode_solution_file_sha256": "195293731f903bb58faf67a33408bde1a11d32fd37cc554eaf6e10d70dab6762",
+  "ode_solution_path": "D:\\GoodTools\\anaconda3\\Lib\\site-packages\\scipy\\integrate\\_ivp\\common.py",
+  "private_API_scope": "PINNED_IMPLEMENTATION_ONLY_NOT_PUBLIC_CROSS_VERSION_STABILITY",
+  "remote_file_sha256": "fa5d6300917f4f949e699b116f59ae147159d5c6147d55d940dc9d3303891056",
+  "remote_private_class_AST_equals_actual_runtime": true,
+  "status": "PASS"
+}

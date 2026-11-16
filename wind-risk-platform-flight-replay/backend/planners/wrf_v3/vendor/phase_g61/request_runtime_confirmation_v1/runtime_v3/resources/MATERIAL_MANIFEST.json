@@ -1,0 +1,1839 @@
+{
+  "derivation": "EXISTING_ORIGINAL_NATIVE_ARRAYS_METADATA_REFERENCE_ONLY",
+  "new_existing_native_hours": 0,
+  "new_weather_generated": false,
+  "records": [
+    {
+      "arrays": {
+        "east": {
+          "dtype": "<f8",
+          "sha256": "c158a3a700393cd02748b1738d292cf3b1c7e4bcbf3cf0908f293ceda21520bc",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "height": {
+          "dtype": "<f8",
+          "sha256": "e88bf69e4fcf810218558c9626a440e54aa0f0338f92a990f06d21f2a815ba7e",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "mapfac": {
+          "dtype": "<f8",
+          "sha256": "f002aca51f53cf96a4387e29fa2a6161f8d0ddca131b977979f9641f19c12d34",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "north": {
+          "dtype": "<f8",
+          "sha256": "063a4f3c3b9163d5aadbbd5bae8c885247a1e2e19a03e23466e15de1bd269c5f",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "terrain": {
+          "dtype": "<f8",
+          "sha256": "3dc1f5be277fba41f1787a2c420f7a8bd138396c6761946eabd8cb66372b93a6",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "u": {
+          "dtype": "<f8",
+          "sha256": "1ae34f649135caefa33a7f8093695829a20ec990c553079a9b714dc12ac315e9",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "v": {
+          "dtype": "<f8",
+          "sha256": "63a8c1933eff0e9ccec54205e25104203fa5dead1f30596fa3c3a53cfd5ff96f",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "w": {
+          "dtype": "<f8",
+          "sha256": "9a2827252464b60f52b05a7083be2862b116655e87e40665abe1b953b265a88f",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        }
+      },
+      "arrays_file": "D:\\yyh\\wind_aware_flight\\phase_g61\\common_research_entry_v1\\source_v2\\runtime\\native_material\\record_0.npz",
+      "arrays_file_sha256": "2ffec970e3c1fcf246bb551d99113cc6674febc0d131e3267388867db4de4951",
+      "case_id": "WINTER_WIND",
+      "coordinate_attributes": {
+        "DX": 3000.0,
+        "DY": 3000.0,
+        "GRID_ID": 2.0,
+        "MAP_PROJ": 1.0,
+        "MOAD_CEN_LAT": 31.10000991821289,
+        "STAND_LON": 118.5999984741211,
+        "TRUELAT1": 30.0,
+        "TRUELAT2": 60.0
+      },
+      "coordinate_values": {
+        "anchor_projected": [
+          -146998.8581210733,
+          -146998.90532932896
+        ],
+        "dx": 3000.0,
+        "dy": 3000.0,
+        "f": 1.7930256259404227,
+        "lon0": 2.069960466233664,
+        "m0": 0.9955542248317899,
+        "n": 0.715566847180628,
+        "nx": 99,
+        "ny": 99,
+        "origin_projected": [
+          -4498.823101021643,
+          -4498.665224660188
+        ],
+        "rho0": 7587376.115984766
+      },
+      "grid": {
+        "COSALPHA": {
+          "dtype": ">f4",
+          "sha256": "71917ac1afa27dcc265f148f76e4cfbf7bbe0686e2e82cc189aa5b3b94eb96a7",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "HGT": {
+          "dtype": ">f4",
+          "sha256": "176dc88a381ec93407fbcaf4b42456d59459538719e74791961bc3a4649f368a",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "MAPFAC_M": {
+          "dtype": ">f4",
+          "sha256": "b86afe678fa53ad9350f7987b4263e13b810564e634d332486ac8f0b46076ab5",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "SINALPHA": {
+          "dtype": ">f4",
+          "sha256": "2bcad9d88f24f8876447e8c7a8c290a8e32142b65915f44a49987700c637abbc",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "XLAT": {
+          "dtype": ">f4",
+          "sha256": "08bde5520180aa998d9c814b00fc77fd62788668f1254a9e335b27b4a5e0e719",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "XLONG": {
+          "dtype": ">f4",
+          "sha256": "b995a10557e99d0a2022ea519c3d8cbb3e5426bfd573c5f93692da00fbfb7b39",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "projection": {
+          "DX": 3000.0,
+          "DY": 3000.0,
+          "GRID_ID": 2.0,
+          "MAP_PROJ": 1.0,
+          "MOAD_CEN_LAT": 31.10000991821289,
+          "STAND_LON": 118.5999984741211,
+          "TRUELAT1": 30.0,
+          "TRUELAT2": 60.0
+        }
+      },
+      "lineage": {
+        "SIMULATION_START_DATE": "2025-01-24_00:00:00",
+        "START_DATE": "2025-01-24_00:00:00"
+      },
+      "record_index": 0,
+      "source": {
+        "binding": "HASH_VERIFIED_IMMUTABLE_IN_MEMORY_ARRAYS",
+        "netcdf_backend": "scipy.io.netcdf_file",
+        "path": "D:\\yyh\\wind_aware_flight\\phase3c\\data\\winter_wind_d02_12UTC.nc",
+        "record_index": 0,
+        "size_bytes": 48597908,
+        "snapshot_id": "WINTER_WIND/2025-01-24_12:00:00",
+        "source_sha256": "0cc712e13d6546040cf52cdc6a88d2dc8ebfbcde49c7cec07331cd7b5e6f94c3",
+        "source_time": "2025-01-24_12:00:00",
+        "source_time_convention": "UTC"
+      },
+      "source_sha256": "0cc712e13d6546040cf52cdc6a88d2dc8ebfbcde49c7cec07331cd7b5e6f94c3"
+    },
+    {
+      "arrays": {
+        "east": {
+          "dtype": "<f8",
+          "sha256": "f97e4a0f47f6df151ebf4b88775f65e0c8c5f9ae21ff7c426a688926ecdaefa5",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "height": {
+          "dtype": "<f8",
+          "sha256": "561cfa03c67eb3c58b94189aa658a73f39b5ec7906ac43e56931463dd732aff0",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "mapfac": {
+          "dtype": "<f8",
+          "sha256": "f002aca51f53cf96a4387e29fa2a6161f8d0ddca131b977979f9641f19c12d34",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "north": {
+          "dtype": "<f8",
+          "sha256": "c844afec624059144c58d105607648f33121dc122bab54a2ef3ab1fdfdaef202",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "terrain": {
+          "dtype": "<f8",
+          "sha256": "3dc1f5be277fba41f1787a2c420f7a8bd138396c6761946eabd8cb66372b93a6",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "u": {
+          "dtype": "<f8",
+          "sha256": "ca63d2b5aee03b2bd3234a19c9fc28c676e978a89ffd9e794eb13653c91b2f1d",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "v": {
+          "dtype": "<f8",
+          "sha256": "6015ddca5f34b41ac735b5460570600aa460f17bde3d07ad69a6427a6244679f",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "w": {
+          "dtype": "<f8",
+          "sha256": "5b2618211049a899434638709a72c8ca085ddf41dd3fca59033f00df1ee2d689",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        }
+      },
+      "arrays_file": "D:\\yyh\\wind_aware_flight\\phase_g61\\common_research_entry_v1\\source_v2\\runtime\\native_material\\record_1.npz",
+      "arrays_file_sha256": "a28fea724302e0459df3db089032fa557c580daecf800ce00eda42b284789875",
+      "case_id": "WINTER_WIND",
+      "coordinate_attributes": {
+        "DX": 3000.0,
+        "DY": 3000.0,
+        "GRID_ID": 2.0,
+        "MAP_PROJ": 1.0,
+        "MOAD_CEN_LAT": 31.10000991821289,
+        "STAND_LON": 118.5999984741211,
+        "TRUELAT1": 30.0,
+        "TRUELAT2": 60.0
+      },
+      "coordinate_values": {
+        "anchor_projected": [
+          -146998.8581210733,
+          -146998.90532932896
+        ],
+        "dx": 3000.0,
+        "dy": 3000.0,
+        "f": 1.7930256259404227,
+        "lon0": 2.069960466233664,
+        "m0": 0.9955542248317899,
+        "n": 0.715566847180628,
+        "nx": 99,
+        "ny": 99,
+        "origin_projected": [
+          -4498.823101021643,
+          -4498.665224660188
+        ],
+        "rho0": 7587376.115984766
+      },
+      "grid": {
+        "COSALPHA": {
+          "dtype": ">f4",
+          "sha256": "71917ac1afa27dcc265f148f76e4cfbf7bbe0686e2e82cc189aa5b3b94eb96a7",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "HGT": {
+          "dtype": ">f4",
+          "sha256": "176dc88a381ec93407fbcaf4b42456d59459538719e74791961bc3a4649f368a",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "MAPFAC_M": {
+          "dtype": ">f4",
+          "sha256": "b86afe678fa53ad9350f7987b4263e13b810564e634d332486ac8f0b46076ab5",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "SINALPHA": {
+          "dtype": ">f4",
+          "sha256": "2bcad9d88f24f8876447e8c7a8c290a8e32142b65915f44a49987700c637abbc",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "XLAT": {
+          "dtype": ">f4",
+          "sha256": "08bde5520180aa998d9c814b00fc77fd62788668f1254a9e335b27b4a5e0e719",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "XLONG": {
+          "dtype": ">f4",
+          "sha256": "b995a10557e99d0a2022ea519c3d8cbb3e5426bfd573c5f93692da00fbfb7b39",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "projection": {
+          "DX": 3000.0,
+          "DY": 3000.0,
+          "GRID_ID": 2.0,
+          "MAP_PROJ": 1.0,
+          "MOAD_CEN_LAT": 31.10000991821289,
+          "STAND_LON": 118.5999984741211,
+          "TRUELAT1": 30.0,
+          "TRUELAT2": 60.0
+        }
+      },
+      "lineage": {
+        "SIMULATION_START_DATE": "2025-01-24_00:00:00",
+        "START_DATE": "2025-01-24_00:00:00"
+      },
+      "record_index": 0,
+      "source": {
+        "binding": "HASH_VERIFIED_IMMUTABLE_IN_MEMORY_ARRAYS",
+        "netcdf_backend": "scipy.io.netcdf_file",
+        "path": "D:\\yyh\\wind_aware_flight\\phase_g61\\dynamic_wind\\original_adjacent_sources\\WINTER\\winter_wind_d02_13UTC.nc",
+        "record_index": 0,
+        "size_bytes": 48597908,
+        "snapshot_id": "WINTER_WIND/2025-01-24_13:00:00",
+        "source_sha256": "5464d142361eb63dc1fdf79e1e5c82553e7292701add839d04453601102c9890",
+        "source_time": "2025-01-24_13:00:00",
+        "source_time_convention": "UTC"
+      },
+      "source_sha256": "5464d142361eb63dc1fdf79e1e5c82553e7292701add839d04453601102c9890"
+    },
+    {
+      "arrays": {
+        "east": {
+          "dtype": "<f8",
+          "sha256": "66a8adaa1e648499bc7f43838aab09a20f31f6d2bc990d75166f6d51115bc24f",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "height": {
+          "dtype": "<f8",
+          "sha256": "8e0fdd9802430cbdb60fbf1fb51cfe51de9c8fb4afd5063a68007589f8e6f930",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "mapfac": {
+          "dtype": "<f8",
+          "sha256": "f002aca51f53cf96a4387e29fa2a6161f8d0ddca131b977979f9641f19c12d34",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "north": {
+          "dtype": "<f8",
+          "sha256": "4107c3b73557eea8fe8034bdcd4d31f90db221f3b873104fbcab093200680188",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "terrain": {
+          "dtype": "<f8",
+          "sha256": "3dc1f5be277fba41f1787a2c420f7a8bd138396c6761946eabd8cb66372b93a6",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "u": {
+          "dtype": "<f8",
+          "sha256": "61df6d87d8a656a7dc6bd69573cf9c26332a45d9005d9d3bd309c827ecdd35b1",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "v": {
+          "dtype": "<f8",
+          "sha256": "7d73fa9c4627cedc0c063a4c2d5927e698d7c501e32338ed1ba8122553417be0",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "w": {
+          "dtype": "<f8",
+          "sha256": "55ab6eb7956f1efd0f10dc62bf2e4e842c74b0e1e3303c73749f078e7f3a56a4",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        }
+      },
+      "arrays_file": "D:\\yyh\\wind_aware_flight\\phase_g61\\common_research_entry_v1\\source_v2\\runtime\\native_material\\record_2.npz",
+      "arrays_file_sha256": "f78ab205a681ec6d699d032b25a462620c697006d9968ce1d0723a03094da6e2",
+      "case_id": "SPRING_NORMAL",
+      "coordinate_attributes": {
+        "DX": 3000.0,
+        "DY": 3000.0,
+        "GRID_ID": 2.0,
+        "MAP_PROJ": 1.0,
+        "MOAD_CEN_LAT": 31.10000991821289,
+        "STAND_LON": 118.5999984741211,
+        "TRUELAT1": 30.0,
+        "TRUELAT2": 60.0
+      },
+      "coordinate_values": {
+        "anchor_projected": [
+          -146998.8581210733,
+          -146998.90532932896
+        ],
+        "dx": 3000.0,
+        "dy": 3000.0,
+        "f": 1.7930256259404227,
+        "lon0": 2.069960466233664,
+        "m0": 0.9955542248317899,
+        "n": 0.715566847180628,
+        "nx": 99,
+        "ny": 99,
+        "origin_projected": [
+          -4498.823101021643,
+          -4498.665224660188
+        ],
+        "rho0": 7587376.115984766
+      },
+      "grid": {
+        "COSALPHA": {
+          "dtype": ">f4",
+          "sha256": "71917ac1afa27dcc265f148f76e4cfbf7bbe0686e2e82cc189aa5b3b94eb96a7",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "HGT": {
+          "dtype": ">f4",
+          "sha256": "176dc88a381ec93407fbcaf4b42456d59459538719e74791961bc3a4649f368a",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "MAPFAC_M": {
+          "dtype": ">f4",
+          "sha256": "b86afe678fa53ad9350f7987b4263e13b810564e634d332486ac8f0b46076ab5",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "SINALPHA": {
+          "dtype": ">f4",
+          "sha256": "2bcad9d88f24f8876447e8c7a8c290a8e32142b65915f44a49987700c637abbc",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "XLAT": {
+          "dtype": ">f4",
+          "sha256": "08bde5520180aa998d9c814b00fc77fd62788668f1254a9e335b27b4a5e0e719",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "XLONG": {
+          "dtype": ">f4",
+          "sha256": "b995a10557e99d0a2022ea519c3d8cbb3e5426bfd573c5f93692da00fbfb7b39",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "projection": {
+          "DX": 3000.0,
+          "DY": 3000.0,
+          "GRID_ID": 2.0,
+          "MAP_PROJ": 1.0,
+          "MOAD_CEN_LAT": 31.10000991821289,
+          "STAND_LON": 118.5999984741211,
+          "TRUELAT1": 30.0,
+          "TRUELAT2": 60.0
+        }
+      },
+      "lineage": {
+        "SIMULATION_START_DATE": "2025-04-04_00:00:00",
+        "START_DATE": "2025-04-04_00:00:00"
+      },
+      "record_index": 0,
+      "source": {
+        "binding": "HASH_VERIFIED_IMMUTABLE_IN_MEMORY_ARRAYS",
+        "netcdf_backend": "scipy.io.netcdf_file",
+        "path": "D:\\yyh\\wind_aware_flight\\phase3c\\data\\spring_normal_d02_12UTC.nc",
+        "record_index": 0,
+        "size_bytes": 48597908,
+        "snapshot_id": "SPRING_NORMAL/2025-04-04_12:00:00",
+        "source_sha256": "1106c7a88c876828cc597041540b31ca2157f788e95768e3b16c0410fd63d1ef",
+        "source_time": "2025-04-04_12:00:00",
+        "source_time_convention": "UTC"
+      },
+      "source_sha256": "1106c7a88c876828cc597041540b31ca2157f788e95768e3b16c0410fd63d1ef"
+    },
+    {
+      "arrays": {
+        "east": {
+          "dtype": "<f8",
+          "sha256": "c256d9e77976a814134f55377b842432225dff1c628a3413f845e98039356315",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "height": {
+          "dtype": "<f8",
+          "sha256": "c6c9882cbdf43406621cb27754cfe023c3921344b2ea1208db73e0df5a14cf90",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "mapfac": {
+          "dtype": "<f8",
+          "sha256": "f002aca51f53cf96a4387e29fa2a6161f8d0ddca131b977979f9641f19c12d34",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "north": {
+          "dtype": "<f8",
+          "sha256": "d26735dd6261990851f808fbb79d790cd1697311de36c0713fbac99068299236",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "terrain": {
+          "dtype": "<f8",
+          "sha256": "3dc1f5be277fba41f1787a2c420f7a8bd138396c6761946eabd8cb66372b93a6",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "u": {
+          "dtype": "<f8",
+          "sha256": "999010c66a43790c6d93002d50caf2cede78874bcbcef7d8084c784919656cb1",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "v": {
+          "dtype": "<f8",
+          "sha256": "466bf3bcfe6cffbba2077bfa3c01b65babe3f4cf071fde287caaa53eea23765a",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "w": {
+          "dtype": "<f8",
+          "sha256": "26f38f62be4d354f3e872ed19e11dddd441bf2b947f9334ed3518bc6f5d50166",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        }
+      },
+      "arrays_file": "D:\\yyh\\wind_aware_flight\\phase_g61\\common_research_entry_v1\\source_v2\\runtime\\native_material\\record_3.npz",
+      "arrays_file_sha256": "27766d3a5486a23ff50d74d10f032184bb126ed7174a38aa2f2c3c568d4d9ae0",
+      "case_id": "SPRING_NORMAL",
+      "coordinate_attributes": {
+        "DX": 3000.0,
+        "DY": 3000.0,
+        "GRID_ID": 2.0,
+        "MAP_PROJ": 1.0,
+        "MOAD_CEN_LAT": 31.10000991821289,
+        "STAND_LON": 118.5999984741211,
+        "TRUELAT1": 30.0,
+        "TRUELAT2": 60.0
+      },
+      "coordinate_values": {
+        "anchor_projected": [
+          -146998.8581210733,
+          -146998.90532932896
+        ],
+        "dx": 3000.0,
+        "dy": 3000.0,
+        "f": 1.7930256259404227,
+        "lon0": 2.069960466233664,
+        "m0": 0.9955542248317899,
+        "n": 0.715566847180628,
+        "nx": 99,
+        "ny": 99,
+        "origin_projected": [
+          -4498.823101021643,
+          -4498.665224660188
+        ],
+        "rho0": 7587376.115984766
+      },
+      "grid": {
+        "COSALPHA": {
+          "dtype": ">f4",
+          "sha256": "71917ac1afa27dcc265f148f76e4cfbf7bbe0686e2e82cc189aa5b3b94eb96a7",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "HGT": {
+          "dtype": ">f4",
+          "sha256": "176dc88a381ec93407fbcaf4b42456d59459538719e74791961bc3a4649f368a",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "MAPFAC_M": {
+          "dtype": ">f4",
+          "sha256": "b86afe678fa53ad9350f7987b4263e13b810564e634d332486ac8f0b46076ab5",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "SINALPHA": {
+          "dtype": ">f4",
+          "sha256": "2bcad9d88f24f8876447e8c7a8c290a8e32142b65915f44a49987700c637abbc",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "XLAT": {
+          "dtype": ">f4",
+          "sha256": "08bde5520180aa998d9c814b00fc77fd62788668f1254a9e335b27b4a5e0e719",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "XLONG": {
+          "dtype": ">f4",
+          "sha256": "b995a10557e99d0a2022ea519c3d8cbb3e5426bfd573c5f93692da00fbfb7b39",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "projection": {
+          "DX": 3000.0,
+          "DY": 3000.0,
+          "GRID_ID": 2.0,
+          "MAP_PROJ": 1.0,
+          "MOAD_CEN_LAT": 31.10000991821289,
+          "STAND_LON": 118.5999984741211,
+          "TRUELAT1": 30.0,
+          "TRUELAT2": 60.0
+        }
+      },
+      "lineage": {
+        "SIMULATION_START_DATE": "2025-04-04_00:00:00",
+        "START_DATE": "2025-04-04_00:00:00"
+      },
+      "record_index": 0,
+      "source": {
+        "binding": "HASH_VERIFIED_IMMUTABLE_IN_MEMORY_ARRAYS",
+        "netcdf_backend": "scipy.io.netcdf_file",
+        "path": "D:\\yyh\\wind_aware_flight\\phase_g61\\dynamic_wind\\original_adjacent_sources\\SPRING\\spring_normal_d02_13UTC.nc",
+        "record_index": 0,
+        "size_bytes": 48597908,
+        "snapshot_id": "SPRING_NORMAL/2025-04-04_13:00:00",
+        "source_sha256": "e473dac102572b69873129aa815516c6bd30be530dffe48d03d019a062c84d31",
+        "source_time": "2025-04-04_13:00:00",
+        "source_time_convention": "UTC"
+      },
+      "source_sha256": "e473dac102572b69873129aa815516c6bd30be530dffe48d03d019a062c84d31"
+    },
+    {
+      "arrays": {
+        "east": {
+          "dtype": "<f8",
+          "sha256": "49a4a40d234627fafa56d89070aafc3ed5a3b83bee4e6602ff8c8dec7a58aea4",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "height": {
+          "dtype": "<f8",
+          "sha256": "89ff8094271a95e4a0958dc7ea133aef6587cc7eb7c2bb1f36a5197580e86393",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "mapfac": {
+          "dtype": "<f8",
+          "sha256": "f002aca51f53cf96a4387e29fa2a6161f8d0ddca131b977979f9641f19c12d34",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "north": {
+          "dtype": "<f8",
+          "sha256": "4f9738178ff4c0eed7ee9b985e7c6ae9ac3f45b0a1240a15901beb8c8530fccd",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "terrain": {
+          "dtype": "<f8",
+          "sha256": "3dc1f5be277fba41f1787a2c420f7a8bd138396c6761946eabd8cb66372b93a6",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "u": {
+          "dtype": "<f8",
+          "sha256": "a3dbe8497a2e7322af6f4783fea808f5aa09db41a25c3a64b595907600e0288f",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "v": {
+          "dtype": "<f8",
+          "sha256": "2eca68aa569666ba93171e5ee7ca011d0dad6649cb9597ddfaa6b542bda9c0d9",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "w": {
+          "dtype": "<f8",
+          "sha256": "4c1ebf1c79cd35353949096863e99b5172c83234f3ef918fde3a12587a84912d",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        }
+      },
+      "arrays_file": "D:\\yyh\\wind_aware_flight\\phase_g61\\common_research_entry_v1\\source_v2\\runtime\\native_material\\record_4.npz",
+      "arrays_file_sha256": "0c22dce9e44c365d6cad2930aab8e84764ea1a2f2aa8f579cf42062199e5997f",
+      "case_id": "SUMMER_DISTURBED",
+      "coordinate_attributes": {
+        "DX": 3000.0,
+        "DY": 3000.0,
+        "GRID_ID": 2.0,
+        "MAP_PROJ": 1.0,
+        "MOAD_CEN_LAT": 31.10000991821289,
+        "STAND_LON": 118.5999984741211,
+        "TRUELAT1": 30.0,
+        "TRUELAT2": 60.0
+      },
+      "coordinate_values": {
+        "anchor_projected": [
+          -146998.8581210733,
+          -146998.90532932896
+        ],
+        "dx": 3000.0,
+        "dy": 3000.0,
+        "f": 1.7930256259404227,
+        "lon0": 2.069960466233664,
+        "m0": 0.9955542248317899,
+        "n": 0.715566847180628,
+        "nx": 99,
+        "ny": 99,
+        "origin_projected": [
+          -4498.823101021643,
+          -4498.665224660188
+        ],
+        "rho0": 7587376.115984766
+      },
+      "grid": {
+        "COSALPHA": {
+          "dtype": ">f4",
+          "sha256": "71917ac1afa27dcc265f148f76e4cfbf7bbe0686e2e82cc189aa5b3b94eb96a7",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "HGT": {
+          "dtype": ">f4",
+          "sha256": "176dc88a381ec93407fbcaf4b42456d59459538719e74791961bc3a4649f368a",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "MAPFAC_M": {
+          "dtype": ">f4",
+          "sha256": "b86afe678fa53ad9350f7987b4263e13b810564e634d332486ac8f0b46076ab5",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "SINALPHA": {
+          "dtype": ">f4",
+          "sha256": "2bcad9d88f24f8876447e8c7a8c290a8e32142b65915f44a49987700c637abbc",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "XLAT": {
+          "dtype": ">f4",
+          "sha256": "08bde5520180aa998d9c814b00fc77fd62788668f1254a9e335b27b4a5e0e719",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "XLONG": {
+          "dtype": ">f4",
+          "sha256": "b995a10557e99d0a2022ea519c3d8cbb3e5426bfd573c5f93692da00fbfb7b39",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "projection": {
+          "DX": 3000.0,
+          "DY": 3000.0,
+          "GRID_ID": 2.0,
+          "MAP_PROJ": 1.0,
+          "MOAD_CEN_LAT": 31.10000991821289,
+          "STAND_LON": 118.5999984741211,
+          "TRUELAT1": 30.0,
+          "TRUELAT2": 60.0
+        }
+      },
+      "lineage": {
+        "SIMULATION_START_DATE": "2025-06-20_00:00:00",
+        "START_DATE": "2025-06-20_00:00:00"
+      },
+      "record_index": 0,
+      "source": {
+        "binding": "HASH_VERIFIED_IMMUTABLE_IN_MEMORY_ARRAYS",
+        "netcdf_backend": "scipy.io.netcdf_file",
+        "path": "D:\\yyh\\wind_aware_flight\\phase3a_implementation\\data\\summer_disturbed_d02_12UTC.nc",
+        "record_index": 0,
+        "size_bytes": 48597908,
+        "snapshot_id": "SUMMER_DISTURBED/2025-06-20_12:00:00",
+        "source_sha256": "00da15f1f8e8815d8be34e09de909e4041da7f76e937677d3bde8af64ca70561",
+        "source_time": "2025-06-20_12:00:00",
+        "source_time_convention": "UTC"
+      },
+      "source_sha256": "00da15f1f8e8815d8be34e09de909e4041da7f76e937677d3bde8af64ca70561"
+    },
+    {
+      "arrays": {
+        "east": {
+          "dtype": "<f8",
+          "sha256": "cf332d4623ce36d3c0cdbc7fd5ecb965644f96cdf99e37188fbdbd28effd4847",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "height": {
+          "dtype": "<f8",
+          "sha256": "4939cfb4a3fea136b54f565704dd36f711d303add059b61fffa4c8b9ad5ac26c",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "mapfac": {
+          "dtype": "<f8",
+          "sha256": "f002aca51f53cf96a4387e29fa2a6161f8d0ddca131b977979f9641f19c12d34",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "north": {
+          "dtype": "<f8",
+          "sha256": "c9f985dcbc9182220f9719e2939fdbc4f3f8b9b50106b23dfde9366672149b6e",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "terrain": {
+          "dtype": "<f8",
+          "sha256": "3dc1f5be277fba41f1787a2c420f7a8bd138396c6761946eabd8cb66372b93a6",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "u": {
+          "dtype": "<f8",
+          "sha256": "d1825fbf2dc7f36c148ce646065e0d3e91e4c60da99a7202aa9d7ecbc6d1900a",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "v": {
+          "dtype": "<f8",
+          "sha256": "6ca1c32f3c33e3dee5ee6f442636010d654a6f18d2c3b4643784c340ffff0225",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "w": {
+          "dtype": "<f8",
+          "sha256": "15185b14036d5212fd2038f0c517f24706507885646c78f7a539d3a2b9df4991",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        }
+      },
+      "arrays_file": "D:\\yyh\\wind_aware_flight\\phase_g61\\common_research_entry_v1\\source_v2\\runtime\\native_material\\record_5.npz",
+      "arrays_file_sha256": "1a5423c6b39bc34817770062c16266c0a4f207cfedda98431e93cbed48a75d95",
+      "case_id": "SUMMER_DISTURBED",
+      "coordinate_attributes": {
+        "DX": 3000.0,
+        "DY": 3000.0,
+        "GRID_ID": 2.0,
+        "MAP_PROJ": 1.0,
+        "MOAD_CEN_LAT": 31.10000991821289,
+        "STAND_LON": 118.5999984741211,
+        "TRUELAT1": 30.0,
+        "TRUELAT2": 60.0
+      },
+      "coordinate_values": {
+        "anchor_projected": [
+          -146998.8581210733,
+          -146998.90532932896
+        ],
+        "dx": 3000.0,
+        "dy": 3000.0,
+        "f": 1.7930256259404227,
+        "lon0": 2.069960466233664,
+        "m0": 0.9955542248317899,
+        "n": 0.715566847180628,
+        "nx": 99,
+        "ny": 99,
+        "origin_projected": [
+          -4498.823101021643,
+          -4498.665224660188
+        ],
+        "rho0": 7587376.115984766
+      },
+      "grid": {
+        "COSALPHA": {
+          "dtype": ">f4",
+          "sha256": "71917ac1afa27dcc265f148f76e4cfbf7bbe0686e2e82cc189aa5b3b94eb96a7",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "HGT": {
+          "dtype": ">f4",
+          "sha256": "176dc88a381ec93407fbcaf4b42456d59459538719e74791961bc3a4649f368a",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "MAPFAC_M": {
+          "dtype": ">f4",
+          "sha256": "b86afe678fa53ad9350f7987b4263e13b810564e634d332486ac8f0b46076ab5",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "SINALPHA": {
+          "dtype": ">f4",
+          "sha256": "2bcad9d88f24f8876447e8c7a8c290a8e32142b65915f44a49987700c637abbc",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "XLAT": {
+          "dtype": ">f4",
+          "sha256": "08bde5520180aa998d9c814b00fc77fd62788668f1254a9e335b27b4a5e0e719",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "XLONG": {
+          "dtype": ">f4",
+          "sha256": "b995a10557e99d0a2022ea519c3d8cbb3e5426bfd573c5f93692da00fbfb7b39",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "projection": {
+          "DX": 3000.0,
+          "DY": 3000.0,
+          "GRID_ID": 2.0,
+          "MAP_PROJ": 1.0,
+          "MOAD_CEN_LAT": 31.10000991821289,
+          "STAND_LON": 118.5999984741211,
+          "TRUELAT1": 30.0,
+          "TRUELAT2": 60.0
+        }
+      },
+      "lineage": {
+        "SIMULATION_START_DATE": "2025-06-20_00:00:00",
+        "START_DATE": "2025-06-20_00:00:00"
+      },
+      "record_index": 0,
+      "source": {
+        "binding": "HASH_VERIFIED_IMMUTABLE_IN_MEMORY_ARRAYS",
+        "netcdf_backend": "scipy.io.netcdf_file",
+        "path": "D:\\yyh\\wind_aware_flight\\phase_g61\\dynamic_wind\\original_adjacent_sources\\SUMMER\\summer_disturbed_d02_13UTC.nc",
+        "record_index": 0,
+        "size_bytes": 48597908,
+        "snapshot_id": "SUMMER_DISTURBED/2025-06-20_13:00:00",
+        "source_sha256": "5f61c2d84253711779c82eca806b8ede18fcbf81c6618d338c63d9082e9f9086",
+        "source_time": "2025-06-20_13:00:00",
+        "source_time_convention": "UTC"
+      },
+      "source_sha256": "5f61c2d84253711779c82eca806b8ede18fcbf81c6618d338c63d9082e9f9086"
+    },
+    {
+      "arrays": {
+        "east": {
+          "dtype": "<f8",
+          "sha256": "5cda1b25d7187624ac99856b6e8aa5c87844cb48bec12b6e1296e5a84ff73acf",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "height": {
+          "dtype": "<f8",
+          "sha256": "2d6c391c38c8d5d997427341b753102ed221398816ceaf52ea984a1b6413ee08",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "mapfac": {
+          "dtype": "<f8",
+          "sha256": "f002aca51f53cf96a4387e29fa2a6161f8d0ddca131b977979f9641f19c12d34",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "north": {
+          "dtype": "<f8",
+          "sha256": "dad6d2a9c09d2b3994e8870278fb1140f95d8a4a9d8b3449edfdb2153b899ab1",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "terrain": {
+          "dtype": "<f8",
+          "sha256": "3dc1f5be277fba41f1787a2c420f7a8bd138396c6761946eabd8cb66372b93a6",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "u": {
+          "dtype": "<f8",
+          "sha256": "3d7c2ef87c8ddff0f192863e88a4793c32c6846d59544738e85810e188ee4a0d",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "v": {
+          "dtype": "<f8",
+          "sha256": "f818377f46449893ea41b1601728ee13a2cf59c8b6f812d620e5ba80c458c283",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "w": {
+          "dtype": "<f8",
+          "sha256": "2003315317f40a1935667c08ea788d94c44a0684ab058ec9ed84780d905c1c52",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        }
+      },
+      "arrays_file": "D:\\yyh\\wind_aware_flight\\phase_g61\\common_research_entry_v1\\source_v2\\runtime\\native_material\\record_6.npz",
+      "arrays_file_sha256": "cf564a3d7a27865f767d7b872771d5ac33fbc47c3c81cb1dfaec7dc5ffae54d6",
+      "case_id": "AUTUMN_WIND",
+      "coordinate_attributes": {
+        "DX": 3000.0,
+        "DY": 3000.0,
+        "GRID_ID": 2.0,
+        "MAP_PROJ": 1.0,
+        "MOAD_CEN_LAT": 31.10000991821289,
+        "STAND_LON": 118.5999984741211,
+        "TRUELAT1": 30.0,
+        "TRUELAT2": 60.0
+      },
+      "coordinate_values": {
+        "anchor_projected": [
+          -146998.8581210733,
+          -146998.90532932896
+        ],
+        "dx": 3000.0,
+        "dy": 3000.0,
+        "f": 1.7930256259404227,
+        "lon0": 2.069960466233664,
+        "m0": 0.9955542248317899,
+        "n": 0.715566847180628,
+        "nx": 99,
+        "ny": 99,
+        "origin_projected": [
+          -4498.823101021643,
+          -4498.665224660188
+        ],
+        "rho0": 7587376.115984766
+      },
+      "grid": {
+        "COSALPHA": {
+          "dtype": ">f4",
+          "sha256": "71917ac1afa27dcc265f148f76e4cfbf7bbe0686e2e82cc189aa5b3b94eb96a7",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "HGT": {
+          "dtype": ">f4",
+          "sha256": "176dc88a381ec93407fbcaf4b42456d59459538719e74791961bc3a4649f368a",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "MAPFAC_M": {
+          "dtype": ">f4",
+          "sha256": "b86afe678fa53ad9350f7987b4263e13b810564e634d332486ac8f0b46076ab5",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "SINALPHA": {
+          "dtype": ">f4",
+          "sha256": "2bcad9d88f24f8876447e8c7a8c290a8e32142b65915f44a49987700c637abbc",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "XLAT": {
+          "dtype": ">f4",
+          "sha256": "08bde5520180aa998d9c814b00fc77fd62788668f1254a9e335b27b4a5e0e719",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "XLONG": {
+          "dtype": ">f4",
+          "sha256": "b995a10557e99d0a2022ea519c3d8cbb3e5426bfd573c5f93692da00fbfb7b39",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "projection": {
+          "DX": 3000.0,
+          "DY": 3000.0,
+          "GRID_ID": 2.0,
+          "MAP_PROJ": 1.0,
+          "MOAD_CEN_LAT": 31.10000991821289,
+          "STAND_LON": 118.5999984741211,
+          "TRUELAT1": 30.0,
+          "TRUELAT2": 60.0
+        }
+      },
+      "lineage": {
+        "SIMULATION_START_DATE": "2025-10-18_00:00:00",
+        "START_DATE": "2025-10-18_00:00:00"
+      },
+      "record_index": 0,
+      "source": {
+        "binding": "HASH_VERIFIED_IMMUTABLE_IN_MEMORY_ARRAYS",
+        "netcdf_backend": "scipy.io.netcdf_file",
+        "path": "D:\\yyh\\wind_aware_flight\\phase3a_implementation\\data\\autumn_wind_d02_12UTC.nc",
+        "record_index": 0,
+        "size_bytes": 48597908,
+        "snapshot_id": "AUTUMN_WIND/2025-10-18_12:00:00",
+        "source_sha256": "41069186e71eb16cbb1e42e0143774fc94981cabf5d0766a72a4f95bb367b150",
+        "source_time": "2025-10-18_12:00:00",
+        "source_time_convention": "UTC"
+      },
+      "source_sha256": "41069186e71eb16cbb1e42e0143774fc94981cabf5d0766a72a4f95bb367b150"
+    },
+    {
+      "arrays": {
+        "east": {
+          "dtype": "<f8",
+          "sha256": "e3f0c4e1420aca1fa6b00caea0ae918cdc76978b1504f825bb7fa6d35c9a037d",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "height": {
+          "dtype": "<f8",
+          "sha256": "9628b66477103944c1e377b1dbac3e3a1695c4b6f5cf6314164005d078392d38",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "mapfac": {
+          "dtype": "<f8",
+          "sha256": "f002aca51f53cf96a4387e29fa2a6161f8d0ddca131b977979f9641f19c12d34",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "north": {
+          "dtype": "<f8",
+          "sha256": "0ba680fe07bb8b8270f3c6b86045bb36651e21937b7604552a39cc7f6e5b19ee",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "terrain": {
+          "dtype": "<f8",
+          "sha256": "3dc1f5be277fba41f1787a2c420f7a8bd138396c6761946eabd8cb66372b93a6",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "u": {
+          "dtype": "<f8",
+          "sha256": "899de262c38b16e521e37f514a5106c6e2a1709c2b159f4eeddd69859b874a67",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "v": {
+          "dtype": "<f8",
+          "sha256": "105649d46ea5c2c842c9d46292859a78a31cdc495ae2b24adc2caff60ba781a3",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "w": {
+          "dtype": "<f8",
+          "sha256": "cdfce0e34a175cbc785e711eee127ccb816e69c05687b15b9dd07a90dc0eb556",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        }
+      },
+      "arrays_file": "D:\\yyh\\wind_aware_flight\\phase_g61\\common_research_entry_v1\\source_v2\\runtime\\native_material\\record_7.npz",
+      "arrays_file_sha256": "f3632b9c4ba8efeebb4728b2e4c2378ca6a3900abf489ff3364f095d932da012",
+      "case_id": "AUTUMN_WIND",
+      "coordinate_attributes": {
+        "DX": 3000.0,
+        "DY": 3000.0,
+        "GRID_ID": 2.0,
+        "MAP_PROJ": 1.0,
+        "MOAD_CEN_LAT": 31.10000991821289,
+        "STAND_LON": 118.5999984741211,
+        "TRUELAT1": 30.0,
+        "TRUELAT2": 60.0
+      },
+      "coordinate_values": {
+        "anchor_projected": [
+          -146998.8581210733,
+          -146998.90532932896
+        ],
+        "dx": 3000.0,
+        "dy": 3000.0,
+        "f": 1.7930256259404227,
+        "lon0": 2.069960466233664,
+        "m0": 0.9955542248317899,
+        "n": 0.715566847180628,
+        "nx": 99,
+        "ny": 99,
+        "origin_projected": [
+          -4498.823101021643,
+          -4498.665224660188
+        ],
+        "rho0": 7587376.115984766
+      },
+      "grid": {
+        "COSALPHA": {
+          "dtype": ">f4",
+          "sha256": "71917ac1afa27dcc265f148f76e4cfbf7bbe0686e2e82cc189aa5b3b94eb96a7",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "HGT": {
+          "dtype": ">f4",
+          "sha256": "176dc88a381ec93407fbcaf4b42456d59459538719e74791961bc3a4649f368a",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "MAPFAC_M": {
+          "dtype": ">f4",
+          "sha256": "b86afe678fa53ad9350f7987b4263e13b810564e634d332486ac8f0b46076ab5",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "SINALPHA": {
+          "dtype": ">f4",
+          "sha256": "2bcad9d88f24f8876447e8c7a8c290a8e32142b65915f44a49987700c637abbc",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "XLAT": {
+          "dtype": ">f4",
+          "sha256": "08bde5520180aa998d9c814b00fc77fd62788668f1254a9e335b27b4a5e0e719",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "XLONG": {
+          "dtype": ">f4",
+          "sha256": "b995a10557e99d0a2022ea519c3d8cbb3e5426bfd573c5f93692da00fbfb7b39",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "projection": {
+          "DX": 3000.0,
+          "DY": 3000.0,
+          "GRID_ID": 2.0,
+          "MAP_PROJ": 1.0,
+          "MOAD_CEN_LAT": 31.10000991821289,
+          "STAND_LON": 118.5999984741211,
+          "TRUELAT1": 30.0,
+          "TRUELAT2": 60.0
+        }
+      },
+      "lineage": {
+        "SIMULATION_START_DATE": "2025-10-18_00:00:00",
+        "START_DATE": "2025-10-18_00:00:00"
+      },
+      "record_index": 0,
+      "source": {
+        "binding": "HASH_VERIFIED_IMMUTABLE_IN_MEMORY_ARRAYS",
+        "netcdf_backend": "scipy.io.netcdf_file",
+        "path": "D:\\yyh\\wind_aware_flight\\phase_g61\\dynamic_wind\\original_adjacent_sources\\AUTUMN\\autumn_wind_d02_13UTC.nc",
+        "record_index": 0,
+        "size_bytes": 48597908,
+        "snapshot_id": "AUTUMN_WIND/2025-10-18_13:00:00",
+        "source_sha256": "6a9012981aa52a12a7e473311f53b7ab9e1634a855c142e36eaf2f20c5fbabb1",
+        "source_time": "2025-10-18_13:00:00",
+        "source_time_convention": "UTC"
+      },
+      "source_sha256": "6a9012981aa52a12a7e473311f53b7ab9e1634a855c142e36eaf2f20c5fbabb1"
+    },
+    {
+      "arrays": {
+        "east": {
+          "dtype": "<f8",
+          "sha256": "07251cc1ac496ef4c065d01fdee588e263a5afca6238f2328174d03a5d2cbc0f",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "height": {
+          "dtype": "<f8",
+          "sha256": "b78b78c26aef0a1f0b9bf5ee9640c84a21dd59eebaabbc61c7c331ee14bf361b",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "mapfac": {
+          "dtype": "<f8",
+          "sha256": "f002aca51f53cf96a4387e29fa2a6161f8d0ddca131b977979f9641f19c12d34",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "north": {
+          "dtype": "<f8",
+          "sha256": "837d2aece23c0087862eb7e45054a02a5bcf3b53523535eb4380fad5da33c996",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "terrain": {
+          "dtype": "<f8",
+          "sha256": "3dc1f5be277fba41f1787a2c420f7a8bd138396c6761946eabd8cb66372b93a6",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "u": {
+          "dtype": "<f8",
+          "sha256": "ba8c57a552e68f1f7f6320dc8c504340b631dbd50654c6b1fdaab60f62876349",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "v": {
+          "dtype": "<f8",
+          "sha256": "2de6dc4d1853898d07f4b07e86f974db126c009361584c0c65c3cd78597c2e04",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "w": {
+          "dtype": "<f8",
+          "sha256": "5576ebd9340e6aa8b3310c51db4b5b566492d818b775f20eba110ed13b2d618b",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        }
+      },
+      "arrays_file": "D:\\yyh\\wind_aware_flight\\phase_g61\\common_research_entry_v1\\source_v2\\runtime\\native_material\\record_8.npz",
+      "arrays_file_sha256": "0dd343dfc0dce7e5b1f377c3fce3f9a47691fe179562439de2265eeb66e4533a",
+      "case_id": "WINTER_WIND",
+      "coordinate_attributes": {
+        "DX": 3000.0,
+        "DY": 3000.0,
+        "GRID_ID": 2.0,
+        "MAP_PROJ": 1.0,
+        "MOAD_CEN_LAT": 31.10000991821289,
+        "STAND_LON": 118.5999984741211,
+        "TRUELAT1": 30.0,
+        "TRUELAT2": 60.0
+      },
+      "coordinate_values": {
+        "anchor_projected": [
+          -146998.8581210733,
+          -146998.90532932896
+        ],
+        "dx": 3000.0,
+        "dy": 3000.0,
+        "f": 1.7930256259404227,
+        "lon0": 2.069960466233664,
+        "m0": 0.9955542248317899,
+        "n": 0.715566847180628,
+        "nx": 99,
+        "ny": 99,
+        "origin_projected": [
+          -4498.823101021643,
+          -4498.665224660188
+        ],
+        "rho0": 7587376.115984766
+      },
+      "grid": {
+        "COSALPHA": {
+          "dtype": ">f4",
+          "sha256": "71917ac1afa27dcc265f148f76e4cfbf7bbe0686e2e82cc189aa5b3b94eb96a7",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "HGT": {
+          "dtype": ">f4",
+          "sha256": "176dc88a381ec93407fbcaf4b42456d59459538719e74791961bc3a4649f368a",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "MAPFAC_M": {
+          "dtype": ">f4",
+          "sha256": "b86afe678fa53ad9350f7987b4263e13b810564e634d332486ac8f0b46076ab5",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "SINALPHA": {
+          "dtype": ">f4",
+          "sha256": "2bcad9d88f24f8876447e8c7a8c290a8e32142b65915f44a49987700c637abbc",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "XLAT": {
+          "dtype": ">f4",
+          "sha256": "08bde5520180aa998d9c814b00fc77fd62788668f1254a9e335b27b4a5e0e719",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "XLONG": {
+          "dtype": ">f4",
+          "sha256": "b995a10557e99d0a2022ea519c3d8cbb3e5426bfd573c5f93692da00fbfb7b39",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "projection": {
+          "DX": 3000.0,
+          "DY": 3000.0,
+          "GRID_ID": 2.0,
+          "MAP_PROJ": 1.0,
+          "MOAD_CEN_LAT": 31.10000991821289,
+          "STAND_LON": 118.5999984741211,
+          "TRUELAT1": 30.0,
+          "TRUELAT2": 60.0
+        }
+      },
+      "lineage": {
+        "SIMULATION_START_DATE": "2025-01-24_00:00:00",
+        "START_DATE": "2025-01-24_00:00:00"
+      },
+      "record_index": 0,
+      "source": {
+        "binding": "HASH_VERIFIED_IMMUTABLE_IN_MEMORY_ARRAYS",
+        "netcdf_backend": "scipy.io.netcdf_file",
+        "path": "D:\\yyh\\wind_aware_flight\\phase_g61\\temporal_boundary_execution_v1\\source\\winter_wind_d02_11UTC.nc",
+        "record_index": 0,
+        "size_bytes": 48597908,
+        "snapshot_id": "WINTER_WIND/2025-01-24_11:00:00",
+        "source_sha256": "258732b40d131f17b076c7e00edc9f7b4bb7a39eb5d1705463d0f230a3a8c71b",
+        "source_time": "2025-01-24_11:00:00",
+        "source_time_convention": "UTC"
+      },
+      "source_sha256": "258732b40d131f17b076c7e00edc9f7b4bb7a39eb5d1705463d0f230a3a8c71b"
+    },
+    {
+      "arrays": {
+        "east": {
+          "dtype": "<f8",
+          "sha256": "6ad87a3ddeb010f1c25200eefb02e0b6602d0b989182d63994cb1b44168afa59",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "height": {
+          "dtype": "<f8",
+          "sha256": "8a57e7b8a50c0157987fdef1df7f02b7348cd1108169535baf0029f6900274d3",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "mapfac": {
+          "dtype": "<f8",
+          "sha256": "f002aca51f53cf96a4387e29fa2a6161f8d0ddca131b977979f9641f19c12d34",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "north": {
+          "dtype": "<f8",
+          "sha256": "c6fb4e649dd0d315b1e1bfd65b2db94913a0b3c934d3deffbc75401ecc5954f2",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "terrain": {
+          "dtype": "<f8",
+          "sha256": "3dc1f5be277fba41f1787a2c420f7a8bd138396c6761946eabd8cb66372b93a6",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "u": {
+          "dtype": "<f8",
+          "sha256": "fa46a7221fe0359bc22d73471af7d5c9efa53b6f4a97bdbb3d48b6002ec83824",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "v": {
+          "dtype": "<f8",
+          "sha256": "943c4cd4f033ee85d2633e8cf98948a3acd4819c457a9ee9d036e3e32aa5f601",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        },
+        "w": {
+          "dtype": "<f8",
+          "sha256": "6ddc02fb5e924c270d552fce8254b5bfa2f3eef6011672e33c306cca30e90a0a",
+          "shape": [
+            47,
+            99,
+            99
+          ]
+        }
+      },
+      "arrays_file": "D:\\yyh\\wind_aware_flight\\phase_g61\\native_gradient_validation_v1\\source_v2\\runtime\\native_material\\record_0.npz",
+      "arrays_file_sha256": "3da1d50daa93ba67a282864bfddd92ed3107a5a62acc9f65c654af6353117eb9",
+      "case_id": "SPRING_NORMAL",
+      "coordinate_attributes": {
+        "DX": 3000.0,
+        "DY": 3000.0,
+        "GRID_ID": 2.0,
+        "MAP_PROJ": 1.0,
+        "MOAD_CEN_LAT": 31.10000991821289,
+        "STAND_LON": 118.5999984741211,
+        "TRUELAT1": 30.0,
+        "TRUELAT2": 60.0
+      },
+      "coordinate_values": {
+        "anchor_projected": [
+          -146998.8581210733,
+          -146998.90532932896
+        ],
+        "dx": 3000.0,
+        "dy": 3000.0,
+        "f": 1.7930256259404227,
+        "lon0": 2.069960466233664,
+        "m0": 0.9955542248317899,
+        "n": 0.715566847180628,
+        "nx": 99,
+        "ny": 99,
+        "origin_projected": [
+          -4498.823101021643,
+          -4498.665224660188
+        ],
+        "rho0": 7587376.115984766
+      },
+      "grid": {
+        "COSALPHA": {
+          "dtype": ">f4",
+          "sha256": "71917ac1afa27dcc265f148f76e4cfbf7bbe0686e2e82cc189aa5b3b94eb96a7",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "HGT": {
+          "dtype": ">f4",
+          "sha256": "176dc88a381ec93407fbcaf4b42456d59459538719e74791961bc3a4649f368a",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "MAPFAC_M": {
+          "dtype": ">f4",
+          "sha256": "b86afe678fa53ad9350f7987b4263e13b810564e634d332486ac8f0b46076ab5",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "SINALPHA": {
+          "dtype": ">f4",
+          "sha256": "2bcad9d88f24f8876447e8c7a8c290a8e32142b65915f44a49987700c637abbc",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "XLAT": {
+          "dtype": ">f4",
+          "sha256": "08bde5520180aa998d9c814b00fc77fd62788668f1254a9e335b27b4a5e0e719",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "XLONG": {
+          "dtype": ">f4",
+          "sha256": "b995a10557e99d0a2022ea519c3d8cbb3e5426bfd573c5f93692da00fbfb7b39",
+          "shape": [
+            99,
+            99
+          ]
+        },
+        "projection": {
+          "DX": 3000.0,
+          "DY": 3000.0,
+          "GRID_ID": 2.0,
+          "MAP_PROJ": 1.0,
+          "MOAD_CEN_LAT": 31.10000991821289,
+          "STAND_LON": 118.5999984741211,
+          "TRUELAT1": 30.0,
+          "TRUELAT2": 60.0
+        }
+      },
+      "lineage": {
+        "SIMULATION_START_DATE": "2025-04-04_00:00:00",
+        "START_DATE": "2025-04-04_00:00:00"
+      },
+      "record_index": 0,
+      "source": {
+        "binding": "HASH_VERIFIED_IMMUTABLE_IN_MEMORY_ARRAYS",
+        "netcdf_backend": "scipy.io.netcdf_file",
+        "path": "D:\\yyh\\wind_aware_flight\\phase_g61\\native_gradient_validation_v1\\source\\spring_normal_d02_11UTC.nc",
+        "record_index": 0,
+        "size_bytes": 48597908,
+        "snapshot_id": "SPRING_NORMAL/2025-04-04_11:00:00",
+        "source_sha256": "9866746440a7d46b9c8e272e0163893bfd9f3fae35fa0aa4631e19363cbf3e68",
+        "source_time": "2025-04-04_11:00:00",
+        "source_time_convention": "UTC"
+      },
+      "source_sha256": "9866746440a7d46b9c8e272e0163893bfd9f3fae35fa0aa4631e19363cbf3e68"
+    }
+  ],
+  "schema": "LOSSLESS_ORIGINAL_NATIVE_ARRAYS_V1",
+  "wind_value_cache": false
+}

@@ -1,0 +1,1539 @@
+{
+  "approved_native_records": {
+    "00da15f1f8e8815d8be34e09de909e4041da7f76e937677d3bde8af64ca70561:0": {
+      "case_id": "SUMMER_DISTURBED",
+      "expected_sha256": "00da15f1f8e8815d8be34e09de909e4041da7f76e937677d3bde8af64ca70561",
+      "expected_time": "2025-06-20_12:00:00",
+      "path": "D:\\yyh\\wind_aware_flight\\phase3a_implementation\\data\\summer_disturbed_d02_12UTC.nc",
+      "record_index": 0,
+      "source_run_id": "ORIGINAL_REFERENCE/SUMMER_DISTURBED/2025-06-20_00:00:00"
+    },
+    "0cc712e13d6546040cf52cdc6a88d2dc8ebfbcde49c7cec07331cd7b5e6f94c3:0": {
+      "case_id": "WINTER_WIND",
+      "expected_sha256": "0cc712e13d6546040cf52cdc6a88d2dc8ebfbcde49c7cec07331cd7b5e6f94c3",
+      "expected_time": "2025-01-24_12:00:00",
+      "path": "D:\\yyh\\wind_aware_flight\\phase3c\\data\\winter_wind_d02_12UTC.nc",
+      "record_index": 0,
+      "source_run_id": "ORIGINAL_REFERENCE/WINTER_WIND/2025-01-24_00:00:00"
+    },
+    "1106c7a88c876828cc597041540b31ca2157f788e95768e3b16c0410fd63d1ef:0": {
+      "case_id": "SPRING_NORMAL",
+      "expected_sha256": "1106c7a88c876828cc597041540b31ca2157f788e95768e3b16c0410fd63d1ef",
+      "expected_time": "2025-04-04_12:00:00",
+      "path": "D:\\yyh\\wind_aware_flight\\phase3c\\data\\spring_normal_d02_12UTC.nc",
+      "record_index": 0,
+      "source_run_id": "ORIGINAL_REFERENCE/SPRING_NORMAL/2025-04-04_00:00:00"
+    },
+    "258732b40d131f17b076c7e00edc9f7b4bb7a39eb5d1705463d0f230a3a8c71b:0": {
+      "case_id": "WINTER_WIND",
+      "expected_sha256": "258732b40d131f17b076c7e00edc9f7b4bb7a39eb5d1705463d0f230a3a8c71b",
+      "expected_time": "2025-01-24_11:00:00",
+      "path": "D:\\yyh\\wind_aware_flight\\phase_g61\\temporal_boundary_execution_v1\\source\\winter_wind_d02_11UTC.nc",
+      "record_index": 0,
+      "source_run_id": "ORIGINAL_REFERENCE/WINTER_WIND/2025-01-24_00:00:00"
+    },
+    "41069186e71eb16cbb1e42e0143774fc94981cabf5d0766a72a4f95bb367b150:0": {
+      "case_id": "AUTUMN_WIND",
+      "expected_sha256": "41069186e71eb16cbb1e42e0143774fc94981cabf5d0766a72a4f95bb367b150",
+      "expected_time": "2025-10-18_12:00:00",
+      "path": "D:\\yyh\\wind_aware_flight\\phase3a_implementation\\data\\autumn_wind_d02_12UTC.nc",
+      "record_index": 0,
+      "source_run_id": "ORIGINAL_REFERENCE/AUTUMN_WIND/2025-10-18_00:00:00"
+    },
+    "5464d142361eb63dc1fdf79e1e5c82553e7292701add839d04453601102c9890:0": {
+      "case_id": "WINTER_WIND",
+      "expected_sha256": "5464d142361eb63dc1fdf79e1e5c82553e7292701add839d04453601102c9890",
+      "expected_time": "2025-01-24_13:00:00",
+      "path": "D:\\yyh\\wind_aware_flight\\phase_g61\\dynamic_wind\\original_adjacent_sources\\WINTER\\winter_wind_d02_13UTC.nc",
+      "record_index": 0,
+      "source_run_id": "ORIGINAL_REFERENCE/WINTER_WIND/2025-01-24_00:00:00"
+    },
+    "5f61c2d84253711779c82eca806b8ede18fcbf81c6618d338c63d9082e9f9086:0": {
+      "case_id": "SUMMER_DISTURBED",
+      "expected_sha256": "5f61c2d84253711779c82eca806b8ede18fcbf81c6618d338c63d9082e9f9086",
+      "expected_time": "2025-06-20_13:00:00",
+      "path": "D:\\yyh\\wind_aware_flight\\phase_g61\\dynamic_wind\\original_adjacent_sources\\SUMMER\\summer_disturbed_d02_13UTC.nc",
+      "record_index": 0,
+      "source_run_id": "ORIGINAL_REFERENCE/SUMMER_DISTURBED/2025-06-20_00:00:00"
+    },
+    "6a9012981aa52a12a7e473311f53b7ab9e1634a855c142e36eaf2f20c5fbabb1:0": {
+      "case_id": "AUTUMN_WIND",
+      "expected_sha256": "6a9012981aa52a12a7e473311f53b7ab9e1634a855c142e36eaf2f20c5fbabb1",
+      "expected_time": "2025-10-18_13:00:00",
+      "path": "D:\\yyh\\wind_aware_flight\\phase_g61\\dynamic_wind\\original_adjacent_sources\\AUTUMN\\autumn_wind_d02_13UTC.nc",
+      "record_index": 0,
+      "source_run_id": "ORIGINAL_REFERENCE/AUTUMN_WIND/2025-10-18_00:00:00"
+    },
+    "9866746440a7d46b9c8e272e0163893bfd9f3fae35fa0aa4631e19363cbf3e68:0": {
+      "case_id": "SPRING_NORMAL",
+      "expected_sha256": "9866746440a7d46b9c8e272e0163893bfd9f3fae35fa0aa4631e19363cbf3e68",
+      "expected_time": "2025-04-04_11:00:00",
+      "path": "D:\\yyh\\wind_aware_flight\\phase_g61\\native_gradient_validation_v1\\source\\spring_normal_d02_11UTC.nc",
+      "record_index": 0,
+      "source_run_id": "ORIGINAL_REFERENCE/SPRING_NORMAL/2025-04-04_00:00:00"
+    },
+    "e473dac102572b69873129aa815516c6bd30be530dffe48d03d019a062c84d31:0": {
+      "case_id": "SPRING_NORMAL",
+      "expected_sha256": "e473dac102572b69873129aa815516c6bd30be530dffe48d03d019a062c84d31",
+      "expected_time": "2025-04-04_13:00:00",
+      "path": "D:\\yyh\\wind_aware_flight\\phase_g61\\dynamic_wind\\original_adjacent_sources\\SPRING\\spring_normal_d02_13UTC.nc",
+      "record_index": 0,
+      "source_run_id": "ORIGINAL_REFERENCE/SPRING_NORMAL/2025-04-04_00:00:00"
+    }
+  },
+  "missions": {
+    "P4J-01": {
+      "input": {
+        "cap_source": "phase_g61/remaining_validation_20261023/EXECUTION_MANIFEST.json",
+        "case": {
+          "id": "UNIFORM_P4J-01",
+          "initial_physical_cap_s": 39.34857128407634,
+          "initial_reserve_fraction": 0.9,
+          "provider": {
+            "epoch_utc": "2025-01-24T12:00:00+00:00",
+            "height_datum": "WRF_MODEL_MSL_GEOPOTENTIAL",
+            "id": "WINTER",
+            "interpolation": "ORIGINAL_NATIVE_SPATIAL_THEN_UTC_LINEAR",
+            "kind": "WRF_TIME_LINEAR_SNAPSHOTS",
+            "max_gap_s": 3600.0,
+            "original_snapshot_not_replaced": true,
+            "records": [
+              {
+                "case_id": "WINTER_WIND",
+                "expected_sha256": "0cc712e13d6546040cf52cdc6a88d2dc8ebfbcde49c7cec07331cd7b5e6f94c3",
+                "expected_time": "2025-01-24_12:00:00",
+                "path": "D:\\yyh\\wind_aware_flight\\phase3c\\data\\winter_wind_d02_12UTC.nc",
+                "record_index": 0,
+                "source_run_id": "ORIGINAL_REFERENCE/WINTER_WIND/2025-01-24_00:00:00"
+              },
+              {
+                "case_id": "WINTER_WIND",
+                "expected_sha256": "5464d142361eb63dc1fdf79e1e5c82553e7292701add839d04453601102c9890",
+                "expected_time": "2025-01-24_13:00:00",
+                "path": "D:\\yyh\\wind_aware_flight\\phase_g61\\dynamic_wind\\original_adjacent_sources\\WINTER\\winter_wind_d02_13UTC.nc",
+                "record_index": 0,
+                "source_run_id": "ORIGINAL_REFERENCE/WINTER_WIND/2025-01-24_00:00:00"
+              }
+            ],
+            "roi": {
+              "xmax": 53234.41031182284,
+              "xmin": 52234.41031182284,
+              "ymax": -70315.06797540895,
+              "ymin": -71315.06797540895
+            },
+            "source_run_id": "WINTER_WIND",
+            "source_time_convention": "UTC",
+            "time_extrapolation_allowed": false,
+            "vector_basis": "ORIGINAL_NATIVE_PROJECT_FRAME"
+          },
+          "radius_m": 2.0,
+          "rectangles": [],
+          "route": {
+            "control_interpolation": "ZOH",
+            "controls": [],
+            "durations": [],
+            "frame_id": "WRF_LCC_LOCAL_METRIC_PLANE_V1",
+            "height_datum": "WRF_MODEL_MSL_GEOPOTENTIAL",
+            "parameters": {
+              "R0": 8.513422179807296,
+              "Va": 10.0
+            },
+            "state_goal": [
+              52663.80723934382,
+              -70759.25394351264,
+              2.8726512225731256
+            ],
+            "state_start": [
+              52805.013384301856,
+              -70870.88200730526,
+              2.4726512225731256
+            ],
+            "states": [
+              [
+                52805.013384301856,
+                -70870.88200730526,
+                2.4726512225731256
+              ]
+            ],
+            "type": "piecewise_constant",
+            "z_layer_msl_m": 240.0
+          },
+          "z_layer_msl_m": 240.0
+        },
+        "category": "WEAK",
+        "legacy_physical_cap_s": 39.34857128407634,
+        "original_J_seed": 4101,
+        "original_J_task_sha256": "a611105aef7118773f1a5133ce4751d7aef40f784157844d004ba5c8e388bac2",
+        "original_manifest_sha256": "d474e738045d7122d185c3b6605068d67e87a1a7f5be104bbfa801c511920730",
+        "route_controls_or_qualified_spatial_route_not_supplied_to_initial_planner": true,
+        "season": "WINTER",
+        "source_case_id": "P4J-01"
+      },
+      "input_file_sha256": "c41349da5267e8855819bdc23a0c035f882a8d036734affc31ee71b1e63bd239"
+    },
+    "P4J-02": {
+      "input": {
+        "cap_source": "phase_g61/remaining_validation_20261023/EXECUTION_MANIFEST.json",
+        "case": {
+          "id": "UNIFORM_P4J-02",
+          "initial_physical_cap_s": 111.15593714089991,
+          "initial_reserve_fraction": 0.9,
+          "provider": {
+            "epoch_utc": "2025-01-24T12:00:00+00:00",
+            "height_datum": "WRF_MODEL_MSL_GEOPOTENTIAL",
+            "id": "WINTER",
+            "interpolation": "ORIGINAL_NATIVE_SPATIAL_THEN_UTC_LINEAR",
+            "kind": "WRF_TIME_LINEAR_SNAPSHOTS",
+            "max_gap_s": 3600.0,
+            "original_snapshot_not_replaced": true,
+            "records": [
+              {
+                "case_id": "WINTER_WIND",
+                "expected_sha256": "0cc712e13d6546040cf52cdc6a88d2dc8ebfbcde49c7cec07331cd7b5e6f94c3",
+                "expected_time": "2025-01-24_12:00:00",
+                "path": "D:\\yyh\\wind_aware_flight\\phase3c\\data\\winter_wind_d02_12UTC.nc",
+                "record_index": 0,
+                "source_run_id": "ORIGINAL_REFERENCE/WINTER_WIND/2025-01-24_00:00:00"
+              },
+              {
+                "case_id": "WINTER_WIND",
+                "expected_sha256": "5464d142361eb63dc1fdf79e1e5c82553e7292701add839d04453601102c9890",
+                "expected_time": "2025-01-24_13:00:00",
+                "path": "D:\\yyh\\wind_aware_flight\\phase_g61\\dynamic_wind\\original_adjacent_sources\\WINTER\\winter_wind_d02_13UTC.nc",
+                "record_index": 0,
+                "source_run_id": "ORIGINAL_REFERENCE/WINTER_WIND/2025-01-24_00:00:00"
+              }
+            ],
+            "roi": {
+              "xmax": 17073.647691300983,
+              "xmin": 16073.647691300983,
+              "ymax": -37167.702239930586,
+              "ymin": -38167.702239930586
+            },
+            "source_run_id": "WINTER_WIND",
+            "source_time_convention": "UTC",
+            "time_extrapolation_allowed": false,
+            "vector_basis": "ORIGINAL_NATIVE_PROJECT_FRAME"
+          },
+          "radius_m": 2.0,
+          "rectangles": [],
+          "route": {
+            "control_interpolation": "ZOH",
+            "controls": [],
+            "durations": [],
+            "frame_id": "WRF_LCC_LOCAL_METRIC_PLANE_V1",
+            "height_datum": "WRF_MODEL_MSL_GEOPOTENTIAL",
+            "parameters": {
+              "R0": 8.513422179807296,
+              "Va": 10.0
+            },
+            "state_goal": [
+              16586.336668661148,
+              -37756.803249204066,
+              -1.0293363706579157
+            ],
+            "state_start": [
+              16560.958713940818,
+              -37578.60123065711,
+              -1.4293363706579156
+            ],
+            "states": [
+              [
+                16560.958713940818,
+                -37578.60123065711,
+                -1.4293363706579156
+              ]
+            ],
+            "type": "piecewise_constant",
+            "z_layer_msl_m": 240.0
+          },
+          "z_layer_msl_m": 240.0
+        },
+        "category": "STRONG",
+        "legacy_physical_cap_s": 111.15593714089991,
+        "original_J_seed": 4102,
+        "original_J_task_sha256": "ec18e60180541a0aa182b4e7a954acc032c8d7a857a761b60601500dc1be6db3",
+        "original_manifest_sha256": "d474e738045d7122d185c3b6605068d67e87a1a7f5be104bbfa801c511920730",
+        "route_controls_or_qualified_spatial_route_not_supplied_to_initial_planner": true,
+        "season": "WINTER",
+        "source_case_id": "P4J-02"
+      },
+      "input_file_sha256": "4f452328450fb0a6a5bf06f93484133045faaa221da28fd40a87bb372ce9ed4d"
+    },
+    "P4J-03": {
+      "input": {
+        "cap_source": "phase_g61/uncovered_environments_v1/EXECUTION_MANIFEST.json",
+        "case": {
+          "id": "UNIFORM_P4J-03",
+          "initial_physical_cap_s": 383.24320377055426,
+          "initial_reserve_fraction": 0.9,
+          "provider": {
+            "epoch_utc": "2025-01-24T12:00:00+00:00",
+            "height_datum": "WRF_MODEL_MSL_GEOPOTENTIAL",
+            "id": "WINTER",
+            "interpolation": "ORIGINAL_NATIVE_SPATIAL_THEN_UTC_LINEAR",
+            "kind": "WRF_TIME_LINEAR_SNAPSHOTS",
+            "max_gap_s": 3600.0,
+            "original_snapshot_not_replaced": true,
+            "records": [
+              {
+                "case_id": "WINTER_WIND",
+                "expected_sha256": "0cc712e13d6546040cf52cdc6a88d2dc8ebfbcde49c7cec07331cd7b5e6f94c3",
+                "expected_time": "2025-01-24_12:00:00",
+                "path": "D:\\yyh\\wind_aware_flight\\phase3c\\data\\winter_wind_d02_12UTC.nc",
+                "record_index": 0,
+                "source_run_id": "ORIGINAL_REFERENCE/WINTER_WIND/2025-01-24_00:00:00"
+              },
+              {
+                "case_id": "WINTER_WIND",
+                "expected_sha256": "5464d142361eb63dc1fdf79e1e5c82553e7292701add839d04453601102c9890",
+                "expected_time": "2025-01-24_13:00:00",
+                "path": "D:\\yyh\\wind_aware_flight\\phase_g61\\dynamic_wind\\original_adjacent_sources\\WINTER\\winter_wind_d02_13UTC.nc",
+                "record_index": 0,
+                "source_run_id": "ORIGINAL_REFERENCE/WINTER_WIND/2025-01-24_00:00:00"
+              }
+            ],
+            "roi": {
+              "xmax": -79355.05263009063,
+              "xmin": -80355.05263009063,
+              "ymax": -61274.877320278494,
+              "ymin": -62274.877320278494
+            },
+            "source_run_id": "WINTER_WIND",
+            "source_time_convention": "UTC",
+            "time_extrapolation_allowed": false,
+            "vector_basis": "ORIGINAL_NATIVE_PROJECT_FRAME"
+          },
+          "radius_m": 2.0,
+          "rectangles": [],
+          "route": {
+            "control_interpolation": "ZOH",
+            "controls": [],
+            "durations": [],
+            "frame_id": "WRF_LCC_LOCAL_METRIC_PLANE_V1",
+            "height_datum": "WRF_MODEL_MSL_GEOPOTENTIAL",
+            "parameters": {
+              "R0": 8.513422179807296,
+              "Va": 10.0
+            },
+            "state_goal": [
+              -79762.288060343,
+              -61683.801886710855,
+              1.176210344537421
+            ],
+            "state_start": [
+              -79947.81719983827,
+              -61865.95275384613,
+              0.7762103445374211
+            ],
+            "states": [
+              [
+                -79947.81719983827,
+                -61865.95275384613,
+                0.7762103445374211
+              ]
+            ],
+            "type": "piecewise_constant",
+            "z_layer_msl_m": 240.0
+          },
+          "z_layer_msl_m": 240.0
+        },
+        "category": "GRADIENT",
+        "legacy_physical_cap_s": 383.24320377055426,
+        "original_J_seed": 4103,
+        "original_J_task_sha256": "15157dd7381396eecda85ad284161edfdc9279da126a527db5af704b7f92afce",
+        "original_manifest_sha256": "d474e738045d7122d185c3b6605068d67e87a1a7f5be104bbfa801c511920730",
+        "route_controls_or_qualified_spatial_route_not_supplied_to_initial_planner": true,
+        "season": "WINTER",
+        "source_case_id": "P4J-03"
+      },
+      "input_file_sha256": "312dbaf26e237822666250ecb6a6cd15472c2ad72744abf4520db74d63415c05"
+    },
+    "P4J-04": {
+      "input": {
+        "cap_source": "phase_g61/uncovered_environments_v1/EXECUTION_MANIFEST.json",
+        "case": {
+          "id": "UNIFORM_P4J-04",
+          "initial_physical_cap_s": 127.40561662745337,
+          "initial_reserve_fraction": 0.9,
+          "provider": {
+            "epoch_utc": "2025-01-24T12:00:00+00:00",
+            "height_datum": "WRF_MODEL_MSL_GEOPOTENTIAL",
+            "id": "WINTER",
+            "interpolation": "ORIGINAL_NATIVE_SPATIAL_THEN_UTC_LINEAR",
+            "kind": "WRF_TIME_LINEAR_SNAPSHOTS",
+            "max_gap_s": 3600.0,
+            "original_snapshot_not_replaced": true,
+            "records": [
+              {
+                "case_id": "WINTER_WIND",
+                "expected_sha256": "0cc712e13d6546040cf52cdc6a88d2dc8ebfbcde49c7cec07331cd7b5e6f94c3",
+                "expected_time": "2025-01-24_12:00:00",
+                "path": "D:\\yyh\\wind_aware_flight\\phase3c\\data\\winter_wind_d02_12UTC.nc",
+                "record_index": 0,
+                "source_run_id": "ORIGINAL_REFERENCE/WINTER_WIND/2025-01-24_00:00:00"
+              },
+              {
+                "case_id": "WINTER_WIND",
+                "expected_sha256": "5464d142361eb63dc1fdf79e1e5c82553e7292701add839d04453601102c9890",
+                "expected_time": "2025-01-24_13:00:00",
+                "path": "D:\\yyh\\wind_aware_flight\\phase_g61\\dynamic_wind\\original_adjacent_sources\\WINTER\\winter_wind_d02_13UTC.nc",
+                "record_index": 0,
+                "source_run_id": "ORIGINAL_REFERENCE/WINTER_WIND/2025-01-24_00:00:00"
+              }
+            ],
+            "roi": {
+              "xmax": 53234.41031182284,
+              "xmin": 52234.41031182284,
+              "ymax": -70315.06797540895,
+              "ymin": -71315.06797540895
+            },
+            "source_run_id": "WINTER_WIND",
+            "source_time_convention": "UTC",
+            "time_extrapolation_allowed": false,
+            "vector_basis": "ORIGINAL_NATIVE_PROJECT_FRAME"
+          },
+          "radius_m": 2.0,
+          "rectangles": [
+            [
+              52709.41031182284,
+              52759.41031182284,
+              -70875.06797540895,
+              -70755.06797540895
+            ]
+          ],
+          "route": {
+            "control_interpolation": "ZOH",
+            "controls": [],
+            "durations": [],
+            "frame_id": "WRF_LCC_LOCAL_METRIC_PLANE_V1",
+            "height_datum": "WRF_MODEL_MSL_GEOPOTENTIAL",
+            "parameters": {
+              "R0": 8.513422179807296,
+              "Va": 10.0
+            },
+            "state_goal": [
+              52874.41031182284,
+              -70815.06797540895,
+              0.0
+            ],
+            "state_start": [
+              52594.41031182284,
+              -70815.06797540895,
+              0.0
+            ],
+            "states": [
+              [
+                52594.41031182284,
+                -70815.06797540895,
+                0.0
+              ]
+            ],
+            "type": "piecewise_constant",
+            "z_layer_msl_m": 240.0
+          },
+          "z_layer_msl_m": 240.0
+        },
+        "category": "OBSTACLE",
+        "legacy_physical_cap_s": 127.40561662745337,
+        "original_J_seed": 4104,
+        "original_J_task_sha256": "cf8190a36f2811537584e29b8f66a31d18734f8d6db7cb6477e69e231ee004a5",
+        "original_manifest_sha256": "d474e738045d7122d185c3b6605068d67e87a1a7f5be104bbfa801c511920730",
+        "route_controls_or_qualified_spatial_route_not_supplied_to_initial_planner": true,
+        "season": "WINTER",
+        "source_case_id": "P4J-04"
+      },
+      "input_file_sha256": "09eb37a54aaaf535f74fc237425511dcc7455cf926d3eb245862c00dca533ff0"
+    },
+    "P4J-05": {
+      "input": {
+        "cap_source": "phase_g61/remaining_validation_20261023/EXECUTION_MANIFEST.json",
+        "case": {
+          "id": "UNIFORM_P4J-05",
+          "initial_physical_cap_s": 38.144192433129476,
+          "initial_reserve_fraction": 0.9,
+          "provider": {
+            "epoch_utc": "2025-04-04T12:00:00+00:00",
+            "height_datum": "WRF_MODEL_MSL_GEOPOTENTIAL",
+            "id": "SPRING",
+            "interpolation": "ORIGINAL_NATIVE_SPATIAL_THEN_UTC_LINEAR",
+            "kind": "WRF_TIME_LINEAR_SNAPSHOTS",
+            "max_gap_s": 3600.0,
+            "original_snapshot_not_replaced": true,
+            "records": [
+              {
+                "case_id": "SPRING_NORMAL",
+                "expected_sha256": "1106c7a88c876828cc597041540b31ca2157f788e95768e3b16c0410fd63d1ef",
+                "expected_time": "2025-04-04_12:00:00",
+                "path": "D:\\yyh\\wind_aware_flight\\phase3c\\data\\spring_normal_d02_12UTC.nc",
+                "record_index": 0,
+                "source_run_id": "ORIGINAL_REFERENCE/SPRING_NORMAL/2025-04-04_00:00:00"
+              },
+              {
+                "case_id": "SPRING_NORMAL",
+                "expected_sha256": "e473dac102572b69873129aa815516c6bd30be530dffe48d03d019a062c84d31",
+                "expected_time": "2025-04-04_13:00:00",
+                "path": "D:\\yyh\\wind_aware_flight\\phase_g61\\dynamic_wind\\original_adjacent_sources\\SPRING\\spring_normal_d02_13UTC.nc",
+                "record_index": 0,
+                "source_run_id": "ORIGINAL_REFERENCE/SPRING_NORMAL/2025-04-04_00:00:00"
+              }
+            ],
+            "roi": {
+              "xmax": -7033.5273890469225,
+              "xmin": -8033.5273890469225,
+              "ymax": -1006.939619408733,
+              "ymin": -2006.939619408733
+            },
+            "source_run_id": "SPRING_NORMAL",
+            "source_time_convention": "UTC",
+            "time_extrapolation_allowed": false,
+            "vector_basis": "ORIGINAL_NATIVE_PROJECT_FRAME"
+          },
+          "radius_m": 2.0,
+          "rectangles": [],
+          "route": {
+            "control_interpolation": "ZOH",
+            "controls": [],
+            "durations": [],
+            "frame_id": "WRF_LCC_LOCAL_METRIC_PLANE_V1",
+            "height_datum": "WRF_MODEL_MSL_GEOPOTENTIAL",
+            "parameters": {
+              "R0": 8.513422179807296,
+              "Va": 10.0
+            },
+            "state_goal": [
+              -7517.807034366726,
+              -1418.323196276625,
+              1.7952251038432734
+            ],
+            "state_start": [
+              -7549.247743727119,
+              -1595.5560425408412,
+              1.3952251038432733
+            ],
+            "states": [
+              [
+                -7549.247743727119,
+                -1595.5560425408412,
+                1.3952251038432733
+              ]
+            ],
+            "type": "piecewise_constant",
+            "z_layer_msl_m": 240.0
+          },
+          "z_layer_msl_m": 240.0
+        },
+        "category": "WEAK",
+        "legacy_physical_cap_s": 38.144192433129476,
+        "original_J_seed": 4105,
+        "original_J_task_sha256": "93d1f04646e8b3d70eddd2c5ae854153c5c7378ef8e406fc05b9bf3d4c458338",
+        "original_manifest_sha256": "d474e738045d7122d185c3b6605068d67e87a1a7f5be104bbfa801c511920730",
+        "route_controls_or_qualified_spatial_route_not_supplied_to_initial_planner": true,
+        "season": "SPRING",
+        "source_case_id": "P4J-05"
+      },
+      "input_file_sha256": "e26f1b6bb1ada605e0048f945b2ec6ee8bbda3b5d56571c4d73deb5306cecf3d"
+    },
+    "P4J-06": {
+      "input": {
+        "cap_source": "phase_g61/midflight_environment_coverage_v1/ROOT_INPUT_MANIFEST_V2.json:physical_deadline_s",
+        "case": {
+          "id": "UNIFORM_P4J-06",
+          "initial_physical_cap_s": 100.44011125949447,
+          "initial_reserve_fraction": 0.9,
+          "provider": {
+            "epoch_utc": "2025-04-04T12:00:00+00:00",
+            "height_datum": "WRF_MODEL_MSL_GEOPOTENTIAL",
+            "id": "SPRING",
+            "interpolation": "ORIGINAL_NATIVE_SPATIAL_THEN_UTC_LINEAR",
+            "kind": "WRF_TIME_LINEAR_SNAPSHOTS",
+            "max_gap_s": 3600.0,
+            "original_snapshot_not_replaced": true,
+            "records": [
+              {
+                "case_id": "SPRING_NORMAL",
+                "expected_sha256": "1106c7a88c876828cc597041540b31ca2157f788e95768e3b16c0410fd63d1ef",
+                "expected_time": "2025-04-04_12:00:00",
+                "path": "D:\\yyh\\wind_aware_flight\\phase3c\\data\\spring_normal_d02_12UTC.nc",
+                "record_index": 0,
+                "source_run_id": "ORIGINAL_REFERENCE/SPRING_NORMAL/2025-04-04_00:00:00"
+              },
+              {
+                "case_id": "SPRING_NORMAL",
+                "expected_sha256": "e473dac102572b69873129aa815516c6bd30be530dffe48d03d019a062c84d31",
+                "expected_time": "2025-04-04_13:00:00",
+                "path": "D:\\yyh\\wind_aware_flight\\phase_g61\\dynamic_wind\\original_adjacent_sources\\SPRING\\spring_normal_d02_13UTC.nc",
+                "record_index": 0,
+                "source_run_id": "ORIGINAL_REFERENCE/SPRING_NORMAL/2025-04-04_00:00:00"
+              }
+            ],
+            "roi": {
+              "xmax": 2006.6632660835417,
+              "xmin": 1006.6632660835417,
+              "ymax": 2006.457265634755,
+              "ymin": 1006.457265634755
+            },
+            "source_run_id": "SPRING_NORMAL",
+            "source_time_convention": "UTC",
+            "time_extrapolation_allowed": false,
+            "vector_basis": "ORIGINAL_NATIVE_PROJECT_FRAME"
+          },
+          "radius_m": 2.0,
+          "rectangles": [],
+          "route": {
+            "control_interpolation": "ZOH",
+            "controls": [],
+            "durations": [],
+            "frame_id": "WRF_LCC_LOCAL_METRIC_PLANE_V1",
+            "height_datum": "WRF_MODEL_MSL_GEOPOTENTIAL",
+            "parameters": {
+              "R0": 8.513422179807296,
+              "Va": 10.0
+            },
+            "state_goal": [
+              1442.915161895118,
+              1569.9881967815743,
+              2.7579007635803814
+            ],
+            "state_start": [
+              1570.4113702719653,
+              1442.9263344879357,
+              2.3579007635803815
+            ],
+            "states": [
+              [
+                1570.4113702719653,
+                1442.9263344879357,
+                2.3579007635803815
+              ]
+            ],
+            "type": "piecewise_constant",
+            "z_layer_msl_m": 240.0
+          },
+          "z_layer_msl_m": 240.0
+        },
+        "category": "STRONG",
+        "legacy_physical_cap_s": 100.44011125949447,
+        "original_J_seed": 4106,
+        "original_J_task_sha256": "e3262efc94988b9b414c83b3c3937d4842e4a5adb1e85d84d61fc313b95048e9",
+        "original_manifest_sha256": "d474e738045d7122d185c3b6605068d67e87a1a7f5be104bbfa801c511920730",
+        "route_controls_or_qualified_spatial_route_not_supplied_to_initial_planner": true,
+        "season": "SPRING",
+        "source_case_id": "P4J-06"
+      },
+      "input_file_sha256": "b5fcb8d8bdbeb7711d658c7442d96c7d37447733e3c86dca6bac543445b1adec"
+    },
+    "P4J-07": {
+      "input": {
+        "cap_source": "phase_g61/uncovered_environments_v1/EXECUTION_MANIFEST.json",
+        "case": {
+          "id": "UNIFORM_P4J-07",
+          "initial_physical_cap_s": 201.26604195532468,
+          "initial_reserve_fraction": 0.9,
+          "provider": {
+            "epoch_utc": "2025-04-04T12:00:00+00:00",
+            "height_datum": "WRF_MODEL_MSL_GEOPOTENTIAL",
+            "id": "SPRING",
+            "interpolation": "ORIGINAL_NATIVE_SPATIAL_THEN_UTC_LINEAR",
+            "kind": "WRF_TIME_LINEAR_SNAPSHOTS",
+            "max_gap_s": 3600.0,
+            "original_snapshot_not_replaced": true,
+            "records": [
+              {
+                "case_id": "SPRING_NORMAL",
+                "expected_sha256": "1106c7a88c876828cc597041540b31ca2157f788e95768e3b16c0410fd63d1ef",
+                "expected_time": "2025-04-04_12:00:00",
+                "path": "D:\\yyh\\wind_aware_flight\\phase3c\\data\\spring_normal_d02_12UTC.nc",
+                "record_index": 0,
+                "source_run_id": "ORIGINAL_REFERENCE/SPRING_NORMAL/2025-04-04_00:00:00"
+              },
+              {
+                "case_id": "SPRING_NORMAL",
+                "expected_sha256": "e473dac102572b69873129aa815516c6bd30be530dffe48d03d019a062c84d31",
+                "expected_time": "2025-04-04_13:00:00",
+                "path": "D:\\yyh\\wind_aware_flight\\phase_g61\\dynamic_wind\\original_adjacent_sources\\SPRING\\spring_normal_d02_13UTC.nc",
+                "record_index": 0,
+                "source_run_id": "ORIGINAL_REFERENCE/SPRING_NORMAL/2025-04-04_00:00:00"
+              }
+            ],
+            "roi": {
+              "xmax": -25113.90869930785,
+              "xmin": -26113.90869930785,
+              "ymax": 8033.251035721731,
+              "ymin": 7033.251035721731
+            },
+            "source_run_id": "SPRING_NORMAL",
+            "source_time_convention": "UTC",
+            "time_extrapolation_allowed": false,
+            "vector_basis": "ORIGINAL_NATIVE_PROJECT_FRAME"
+          },
+          "radius_m": 2.0,
+          "rectangles": [],
+          "route": {
+            "control_interpolation": "ZOH",
+            "controls": [],
+            "durations": [],
+            "frame_id": "WRF_LCC_LOCAL_METRIC_PLANE_V1",
+            "height_datum": "WRF_MODEL_MSL_GEOPOTENTIAL",
+            "parameters": {
+              "R0": 8.513422179807296,
+              "Va": 10.0
+            },
+            "state_goal": [
+              -25574.080768437027,
+              7409.502355233618,
+              5.423764918172626
+            ],
+            "state_start": [
+              -25653.73663017867,
+              7656.999716209843,
+              5.023764918172626
+            ],
+            "states": [
+              [
+                -25653.73663017867,
+                7656.999716209843,
+                5.023764918172626
+              ]
+            ],
+            "type": "piecewise_constant",
+            "z_layer_msl_m": 240.0
+          },
+          "z_layer_msl_m": 240.0
+        },
+        "category": "GRADIENT",
+        "legacy_physical_cap_s": 201.26604195532468,
+        "original_J_seed": 4107,
+        "original_J_task_sha256": "05ce677c71d1b0c2a5c4e95f3e57a9197c3f2cf72deba28f217f258158332e16",
+        "original_manifest_sha256": "d474e738045d7122d185c3b6605068d67e87a1a7f5be104bbfa801c511920730",
+        "route_controls_or_qualified_spatial_route_not_supplied_to_initial_planner": true,
+        "season": "SPRING",
+        "source_case_id": "P4J-07"
+      },
+      "input_file_sha256": "c0a444e2303eda5ee1484ed27fe03f8c94c1697bf3ac4a74995cd06d990c25d9"
+    },
+    "P4J-08": {
+      "input": {
+        "cap_source": "phase_g61/uncovered_environments_v1/initial_execution/EXECUTION_MANIFEST.json",
+        "case": {
+          "id": "UNIFORM_P4J-08",
+          "initial_physical_cap_s": 75.26719038825064,
+          "initial_reserve_fraction": 0.9,
+          "provider": {
+            "epoch_utc": "2025-04-04T12:00:00+00:00",
+            "height_datum": "WRF_MODEL_MSL_GEOPOTENTIAL",
+            "id": "SPRING",
+            "interpolation": "ORIGINAL_NATIVE_SPATIAL_THEN_UTC_LINEAR",
+            "kind": "WRF_TIME_LINEAR_SNAPSHOTS",
+            "max_gap_s": 3600.0,
+            "original_snapshot_not_replaced": true,
+            "records": [
+              {
+                "case_id": "SPRING_NORMAL",
+                "expected_sha256": "1106c7a88c876828cc597041540b31ca2157f788e95768e3b16c0410fd63d1ef",
+                "expected_time": "2025-04-04_12:00:00",
+                "path": "D:\\yyh\\wind_aware_flight\\phase3c\\data\\spring_normal_d02_12UTC.nc",
+                "record_index": 0,
+                "source_run_id": "ORIGINAL_REFERENCE/SPRING_NORMAL/2025-04-04_00:00:00"
+              },
+              {
+                "case_id": "SPRING_NORMAL",
+                "expected_sha256": "e473dac102572b69873129aa815516c6bd30be530dffe48d03d019a062c84d31",
+                "expected_time": "2025-04-04_13:00:00",
+                "path": "D:\\yyh\\wind_aware_flight\\phase_g61\\dynamic_wind\\original_adjacent_sources\\SPRING\\spring_normal_d02_13UTC.nc",
+                "record_index": 0,
+                "source_run_id": "ORIGINAL_REFERENCE/SPRING_NORMAL/2025-04-04_00:00:00"
+              }
+            ],
+            "roi": {
+              "xmax": -7033.5273890469225,
+              "xmin": -8033.5273890469225,
+              "ymax": -1006.939619408733,
+              "ymin": -2006.939619408733
+            },
+            "source_run_id": "SPRING_NORMAL",
+            "source_time_convention": "UTC",
+            "time_extrapolation_allowed": false,
+            "vector_basis": "ORIGINAL_NATIVE_PROJECT_FRAME"
+          },
+          "radius_m": 2.0,
+          "rectangles": [
+            [
+              -7558.5273890469225,
+              -7508.5273890469225,
+              -1566.939619408733,
+              -1446.939619408733
+            ]
+          ],
+          "route": {
+            "control_interpolation": "ZOH",
+            "controls": [],
+            "durations": [],
+            "frame_id": "WRF_LCC_LOCAL_METRIC_PLANE_V1",
+            "height_datum": "WRF_MODEL_MSL_GEOPOTENTIAL",
+            "parameters": {
+              "R0": 8.513422179807296,
+              "Va": 10.0
+            },
+            "state_goal": [
+              -7393.5273890469225,
+              -1506.939619408733,
+              0.0
+            ],
+            "state_start": [
+              -7673.5273890469225,
+              -1506.939619408733,
+              0.0
+            ],
+            "states": [
+              [
+                -7673.5273890469225,
+                -1506.939619408733,
+                0.0
+              ]
+            ],
+            "type": "piecewise_constant",
+            "z_layer_msl_m": 240.0
+          },
+          "z_layer_msl_m": 240.0
+        },
+        "category": "OBSTACLE",
+        "legacy_physical_cap_s": 75.26719038825064,
+        "original_J_seed": 4108,
+        "original_J_task_sha256": "e3b31dfab3605b5468ce115625bd66fd822a0df15af35171a21e9a96f50772fd",
+        "original_manifest_sha256": "d474e738045d7122d185c3b6605068d67e87a1a7f5be104bbfa801c511920730",
+        "route_controls_or_qualified_spatial_route_not_supplied_to_initial_planner": true,
+        "season": "SPRING",
+        "source_case_id": "P4J-08"
+      },
+      "input_file_sha256": "1d59d5a1097c50818fd1d092279aead0f57d58c4e5640670e177e81ad123e8a9"
+    },
+    "P4J-09": {
+      "input": {
+        "cap_source": "phase_g61/remaining_validation_20261023/EXECUTION_MANIFEST.json",
+        "case": {
+          "id": "UNIFORM_P4J-09",
+          "initial_physical_cap_s": 38.252018394921265,
+          "initial_reserve_fraction": 0.9,
+          "provider": {
+            "epoch_utc": "2025-06-20T12:00:00+00:00",
+            "height_datum": "WRF_MODEL_MSL_GEOPOTENTIAL",
+            "id": "SUMMER",
+            "interpolation": "ORIGINAL_NATIVE_SPATIAL_THEN_UTC_LINEAR",
+            "kind": "WRF_TIME_LINEAR_SNAPSHOTS",
+            "max_gap_s": 3600.0,
+            "original_snapshot_not_replaced": true,
+            "records": [
+              {
+                "case_id": "SUMMER_DISTURBED",
+                "expected_sha256": "00da15f1f8e8815d8be34e09de909e4041da7f76e937677d3bde8af64ca70561",
+                "expected_time": "2025-06-20_12:00:00",
+                "path": "D:\\yyh\\wind_aware_flight\\phase3a_implementation\\data\\summer_disturbed_d02_12UTC.nc",
+                "record_index": 0,
+                "source_run_id": "ORIGINAL_REFERENCE/SUMMER_DISTURBED/2025-06-20_00:00:00"
+              },
+              {
+                "case_id": "SUMMER_DISTURBED",
+                "expected_sha256": "5f61c2d84253711779c82eca806b8ede18fcbf81c6618d338c63d9082e9f9086",
+                "expected_time": "2025-06-20_13:00:00",
+                "path": "D:\\yyh\\wind_aware_flight\\phase_g61\\dynamic_wind\\original_adjacent_sources\\SUMMER\\summer_disturbed_d02_13UTC.nc",
+                "record_index": 0,
+                "source_run_id": "ORIGINAL_REFERENCE/SUMMER_DISTURBED/2025-06-20_00:00:00"
+              }
+            ],
+            "roi": {
+              "xmax": 11046.853921214006,
+              "xmin": 10046.853921214006,
+              "ymax": -1006.939619408733,
+              "ymin": -2006.939619408733
+            },
+            "source_run_id": "SUMMER_DISTURBED",
+            "source_time_convention": "UTC",
+            "time_extrapolation_allowed": false,
+            "vector_basis": "ORIGINAL_NATIVE_PROJECT_FRAME"
+          },
+          "radius_m": 2.0,
+          "rectangles": [],
+          "route": {
+            "control_interpolation": "ZOH",
+            "controls": [],
+            "durations": [],
+            "frame_id": "WRF_LCC_LOCAL_METRIC_PLANE_V1",
+            "height_datum": "WRF_MODEL_MSL_GEOPOTENTIAL",
+            "parameters": {
+              "R0": 8.513422179807296,
+              "Va": 10.0
+            },
+            "state_goal": [
+              10615.592524814652,
+              -1448.8448315613432,
+              1.1016746715768782
+            ],
+            "state_start": [
+              10478.11531761336,
+              -1565.034407256123,
+              0.701674671576878
+            ],
+            "states": [
+              [
+                10478.11531761336,
+                -1565.034407256123,
+                0.701674671576878
+              ]
+            ],
+            "type": "piecewise_constant",
+            "z_layer_msl_m": 240.0
+          },
+          "z_layer_msl_m": 240.0
+        },
+        "category": "WEAK",
+        "legacy_physical_cap_s": 38.252018394921265,
+        "original_J_seed": 4109,
+        "original_J_task_sha256": "d483b197dcd0a829b73f47146a125b7a5222e91e2ce3ea114e4f6171f7b9e0d6",
+        "original_manifest_sha256": "d474e738045d7122d185c3b6605068d67e87a1a7f5be104bbfa801c511920730",
+        "route_controls_or_qualified_spatial_route_not_supplied_to_initial_planner": true,
+        "season": "SUMMER",
+        "source_case_id": "P4J-09"
+      },
+      "input_file_sha256": "c02e27e5f299eec9e7a26c3d5db1650fbf905106160e720215565aa288a7cdac"
+    },
+    "P4J-10": {
+      "input": {
+        "cap_source": "phase_g61/midflight_environment_coverage_v1/ROOT_INPUT_MANIFEST_V2.json:physical_deadline_s",
+        "case": {
+          "id": "UNIFORM_P4J-10",
+          "initial_physical_cap_s": 72.79168884553307,
+          "initial_reserve_fraction": 0.9,
+          "provider": {
+            "epoch_utc": "2025-06-20T12:00:00+00:00",
+            "height_datum": "WRF_MODEL_MSL_GEOPOTENTIAL",
+            "id": "SUMMER",
+            "interpolation": "ORIGINAL_NATIVE_SPATIAL_THEN_UTC_LINEAR",
+            "kind": "WRF_TIME_LINEAR_SNAPSHOTS",
+            "max_gap_s": 3600.0,
+            "original_snapshot_not_replaced": true,
+            "records": [
+              {
+                "case_id": "SUMMER_DISTURBED",
+                "expected_sha256": "00da15f1f8e8815d8be34e09de909e4041da7f76e937677d3bde8af64ca70561",
+                "expected_time": "2025-06-20_12:00:00",
+                "path": "D:\\yyh\\wind_aware_flight\\phase3a_implementation\\data\\summer_disturbed_d02_12UTC.nc",
+                "record_index": 0,
+                "source_run_id": "ORIGINAL_REFERENCE/SUMMER_DISTURBED/2025-06-20_00:00:00"
+              },
+              {
+                "case_id": "SUMMER_DISTURBED",
+                "expected_sha256": "5f61c2d84253711779c82eca806b8ede18fcbf81c6618d338c63d9082e9f9086",
+                "expected_time": "2025-06-20_13:00:00",
+                "path": "D:\\yyh\\wind_aware_flight\\phase_g61\\dynamic_wind\\original_adjacent_sources\\SUMMER\\summer_disturbed_d02_13UTC.nc",
+                "record_index": 0,
+                "source_run_id": "ORIGINAL_REFERENCE/SUMMER_DISTURBED/2025-06-20_00:00:00"
+              }
+            ],
+            "roi": {
+              "xmax": -31140.702469394826,
+              "xmin": -32140.702469394826,
+              "ymax": 11046.64792076522,
+              "ymin": 10046.64792076522
+            },
+            "source_run_id": "SUMMER_DISTURBED",
+            "source_time_convention": "UTC",
+            "time_extrapolation_allowed": false,
+            "vector_basis": "ORIGINAL_NATIVE_PROJECT_FRAME"
+          },
+          "radius_m": 2.0,
+          "rectangles": [],
+          "route": {
+            "control_interpolation": "ZOH",
+            "controls": [],
+            "durations": [],
+            "frame_id": "WRF_LCC_LOCAL_METRIC_PLANE_V1",
+            "height_datum": "WRF_MODEL_MSL_GEOPOTENTIAL",
+            "parameters": {
+              "R0": 8.513422179807296,
+              "Va": 10.0
+            },
+            "state_goal": [
+              -31685.603471248607,
+              10624.647279945451,
+              2.4931254206146023
+            ],
+            "state_start": [
+              -31595.801467541045,
+              10468.648561584987,
+              2.0931254206146024
+            ],
+            "states": [
+              [
+                -31595.801467541045,
+                10468.648561584987,
+                2.0931254206146024
+              ]
+            ],
+            "type": "piecewise_constant",
+            "z_layer_msl_m": 240.0
+          },
+          "z_layer_msl_m": 240.0
+        },
+        "category": "STRONG",
+        "legacy_physical_cap_s": 72.79168884553307,
+        "original_J_seed": 4110,
+        "original_J_task_sha256": "b6d9fb180bd86db6b96de40a636a872587bb4f73a082c02474a3665326195f2a",
+        "original_manifest_sha256": "d474e738045d7122d185c3b6605068d67e87a1a7f5be104bbfa801c511920730",
+        "route_controls_or_qualified_spatial_route_not_supplied_to_initial_planner": true,
+        "season": "SUMMER",
+        "source_case_id": "P4J-10"
+      },
+      "input_file_sha256": "a96f6da002c29149b4a957c9264b808ea03bce5a7e084c99b16f72074e44fe38"
+    },
+    "P4J-11": {
+      "input": {
+        "cap_source": "phase_g61/uncovered_environments_v1/EXECUTION_MANIFEST.json",
+        "case": {
+          "id": "UNIFORM_P4J-11",
+          "initial_physical_cap_s": 89.72627902869706,
+          "initial_reserve_fraction": 0.9,
+          "provider": {
+            "epoch_utc": "2025-06-20T12:00:00+00:00",
+            "height_datum": "WRF_MODEL_MSL_GEOPOTENTIAL",
+            "id": "SUMMER",
+            "interpolation": "ORIGINAL_NATIVE_SPATIAL_THEN_UTC_LINEAR",
+            "kind": "WRF_TIME_LINEAR_SNAPSHOTS",
+            "max_gap_s": 3600.0,
+            "original_snapshot_not_replaced": true,
+            "records": [
+              {
+                "case_id": "SUMMER_DISTURBED",
+                "expected_sha256": "00da15f1f8e8815d8be34e09de909e4041da7f76e937677d3bde8af64ca70561",
+                "expected_time": "2025-06-20_12:00:00",
+                "path": "D:\\yyh\\wind_aware_flight\\phase3a_implementation\\data\\summer_disturbed_d02_12UTC.nc",
+                "record_index": 0,
+                "source_run_id": "ORIGINAL_REFERENCE/SUMMER_DISTURBED/2025-06-20_00:00:00"
+              },
+              {
+                "case_id": "SUMMER_DISTURBED",
+                "expected_sha256": "5f61c2d84253711779c82eca806b8ede18fcbf81c6618d338c63d9082e9f9086",
+                "expected_time": "2025-06-20_13:00:00",
+                "path": "D:\\yyh\\wind_aware_flight\\phase_g61\\dynamic_wind\\original_adjacent_sources\\SUMMER\\summer_disturbed_d02_13UTC.nc",
+                "record_index": 0,
+                "source_run_id": "ORIGINAL_REFERENCE/SUMMER_DISTURBED/2025-06-20_00:00:00"
+              }
+            ],
+            "roi": {
+              "xmax": 95421.96670243167,
+              "xmin": 94421.96670243167,
+              "ymax": 65287.791851548005,
+              "ymin": 64287.791851548005
+            },
+            "source_run_id": "SUMMER_DISTURBED",
+            "source_time_convention": "UTC",
+            "time_extrapolation_allowed": false,
+            "vector_basis": "ORIGINAL_NATIVE_PROJECT_FRAME"
+          },
+          "radius_m": 2.0,
+          "rectangles": [],
+          "route": {
+            "control_interpolation": "ZOH",
+            "controls": [],
+            "durations": [],
+            "frame_id": "WRF_LCC_LOCAL_METRIC_PLANE_V1",
+            "height_datum": "WRF_MODEL_MSL_GEOPOTENTIAL",
+            "parameters": {
+              "R0": 8.513422179807296,
+              "Va": 10.0
+            },
+            "state_goal": [
+              94800.71043609729,
+              64834.66314206409,
+              3.1727368942777594
+            ],
+            "state_start": [
+              95043.22296876606,
+              64740.92056103192,
+              2.7727368942777595
+            ],
+            "states": [
+              [
+                95043.22296876606,
+                64740.92056103192,
+                2.7727368942777595
+              ]
+            ],
+            "type": "piecewise_constant",
+            "z_layer_msl_m": 240.0
+          },
+          "z_layer_msl_m": 240.0
+        },
+        "category": "GRADIENT",
+        "legacy_physical_cap_s": 89.72627902869706,
+        "original_J_seed": 4111,
+        "original_J_task_sha256": "e9cbe2014647c39f019808015677c6c2ecce268d504643e6168d10493d177403",
+        "original_manifest_sha256": "d474e738045d7122d185c3b6605068d67e87a1a7f5be104bbfa801c511920730",
+        "route_controls_or_qualified_spatial_route_not_supplied_to_initial_planner": true,
+        "season": "SUMMER",
+        "source_case_id": "P4J-11"
+      },
+      "input_file_sha256": "53635a7d87f4e357545394df5892487563b3847e1d1e62ee3a0d09c7b1837c85"
+    },
+    "P4J-12": {
+      "input": {
+        "cap_source": "phase_g61/uncovered_environments_v1/initial_execution/EXECUTION_MANIFEST.json",
+        "case": {
+          "id": "UNIFORM_P4J-12",
+          "initial_physical_cap_s": 66.61768236527999,
+          "initial_reserve_fraction": 0.9,
+          "provider": {
+            "epoch_utc": "2025-06-20T12:00:00+00:00",
+            "height_datum": "WRF_MODEL_MSL_GEOPOTENTIAL",
+            "id": "SUMMER",
+            "interpolation": "ORIGINAL_NATIVE_SPATIAL_THEN_UTC_LINEAR",
+            "kind": "WRF_TIME_LINEAR_SNAPSHOTS",
+            "max_gap_s": 3600.0,
+            "original_snapshot_not_replaced": true,
+            "records": [
+              {
+                "case_id": "SUMMER_DISTURBED",
+                "expected_sha256": "00da15f1f8e8815d8be34e09de909e4041da7f76e937677d3bde8af64ca70561",
+                "expected_time": "2025-06-20_12:00:00",
+                "path": "D:\\yyh\\wind_aware_flight\\phase3a_implementation\\data\\summer_disturbed_d02_12UTC.nc",
+                "record_index": 0,
+                "source_run_id": "ORIGINAL_REFERENCE/SUMMER_DISTURBED/2025-06-20_00:00:00"
+              },
+              {
+                "case_id": "SUMMER_DISTURBED",
+                "expected_sha256": "5f61c2d84253711779c82eca806b8ede18fcbf81c6618d338c63d9082e9f9086",
+                "expected_time": "2025-06-20_13:00:00",
+                "path": "D:\\yyh\\wind_aware_flight\\phase_g61\\dynamic_wind\\original_adjacent_sources\\SUMMER\\summer_disturbed_d02_13UTC.nc",
+                "record_index": 0,
+                "source_run_id": "ORIGINAL_REFERENCE/SUMMER_DISTURBED/2025-06-20_00:00:00"
+              }
+            ],
+            "roi": {
+              "xmax": 11046.853921214006,
+              "xmin": 10046.853921214006,
+              "ymax": -1006.939619408733,
+              "ymin": -2006.939619408733
+            },
+            "source_run_id": "SUMMER_DISTURBED",
+            "source_time_convention": "UTC",
+            "time_extrapolation_allowed": false,
+            "vector_basis": "ORIGINAL_NATIVE_PROJECT_FRAME"
+          },
+          "radius_m": 2.0,
+          "rectangles": [
+            [
+              10521.853921214006,
+              10571.853921214006,
+              -1566.939619408733,
+              -1446.939619408733
+            ]
+          ],
+          "route": {
+            "control_interpolation": "ZOH",
+            "controls": [],
+            "durations": [],
+            "frame_id": "WRF_LCC_LOCAL_METRIC_PLANE_V1",
+            "height_datum": "WRF_MODEL_MSL_GEOPOTENTIAL",
+            "parameters": {
+              "R0": 8.513422179807296,
+              "Va": 10.0
+            },
+            "state_goal": [
+              10686.853921214006,
+              -1506.939619408733,
+              0.0
+            ],
+            "state_start": [
+              10406.853921214006,
+              -1506.939619408733,
+              0.0
+            ],
+            "states": [
+              [
+                10406.853921214006,
+                -1506.939619408733,
+                0.0
+              ]
+            ],
+            "type": "piecewise_constant",
+            "z_layer_msl_m": 240.0
+          },
+          "z_layer_msl_m": 240.0
+        },
+        "category": "OBSTACLE",
+        "legacy_physical_cap_s": 66.61768236527999,
+        "original_J_seed": 4112,
+        "original_J_task_sha256": "2ef3af7d5ab9c293a2e018962e773bc008a81b3870e093a696e4183f345193ea",
+        "original_manifest_sha256": "d474e738045d7122d185c3b6605068d67e87a1a7f5be104bbfa801c511920730",
+        "route_controls_or_qualified_spatial_route_not_supplied_to_initial_planner": true,
+        "season": "SUMMER",
+        "source_case_id": "P4J-12"
+      },
+      "input_file_sha256": "e8f51ccf4789bb444b97d5676dd977479200275c10fc82b1696905e9a2b79630"
+    },
+    "P4J-13": {
+      "input": {
+        "cap_source": "phase_g61/uncovered_environments_v1/EXECUTION_MANIFEST.json",
+        "case": {
+          "id": "UNIFORM_P4J-13",
+          "initial_physical_cap_s": 47.29044935904858,
+          "initial_reserve_fraction": 0.9,
+          "provider": {
+            "epoch_utc": "2025-10-18T12:00:00+00:00",
+            "height_datum": "WRF_MODEL_MSL_GEOPOTENTIAL",
+            "id": "AUTUMN",
+            "interpolation": "ORIGINAL_NATIVE_SPATIAL_THEN_UTC_LINEAR",
+            "kind": "WRF_TIME_LINEAR_SNAPSHOTS",
+            "max_gap_s": 3600.0,
+            "original_snapshot_not_replaced": true,
+            "records": [
+              {
+                "case_id": "AUTUMN_WIND",
+                "expected_sha256": "41069186e71eb16cbb1e42e0143774fc94981cabf5d0766a72a4f95bb367b150",
+                "expected_time": "2025-10-18_12:00:00",
+                "path": "D:\\yyh\\wind_aware_flight\\phase3a_implementation\\data\\autumn_wind_d02_12UTC.nc",
+                "record_index": 0,
+                "source_run_id": "ORIGINAL_REFERENCE/AUTUMN_WIND/2025-10-18_00:00:00"
+              },
+              {
+                "case_id": "AUTUMN_WIND",
+                "expected_sha256": "6a9012981aa52a12a7e473311f53b7ab9e1634a855c142e36eaf2f20c5fbabb1",
+                "expected_time": "2025-10-18_13:00:00",
+                "path": "D:\\yyh\\wind_aware_flight\\phase_g61\\dynamic_wind\\original_adjacent_sources\\AUTUMN\\autumn_wind_d02_13UTC.nc",
+                "record_index": 0,
+                "source_run_id": "ORIGINAL_REFERENCE/AUTUMN_WIND/2025-10-18_00:00:00"
+              }
+            ],
+            "roi": {
+              "xmax": 47207.61654173586,
+              "xmin": 46207.61654173586,
+              "ymax": -64288.274205321984,
+              "ymin": -65288.274205321984
+            },
+            "source_run_id": "AUTUMN_WIND",
+            "source_time_convention": "UTC",
+            "time_extrapolation_allowed": false,
+            "vector_basis": "ORIGINAL_NATIVE_PROJECT_FRAME"
+          },
+          "radius_m": 2.0,
+          "rectangles": [],
+          "route": {
+            "control_interpolation": "ZOH",
+            "controls": [],
+            "durations": [],
+            "frame_id": "WRF_LCC_LOCAL_METRIC_PLANE_V1",
+            "height_datum": "WRF_MODEL_MSL_GEOPOTENTIAL",
+            "parameters": {
+              "R0": 8.513422179807296,
+              "Va": 10.0
+            },
+            "state_goal": [
+              46677.534681614976,
+              -64873.09803270361,
+              -1.511598131758364
+            ],
+            "state_start": [
+              46737.69840185674,
+              -64703.45037794036,
+              -1.911598131758364
+            ],
+            "states": [
+              [
+                46737.69840185674,
+                -64703.45037794036,
+                -1.911598131758364
+              ]
+            ],
+            "type": "piecewise_constant",
+            "z_layer_msl_m": 240.0
+          },
+          "z_layer_msl_m": 240.0
+        },
+        "category": "WEAK",
+        "legacy_physical_cap_s": 47.29044935904858,
+        "original_J_seed": 4113,
+        "original_J_task_sha256": "935b097351b3a76917db42c09be0746f2bbb09b63372bba4e4b75ad0bf739730",
+        "original_manifest_sha256": "d474e738045d7122d185c3b6605068d67e87a1a7f5be104bbfa801c511920730",
+        "route_controls_or_qualified_spatial_route_not_supplied_to_initial_planner": true,
+        "season": "AUTUMN",
+        "source_case_id": "P4J-13"
+      },
+      "input_file_sha256": "d3f05fc9ea855d89afa61e84f6060f556c96d46c6c0eda12d9d068022211724c"
+    },
+    "P4J-14": {
+      "input": {
+        "cap_source": "phase_g61/uncovered_environments_v1/EXECUTION_MANIFEST.json",
+        "case": {
+          "id": "UNIFORM_P4J-14",
+          "initial_physical_cap_s": 129.13010011182672,
+          "initial_reserve_fraction": 0.9,
+          "provider": {
+            "epoch_utc": "2025-10-18T12:00:00+00:00",
+            "height_datum": "WRF_MODEL_MSL_GEOPOTENTIAL",
+            "id": "AUTUMN",
+            "interpolation": "ORIGINAL_NATIVE_SPATIAL_THEN_UTC_LINEAR",
+            "kind": "WRF_TIME_LINEAR_SNAPSHOTS",
+            "max_gap_s": 3600.0,
+            "original_snapshot_not_replaced": true,
+            "records": [
+              {
+                "case_id": "AUTUMN_WIND",
+                "expected_sha256": "41069186e71eb16cbb1e42e0143774fc94981cabf5d0766a72a4f95bb367b150",
+                "expected_time": "2025-10-18_12:00:00",
+                "path": "D:\\yyh\\wind_aware_flight\\phase3a_implementation\\data\\autumn_wind_d02_12UTC.nc",
+                "record_index": 0,
+                "source_run_id": "ORIGINAL_REFERENCE/AUTUMN_WIND/2025-10-18_00:00:00"
+              },
+              {
+                "case_id": "AUTUMN_WIND",
+                "expected_sha256": "6a9012981aa52a12a7e473311f53b7ab9e1634a855c142e36eaf2f20c5fbabb1",
+                "expected_time": "2025-10-18_13:00:00",
+                "path": "D:\\yyh\\wind_aware_flight\\phase_g61\\dynamic_wind\\original_adjacent_sources\\AUTUMN\\autumn_wind_d02_13UTC.nc",
+                "record_index": 0,
+                "source_run_id": "ORIGINAL_REFERENCE/AUTUMN_WIND/2025-10-18_00:00:00"
+              }
+            ],
+            "roi": {
+              "xmax": 17073.647691300983,
+              "xmin": 16073.647691300983,
+              "ymax": -28127.511584800126,
+              "ymin": -29127.511584800126
+            },
+            "source_run_id": "AUTUMN_WIND",
+            "source_time_convention": "UTC",
+            "time_extrapolation_allowed": false,
+            "vector_basis": "ORIGINAL_NATIVE_PROJECT_FRAME"
+          },
+          "radius_m": 2.0,
+          "rectangles": [],
+          "route": {
+            "control_interpolation": "ZOH",
+            "controls": [],
+            "durations": [],
+            "frame_id": "WRF_LCC_LOCAL_METRIC_PLANE_V1",
+            "height_datum": "WRF_MODEL_MSL_GEOPOTENTIAL",
+            "parameters": {
+              "R0": 8.513422179807296,
+              "Va": 10.0
+            },
+            "state_goal": [
+              16633.535790171118,
+              -28694.69354379003,
+              -0.4427355523137576
+            ],
+            "state_start": [
+              16513.759592430848,
+              -28560.329625810224,
+              -0.8427355523137576
+            ],
+            "states": [
+              [
+                16513.759592430848,
+                -28560.329625810224,
+                -0.8427355523137576
+              ]
+            ],
+            "type": "piecewise_constant",
+            "z_layer_msl_m": 240.0
+          },
+          "z_layer_msl_m": 240.0
+        },
+        "category": "STRONG",
+        "legacy_physical_cap_s": 129.13010011182672,
+        "original_J_seed": 4114,
+        "original_J_task_sha256": "c308bc989e9a9f053a1992b81e8237777da02fab8994ae84e7566e54a549e9ca",
+        "original_manifest_sha256": "d474e738045d7122d185c3b6605068d67e87a1a7f5be104bbfa801c511920730",
+        "route_controls_or_qualified_spatial_route_not_supplied_to_initial_planner": true,
+        "season": "AUTUMN",
+        "source_case_id": "P4J-14"
+      },
+      "input_file_sha256": "40bce6ca8ddfd38c8ce931080fb9949578eb9dded5f491e40ec3d97ee06adafc"
+    },
+    "P4J-15": {
+      "input": {
+        "cap_source": "phase_g61/uncovered_environments_v1/EXECUTION_MANIFEST.json",
+        "case": {
+          "id": "UNIFORM_P4J-15",
+          "initial_physical_cap_s": 166.9839120967903,
+          "initial_reserve_fraction": 0.9,
+          "provider": {
+            "epoch_utc": "2025-10-18T12:00:00+00:00",
+            "height_datum": "WRF_MODEL_MSL_GEOPOTENTIAL",
+            "id": "AUTUMN",
+            "interpolation": "ORIGINAL_NATIVE_SPATIAL_THEN_UTC_LINEAR",
+            "kind": "WRF_TIME_LINEAR_SNAPSHOTS",
+            "max_gap_s": 3600.0,
+            "original_snapshot_not_replaced": true,
+            "records": [
+              {
+                "case_id": "AUTUMN_WIND",
+                "expected_sha256": "41069186e71eb16cbb1e42e0143774fc94981cabf5d0766a72a4f95bb367b150",
+                "expected_time": "2025-10-18_12:00:00",
+                "path": "D:\\yyh\\wind_aware_flight\\phase3a_implementation\\data\\autumn_wind_d02_12UTC.nc",
+                "record_index": 0,
+                "source_run_id": "ORIGINAL_REFERENCE/AUTUMN_WIND/2025-10-18_00:00:00"
+              },
+              {
+                "case_id": "AUTUMN_WIND",
+                "expected_sha256": "6a9012981aa52a12a7e473311f53b7ab9e1634a855c142e36eaf2f20c5fbabb1",
+                "expected_time": "2025-10-18_13:00:00",
+                "path": "D:\\yyh\\wind_aware_flight\\phase_g61\\dynamic_wind\\original_adjacent_sources\\AUTUMN\\autumn_wind_d02_13UTC.nc",
+                "record_index": 0,
+                "source_run_id": "ORIGINAL_REFERENCE/AUTUMN_WIND/2025-10-18_00:00:00"
+              }
+            ],
+            "roi": {
+              "xmax": -100448.83082539505,
+              "xmin": -101448.83082539505,
+              "ymax": -55248.08355019151,
+              "ymin": -56248.08355019151
+            },
+            "source_run_id": "AUTUMN_WIND",
+            "source_time_convention": "UTC",
+            "time_extrapolation_allowed": false,
+            "vector_basis": "ORIGINAL_NATIVE_PROJECT_FRAME"
+          },
+          "radius_m": 2.0,
+          "rectangles": [],
+          "route": {
+            "control_interpolation": "ZOH",
+            "controls": [],
+            "durations": [],
+            "frame_id": "WRF_LCC_LOCAL_METRIC_PLANE_V1",
+            "height_datum": "WRF_MODEL_MSL_GEOPOTENTIAL",
+            "parameters": {
+              "R0": 8.513422179807296,
+              "Va": 10.0
+            },
+            "state_goal": [
+              -100859.65175242005,
+              -55653.49447606919,
+              1.214828938795708
+            ],
+            "state_start": [
+              -101038.00989837006,
+              -55842.67262431384,
+              0.8148289387957082
+            ],
+            "states": [
+              [
+                -101038.00989837006,
+                -55842.67262431384,
+                0.8148289387957082
+              ]
+            ],
+            "type": "piecewise_constant",
+            "z_layer_msl_m": 240.0
+          },
+          "z_layer_msl_m": 240.0
+        },
+        "category": "GRADIENT",
+        "legacy_physical_cap_s": 166.9839120967903,
+        "original_J_seed": 4115,
+        "original_J_task_sha256": "12c22d4ca7f8370c29f61a5eabb813d9749691fcc32164d3df737e970893d104",
+        "original_manifest_sha256": "d474e738045d7122d185c3b6605068d67e87a1a7f5be104bbfa801c511920730",
+        "route_controls_or_qualified_spatial_route_not_supplied_to_initial_planner": true,
+        "season": "AUTUMN",
+        "source_case_id": "P4J-15"
+      },
+      "input_file_sha256": "fd197c44da615ed36e36ccfda977eb49a3199b2586431b5ce1864241c5c3777c"
+    },
+    "P4J-16": {
+      "input": {
+        "cap_source": "phase_g61/uncovered_environments_v1/initial_execution/EXECUTION_MANIFEST.json",
+        "case": {
+          "id": "UNIFORM_P4J-16",
+          "initial_physical_cap_s": 82.99157865765078,
+          "initial_reserve_fraction": 0.9,
+          "provider": {
+            "epoch_utc": "2025-10-18T12:00:00+00:00",
+            "height_datum": "WRF_MODEL_MSL_GEOPOTENTIAL",
+            "id": "AUTUMN",
+            "interpolation": "ORIGINAL_NATIVE_SPATIAL_THEN_UTC_LINEAR",
+            "kind": "WRF_TIME_LINEAR_SNAPSHOTS",
+            "max_gap_s": 3600.0,
+            "original_snapshot_not_replaced": true,
+            "records": [
+              {
+                "case_id": "AUTUMN_WIND",
+                "expected_sha256": "41069186e71eb16cbb1e42e0143774fc94981cabf5d0766a72a4f95bb367b150",
+                "expected_time": "2025-10-18_12:00:00",
+                "path": "D:\\yyh\\wind_aware_flight\\phase3a_implementation\\data\\autumn_wind_d02_12UTC.nc",
+                "record_index": 0,
+                "source_run_id": "ORIGINAL_REFERENCE/AUTUMN_WIND/2025-10-18_00:00:00"
+              },
+              {
+                "case_id": "AUTUMN_WIND",
+                "expected_sha256": "6a9012981aa52a12a7e473311f53b7ab9e1634a855c142e36eaf2f20c5fbabb1",
+                "expected_time": "2025-10-18_13:00:00",
+                "path": "D:\\yyh\\wind_aware_flight\\phase_g61\\dynamic_wind\\original_adjacent_sources\\AUTUMN\\autumn_wind_d02_13UTC.nc",
+                "record_index": 0,
+                "source_run_id": "ORIGINAL_REFERENCE/AUTUMN_WIND/2025-10-18_00:00:00"
+              }
+            ],
+            "roi": {
+              "xmax": 47207.61654173586,
+              "xmin": 46207.61654173586,
+              "ymax": -64288.274205321984,
+              "ymin": -65288.274205321984
+            },
+            "source_run_id": "AUTUMN_WIND",
+            "source_time_convention": "UTC",
+            "time_extrapolation_allowed": false,
+            "vector_basis": "ORIGINAL_NATIVE_PROJECT_FRAME"
+          },
+          "radius_m": 2.0,
+          "rectangles": [
+            [
+              46682.61654173586,
+              46732.61654173586,
+              -64848.274205321984,
+              -64728.274205321984
+            ]
+          ],
+          "route": {
+            "control_interpolation": "ZOH",
+            "controls": [],
+            "durations": [],
+            "frame_id": "WRF_LCC_LOCAL_METRIC_PLANE_V1",
+            "height_datum": "WRF_MODEL_MSL_GEOPOTENTIAL",
+            "parameters": {
+              "R0": 8.513422179807296,
+              "Va": 10.0
+            },
+            "state_goal": [
+              46847.61654173586,
+              -64788.274205321984,
+              0.0
+            ],
+            "state_start": [
+              46567.61654173586,
+              -64788.274205321984,
+              0.0
+            ],
+            "states": [
+              [
+                46567.61654173586,
+                -64788.274205321984,
+                0.0
+              ]
+            ],
+            "type": "piecewise_constant",
+            "z_layer_msl_m": 240.0
+          },
+          "z_layer_msl_m": 240.0
+        },
+        "category": "OBSTACLE",
+        "legacy_physical_cap_s": 82.99157865765078,
+        "original_J_seed": 4116,
+        "original_J_task_sha256": "7c9021d7a3b11e2c517af8fa8ce2c1d99ad2c7b7ac68e2251ce6f82bd21ae275",
+        "original_manifest_sha256": "d474e738045d7122d185c3b6605068d67e87a1a7f5be104bbfa801c511920730",
+        "route_controls_or_qualified_spatial_route_not_supplied_to_initial_planner": true,
+        "season": "AUTUMN",
+        "source_case_id": "P4J-16"
+      },
+      "input_file_sha256": "0d7ad177b005de26f8082b23866be912457cf5518528c3aeb4b78778c86713a6"
+    }
+  },
+  "schema": "ORIGINAL16_APPROVED_CONTEXTS_V1"
+}
