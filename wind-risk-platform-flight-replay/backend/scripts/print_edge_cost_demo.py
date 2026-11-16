@@ -1,7 +1,7 @@
 """Print a decomposed edge-cost example for the shared cost evaluator.
 
 Run from repository root:
-    python wind-risk-platform/backend/scripts/print_edge_cost_demo.py
+    python wind-risk-platform-flight-replay/backend/scripts/print_edge_cost_demo.py
 """
 
 from __future__ import annotations

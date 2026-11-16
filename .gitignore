@@ -120,3 +120,14 @@ configure.wrf
 configure.wps
 wrf_batch_plan.csv
 wrf_batch_status.csv
+
+# main maintains only the current platform and its required shared helpers.
+# Keep local legacy code, research and runtime material outside version control.
+/*
+!/.gitignore
+!/LICENSE
+!/README.md
+!/download_gfs_hourly_70vars_realtime.py
+!/gfs_s3_fallback.py
+!/setup_wrf_env.sh
+!/wind-risk-platform-flight-replay/

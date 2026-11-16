@@ -14,7 +14,7 @@ from app.qgc_waypoints import (
 )
 
 
-SAMPLE_FILE = Path(__file__).resolve().parents[3] / "yifulou.waypoints"
+SAMPLE_FILE = Path(__file__).resolve().parent / "fixtures" / "yifulou.waypoints"
 client = TestClient(main.app)
 
 

@@ -25,11 +25,11 @@ blocked.
 
 Run a synthetic demo:
 
-    python wind-risk-platform/backend/scripts/run_spacetime_route_demo.py --demo
+    python wind-risk-platform-flight-replay/backend/scripts/run_spacetime_route_demo.py --demo
 
 Run on a platform cache directory:
 
-    python wind-risk-platform/backend/scripts/run_spacetime_route_demo.py ^
+    python wind-risk-platform-flight-replay/backend/scripts/run_spacetime_route_demo.py ^
       --data-source wrf ^
       --cache-dir data/wrf_platform_cache ^
       --cycle "2026-07-02 18:00 UTC" ^
@@ -40,7 +40,7 @@ Run on a platform cache directory:
 
 Run on existing GFS GRIB2 files:
 
-    python wind-risk-platform/backend/scripts/run_spacetime_route_demo.py ^
+    python wind-risk-platform-flight-replay/backend/scripts/run_spacetime_route_demo.py ^
       --data-source gfs ^
       --gfs-data-dirs data/gdex_gfs_0p25_global ^
       --cycle "2026-07-10 00:00 UTC" ^

@@ -1,7 +1,7 @@
 """Demo for first-version navigation decision service.
 
 Run from repository root:
-    python wind-risk-platform/backend/scripts/run_decision_service_demo.py
+    python wind-risk-platform-flight-replay/backend/scripts/run_decision_service_demo.py
 """
 
 from __future__ import annotations

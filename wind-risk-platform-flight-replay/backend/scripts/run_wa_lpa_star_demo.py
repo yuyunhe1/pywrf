@@ -1,7 +1,7 @@
 """Demo for wind-aware LPA* planning and incremental repair.
 
 Run from repository root:
-    python wind-risk-platform/backend/scripts/run_wa_lpa_star_demo.py
+    python wind-risk-platform-flight-replay/backend/scripts/run_wa_lpa_star_demo.py
 """
 
 from __future__ import annotations
