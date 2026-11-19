@@ -10,12 +10,12 @@ export const useWorkspaceLayout = () => {
   const resizing = ref(false)
   const compact = computed(() => viewport.value <= 1200)
   const panels = computed(() => compact.value ? {
-    leftWidth: Math.min(360, viewport.value - 24), rightWidth: Math.min(380, viewport.value - 24),
+    leftWidth: Math.min(360, viewport.value - 32), rightWidth: Math.min(380, viewport.value - 32),
     leftOpen: drawer.value === 'left', rightOpen: drawer.value === 'right',
   } : fitDesktopPanels(preferred, viewport.value))
   const insets = computed(() => ({
-    left: !compact.value && panels.value.leftOpen ? panels.value.leftWidth + 24 : 12,
-    right: !compact.value && panels.value.rightOpen ? panels.value.rightWidth + 24 : 12,
+    left: !compact.value && panels.value.leftOpen ? panels.value.leftWidth + 12 : 12,
+    right: !compact.value && panels.value.rightOpen ? panels.value.rightWidth + 12 : 12,
   }))
   const save = () => { try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(preferred)) } catch { /* Storage can be disabled. */ } }
   const open = side => { if (compact.value) drawer.value = side; else { preferred[`${side}Open`] = true; save() } }

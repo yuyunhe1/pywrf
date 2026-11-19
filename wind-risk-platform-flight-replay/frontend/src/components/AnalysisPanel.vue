@@ -5,10 +5,9 @@ import {
   buildHorizontalWindShearChartModel,
   formatMaxHorizontalWindShear,
 } from '../utils/horizontalWindShearChart'
-import { buildNavigationDecision } from '../utils/navigationDecision'
 import { getRouteChartSample, getWindChartSampleIndex } from '../utils/routeChartSelection'
 import { departureWindowDecision, emptyDepartureWindowMessage, formatDepartureTime } from '../utils/departureWindows'
-import { formatReplayTime, fromBeijingInput, toBeijingInput } from '../utils/flightReplay'
+import { formatReplayTime } from '../utils/flightReplay'
 import RecommendationPanel from './RecommendationPanel.vue'
 
 const props = defineProps({
@@ -87,14 +86,6 @@ const maxHorizontalWindShearDisplay = computed(() => formatMaxHorizontalWindShea
 ))
 const currentDepartureDecision = computed(() => departureWindowDecision(props.departureWindows))
 const flightMode = computed(() => props.replay?.active && props.replay.mode === 'flight')
-const navigationDecision = computed(() => {
-  if (!flightMode.value) return buildNavigationDecision(props.analysis, props.thresholds?.danger)
-  if (props.replay.loading) return { level: '待评估', color: '#00f3ff', message: '正在评估所选起飞时间的完整航程…' }
-  const decision = props.replay.result?.decision
-  if (!decision) return { level: '待评估', color: '#f4c95d', message: props.replay.error || '等待完整飞行过程评估。' }
-  return { ...({ allowed: { level: '允许通航', color: '#28c76f' }, blocked: { level: '禁止通航', color: '#ea5455' },
-    unknown: { level: '数据不足', color: '#94a3b8' } }[decision.status]), message: decision.reason }
-})
 
 const toBeijingTime = (utcText, bjText) => {
   if (bjText) return bjText
@@ -217,6 +208,7 @@ const renderWindChart = async () => {
       max: flightMode.value ? samples.at(-1)?.distance_km || 1 : undefined,
       axisLabel: { color: '#8fa6b9', fontSize: 12 },
       axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } },
+      splitLine: { show: false },
       nameTextStyle: { color: '#6b8296', fontSize: 12 }
     },
     yAxis: [
@@ -406,33 +398,24 @@ onBeforeUnmount(() => {
         @preview="$emit('recommendation-preview',$event)" @adopt="$emit('recommendation-adopt',$event)"
         @close-preview="$emit('recommendation-close')" @cancel="$emit('recommendation-cancel')" />
       <div v-if="!hasRoute" class="analysis-empty">
-        <span class="empty-map-icon" aria-hidden="true">⌁</span>
+        <div class="assessment-illustration" aria-hidden="true">
+          <svg viewBox="0 0 160 160" fill="none">
+            <circle cx="80" cy="80" r="65" class="radar-outer" />
+            <circle cx="80" cy="80" r="46" class="radar-ring" />
+            <circle cx="80" cy="80" r="26" class="radar-ring" />
+            <path d="M15 80h130M80 15v130" class="radar-axis" />
+            <path d="M36 115 65 98l22-40 39-20" class="radar-route" />
+            <circle cx="36" cy="115" r="4" class="radar-point" />
+            <circle cx="126" cy="38" r="4" class="radar-point" />
+            <path d="m81 60 13 29-15-7-14 9 16-31Z" class="radar-aircraft" />
+            <path d="M49 15h14M15 49V35h14M111 145h-14M145 111v14h-14" class="radar-corners" />
+          </svg>
+        </div>
         <h2>{{ planningStatus?.label || '开始一次通航评估' }}</h2>
         <p>{{ planningStatus?.label ? '找到并验证航线后将在这里显示通航结果。' : '选择历史航线、在地图绘制，或设置起终点生成航线。' }}</p>
         <span v-if="planningStatus?.label && Number.isFinite(planningStatus.elapsed)">已用时 {{ Math.floor(planningStatus.elapsed) }} 秒</span>
       </div>
       <template v-else>
-        <section class="decision-card primary-decision" :style="{ '--decision-color': navigationDecision.color }" aria-live="polite">
-          <div class="decision-label">{{ flightMode ? '所选起飞时刻 · 全程评估' : '单时刻通航决策' }}</div>
-          <strong class="decision-verdict">{{ navigationDecision.level }}</strong>
-          <p v-if="navigationDecision.level !== '允许通航'" class="decision-reason" role="status">{{ navigationDecision.message }}</p>
-        </section>
-
-        <section v-if="replay?.active" class="departure-settings">
-          <h2>起飞与到达</h2>
-          <label v-if="!recommendationPreview">起飞时间（北京时间）
-            <input aria-label="起飞时间（北京时间）" type="datetime-local" step="60" :value="toBeijingInput(replay.departureAt)"
-              @change="$emit('departure-select', fromBeijingInput($event.target.value))" />
-          </label>
-          <button v-if="!recommendationPreview" class="secondary" @click="$emit('depart-now')">{{ autoReplan && replay.result?.time_model !== 'constant_airspeed' ? '按现在起飞重新规划' : '按现在起飞重新评估' }}</button>
-          <div v-if="flightMode && replay.result" class="flight-summary">
-            <span>起飞 <b>{{ formatReplayTime(replay.result.departure_at) }}</b></span>
-            <span>到达 <b>{{ formatReplayTime(replay.result.arrival_at) }}</b></span>
-            <span><template v-if="replay.result.time_model === 'constant_airspeed'">固定空速 10 m/s · </template>平均地速 {{ numberLabel(replay.result.average_ground_speed_mps) }} m/s · {{ replay.result.level }}</span>
-          </div>
-          <p v-if="flightMode && analysis?.coverage_incomplete" class="coverage-note">部分航段数据不足，统计仅包含已覆盖的风况。</p>
-        </section>
-
         <section v-if="departureWindows?.active" class="departure-windows" aria-live="polite">
           <h2>{{ departureWindows.result?.low_wind_certified ? '限定时间段内的低风窗口' : '未来可起飞窗口' }}</h2>
           <p class="current-departure" :style="{ color: currentDepartureDecision?.color }">现在起飞：{{ currentDepartureDecision?.level }}

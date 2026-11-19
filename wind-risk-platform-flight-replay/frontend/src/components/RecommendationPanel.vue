@@ -1,6 +1,6 @@
 <script setup>
 import { formatDepartureTime } from '../utils/departureWindows'
-import { RECOMMENDATION_COLORS, workflowLabel } from '../utils/recommendations'
+import { RECOMMENDATION_COLORS } from '../utils/recommendations'
 const props=defineProps({ workflow: Object, previewId: String, adopting: Boolean, busy: Boolean, selectedId:String, pendingId:String })
 const emit=defineEmits(['preview', 'adopt', 'close-preview', 'cancel','select'])
 const activateCard=(card,event)=>{
@@ -16,14 +16,9 @@ const earliestContinuous = card => card.windows.departure_windows.some(row => Da
   && Date.parse(card.first_departure_at) <= Date.parse(row.end) && Date.parse(row.end) > Date.parse(row.start))
 </script>
 <template>
-  <section v-if="workflow" class="recommendation-results" aria-live="polite">
-    <div class="section-heading"><h2>{{ workflow.mode === 'departure_range' ? '时间段内的低风航线推荐' : workflow.mode === 'fixed_route' ? '局部绕行推荐' : '未来起飞推荐' }}</h2>
+  <section v-if="workflow && (workflow.mode !== 'specified_time' || workflow.recommendations?.length)" class="recommendation-results" aria-live="polite">
+    <div class="section-heading"><h2>{{ workflow.mode === 'departure_range' ? '时间段内的低风航线推荐' : workflow.mode === 'fixed_route' ? '局部绕行推荐' : '起飞方案' }}</h2>
       <button v-if="busy" class="text-button" @click="$emit('cancel')">停止</button></div>
-    <p v-if="workflow.mode === 'specified_time'" class="requested-departure">原指定 {{ formatDepartureTime(workflow.requested_departure_at) }} ·
-      {{ workflow.requested_status === 'allowed' ? '已确认可飞' : workflow.requested_status === 'blocked' ? '已触发硬约束' : '尚未确认' }}
-      <span v-if="workflow.requested_attempt_status === 'data_insufficient'">（数据不足）</span>
-      <span v-if="workflow.requested_attempt_status === 'resource_limit'">（资源受限）</span></p>
-    <p role="status">{{ workflowLabel(workflow.stage) || workflow.message }}</p>
     <template v-if="workflow.mode === 'departure_range'">
       <p>{{ formatDepartureTime(workflow.departure_start_at) }} — {{ formatDepartureTime(workflow.departure_end_at) }}</p>
       <p v-if="Number.isFinite(workflow.min_verified_peak_mps)">最低已确认峰值 {{ workflow.min_verified_peak_mps.toFixed(2) }} m/s · 择短上限 {{ workflow.peak_wind_limit_mps.toFixed(2) }} m/s</p>
@@ -57,18 +52,11 @@ const earliestContinuous = card => card.windows.departure_windows.some(row => Da
         <button class="primary" :disabled="adopting" @click="$emit('adopt',card)">{{ adopting ? '复核中…' : '采用方案' }}</button></div>
     </div>
     <button v-if="previewId" class="secondary" @click="$emit('close-preview')">关闭方案预览</button>
-    <details v-if="workflow.attempts?.length" class="assessment-detail"><summary>起飞时刻搜索状态（{{ workflow.attempts.length }}）</summary>
-      <p v-for="(attempt,index) in workflow.attempts" :key="`${attempt.departure_at}:${attempt.phase}:${index}`">{{ formatDepartureTime(attempt.departure_at) }} ·
-        <span v-if="attempt.phase">{{ ({seed:'避风搜索',tighten:'降低峰值',shorten:'压缩里程'})[attempt.phase] }} · </span>
-        {{ ({queued:'排队',preparing:'准备风场',searching:'搜索中',found:'已找到完整路线',unconfirmed:'尚未确认',data_insufficient:'数据不足',resource_limit:'资源受限',no_feasible_route:'未找到可行路线',cancelled:'已取消'})[attempt.status] || attempt.status }}
-        <span class="attempt-timing" v-if="attempt.elapsed_seconds != null"> · 排队 {{ (attempt.queue_wait_seconds || 0).toFixed(1) }}s · 准备 {{ attempt.preparation_seconds == null ? '—' : attempt.preparation_seconds.toFixed(1)+'s' }} · 搜索 {{ attempt.search_seconds == null ? '—' : attempt.search_seconds.toFixed(1)+'s' }}</span></p>
-    </details>
   </section>
 </template>
 <style scoped>
 .recommendation-results { margin-bottom:16px; padding:14px; border-radius:8px; background:#111f2d; color:#fff; }
 .recommendation-results h2 { font-size:16px; margin:0; }
-.requested-departure { color:#fff; }
 .recommendation-card { border-left:4px dashed var(--recommendation-color); padding:12px; margin-top:12px; background:#0b1723; border-radius:6px; }
 .recommendation-card strong { color:var(--recommendation-color); }
 .selectable-card { cursor:pointer; outline:1px solid transparent; transition:outline-color .15s,background .15s; }

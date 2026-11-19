@@ -1,5 +1,6 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import WorkspaceIcon from './WorkspaceIcon.vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { exportForRoute, routeDistanceKm } from '../utils/routeRecords'
 import { savedRouteFromExport } from '../utils/customRouteDrawing'
 import { departureRangeBounds } from '../utils/departureRange'
@@ -76,6 +77,33 @@ const vFocus = {
 }
 
 const emit = defineEmits(['reload', 'clear-route', 'pick-start', 'pick-end', 'plan-route', 'cancel-plan', 'save-route', 'load-routes', 'delete-route', 'focus-area', 'import-route-file', 'draw-custom-route', 'recommend-range', 'export-route', 'notice', 'recommend-detour', 'detour-segment', 'detour-limit', 'cancel-recommendation'])
+const controlTabs = [
+  { id: 'weather', label: '风场预测可视化' },
+  { id: 'specified', label: '指定时间规划航线' },
+  { id: 'recommended', label: '推荐最佳起飞时间' },
+  { id: 'history', label: '历史航线回放' },
+  { id: 'settings', label: '参数配置' },
+]
+const activeTab = ref('weather')
+const tabListRef = ref()
+const panelContentRef = ref()
+const tabScrollPositions = new Map()
+const selectTab = async (id, focus = false) => {
+  tabScrollPositions.set(activeTab.value, panelContentRef.value?.scrollTop || 0)
+  activeTab.value = id
+  await nextTick()
+  if (activeTab.value !== id) return
+  if (panelContentRef.value) panelContentRef.value.scrollTop = tabScrollPositions.get(id) || 0
+  if (focus) tabListRef.value?.querySelector(`#control-tab-${id}`)?.focus()
+}
+const navigateTabs = (event, index) => {
+  const offsets = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -2, ArrowDown: 2 }
+  if (!(event.key in offsets) && event.key !== 'Home' && event.key !== 'End') return
+  event.preventDefault()
+  const next = event.key === 'Home' ? 0 : event.key === 'End' ? controlTabs.length - 1
+    : (index + offsets[event.key] + controlTabs.length) % controlTabs.length
+  selectTab(controlTabs[next].id, true)
+}
 const specifiedPlanning = computed(() => props.planner.planning && props.planningEntry !== 'recommended')
 const rangePlanning = computed(() => props.planner.planning && props.planningEntry === 'recommended')
 const rangeBoundsError = computed(() => {
@@ -390,7 +418,14 @@ defineExpose({ refreshJsonDialog })
     </el-table>
   </el-dialog>
   <div class="panel-body control-body" :inert="drawingSaving" :aria-busy="drawingSaving">
-    <div class="panel-content">
+    <div ref="tabListRef" class="control-tabs" role="tablist" aria-label="规划与航线功能">
+      <button v-for="(tab, index) in controlTabs" :key="tab.id" :id="`control-tab-${tab.id}`" type="button"
+        role="tab" :class="{ active: activeTab === tab.id }" :aria-selected="activeTab === tab.id"
+        :aria-controls="`control-tabpanel-${tab.id}`" :tabindex="activeTab === tab.id ? 0 : -1"
+        @click="selectTab(tab.id)" @keydown="navigateTabs($event, index)"><WorkspaceIcon :name="tab.id" /><span>{{ tab.label }}</span></button>
+    </div>
+    <div ref="panelContentRef" class="panel-content">
+      <div v-show="activeTab === 'weather'" id="control-tabpanel-weather" class="control-tab-panel" role="tabpanel" aria-labelledby="control-tab-weather" tabindex="0">
       <!-- 1. 数据选择 -->
       <section style="margin-top: 0;">
         <h2 style="margin: 0 0 12px;">数据选择</h2>
@@ -425,7 +460,7 @@ defineExpose({ refreshJsonDialog })
           <template v-else-if="options.remote_sync?.last_error">同步暂未成功，将自动重试。</template>
         </div>
         <div style="display: flex; justify-content: space-between; align-items: center; margin: 12px 0 8px;">
-          <span style="color: #a1b8cb; font-size: 12px; font-weight: 600;">风场图层</span>
+          <h3 class="layer-section-title">风场图层</h3>
         </div>
         <div class="segmented-control" style="margin-bottom: 10px;">
           <button type="button" :class="{ active: layers.velocity }"
@@ -475,7 +510,8 @@ defineExpose({ refreshJsonDialog })
         </div>
       </section>
 
-
+      </div>
+      <div v-show="activeTab === 'specified'" id="control-tabpanel-specified" class="control-tab-panel" role="tabpanel" aria-labelledby="control-tab-specified" tabindex="0">
       <section class="route-planning-section" :inert="drawingActive" :aria-disabled="drawingActive">
         <div class="section-heading"><h2>指定时间规划航线</h2><button class="text-button danger-text" @click="$emit('clear-route')">清除航线</button></div>
         <label>航线名称<input v-model="planner.name" type="text" maxlength="120" placeholder="请输入航线名称" /></label>
@@ -493,9 +529,11 @@ defineExpose({ refreshJsonDialog })
         <button v-if="!specifiedPlanning" class="primary" :disabled="loading || savingRoute || !planner.startText || !planner.endText" @click="$emit('plan-route', {forceReplan:Boolean(planningStatus?.cache_hit)})">{{ planningStatus?.cache_hit ? '重新优化航线' : '规划航线' }}</button>
         <button v-else class="secondary" @click="$emit('cancel-plan')">停止当前规划</button>
       </section>
+      </div>
 
+      <div v-show="activeTab === 'recommended'" id="control-tabpanel-recommended" class="control-tab-panel" role="tabpanel" aria-labelledby="control-tab-recommended" tabindex="0">
       <section class="route-recommendation-section">
-        <h2>推荐时间规划航线</h2>
+        <h2>推荐最佳起飞时间</h2>
         <label class="recommendation-range-toggle"><input v-model="recommendationRange.enabled" type="checkbox" :disabled="drawingActive" aria-label="启用起飞时间段限制" />起飞时间段限制</label>
         <template v-if="recommendationRange.enabled">
           <label>最早起飞（北京时间）<input v-model="recommendationRange.departureStartAt" :disabled="drawingActive" aria-label="起飞时间段开始（北京时间）" type="datetime-local" step="60" /></label>
@@ -520,7 +558,9 @@ defineExpose({ refreshJsonDialog })
           <button v-else class="secondary" @click="$emit('cancel-recommendation')">停止推荐，保留已确认方案</button>
         </template>
       </section>
+      </div>
 
+      <div v-show="activeTab === 'history'" id="control-tabpanel-history" class="control-tab-panel" role="tabpanel" aria-labelledby="control-tab-history" tabindex="0">
       <section class="route-history-section">
         <div class="section-heading"><h2>历史航线</h2><button class="text-button" @click="openJsonDialog">更多...</button></div>
         <input v-model="historySearch" type="search" class="history-search" aria-label="搜索历史航线" placeholder="搜索航线名称" />
@@ -545,16 +585,18 @@ defineExpose({ refreshJsonDialog })
           </article>
         </div>
       </section>
+      </div>
 
+      <div v-show="activeTab === 'settings'" id="control-tabpanel-settings" class="control-tab-panel" role="tabpanel" aria-labelledby="control-tab-settings" tabindex="0">
       <section class="flight-settings-section">
         <h2>飞行参数</h2>
         <label v-if="nativeLevel || planner.algorithm === 'wrf_v3'">固定空速 (m/s)<input value="10" type="number" disabled /></label>
         <label v-else>平均对地速度 (m/s)<input v-model.number="flightSettings.averageGroundSpeedMps" type="number" min="0" step="any" /></label>
       </section>
 
-      <details class="advanced-settings">
-        <summary>高级设置</summary>
-        <div class="advanced-content">
+      <section class="advanced-settings">
+        <h2>规划与风险参数</h2>
+        <div>
           <div :inert="drawingActive">
             <label>规划算法<el-select v-model="planner.algorithm" class="glass-select" popper-class="glass-select-popper">
               <el-option v-for="item in plannerTypes" :key="item.value" :label="item.label" :value="item.value" />
@@ -580,16 +622,17 @@ defineExpose({ refreshJsonDialog })
             </div>
           </div>
         </div>
-      </details>
+      </section>
+      </div>
     </div>
-    <footer v-if="!drawingActive" class="planning-actions">
+    <footer v-if="!drawingActive && (activeTab === 'specified' || planner.planning)" class="planning-actions">
       <div v-if="planningStatus?.label" class="planning-progress" role="status">
         <strong>{{ planningStatus.label }}</strong><span v-if="Number.isFinite(planningStatus.elapsed)">已用时 {{ Math.floor(planningStatus.elapsed) }} 秒</span>
       </div>
       <p v-if="Number.isFinite(planningStatus?.queue_wait_seconds)" class="planning-message">排队 {{ planningStatus.queue_wait_seconds.toFixed(1) }}s · 快照准备 {{ (planningStatus.preparation_seconds || 0).toFixed(1) }}s</p>
       <p v-if="planner.planningMessage && !planner.planning" class="planning-message">{{ planner.planningMessage }}</p>
       <button v-if="planner.planning" class="secondary" @click="$emit('cancel-plan')">{{ planner.points.length ? '停止优化，保留当前航线' : '取消规划' }}</button>
-      <div class="grid-2">
+      <div v-if="activeTab === 'specified'" class="grid-2">
         <button class="ghost" :disabled="!planner.points.length || savingRoute || savedCurrent || previewingRecommendation" @click="$emit('save-route')">{{ previewingRecommendation ? '采用后可保存' : savingRoute ? '保存中…' : savedCurrent ? '已保存' : '保存航线' }}</button>
         <el-popover trigger="click" :width="180" popper-class="route-export-popover" :disabled="!savedCurrent || savingRoute || previewingRecommendation">
           <template #reference><span :title="previewingRecommendation ? '采用并保存后可导出' : savedCurrent ? '导出当前已保存版本' : '请先保存当前航线'" class="export-trigger"><button class="ghost" :disabled="!savedCurrent || savingRoute || previewingRecommendation">导出</button></span></template>
@@ -597,9 +640,9 @@ defineExpose({ refreshJsonDialog })
             <button class="route-export-option" @click="$emit('export-route', 'waypoints')">导出航点文件</button></div>
         </el-popover>
       </div>
-      <p v-if="saveError" class="save-error" role="alert">{{ saveError }}</p>
+      <p v-if="activeTab === 'specified' && saveError" class="save-error" role="alert">{{ saveError }}</p>
     </footer>
-    <div v-else class="drawing-panel-note">正在绘制航线，请使用地图下方工具栏完成绘制。</div>
+    <div v-if="drawingActive" class="drawing-panel-note">正在绘制航线，请使用地图下方工具栏完成绘制。</div>
   </div>
 </template>
 

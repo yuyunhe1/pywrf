@@ -1,17 +1,19 @@
 <script setup>
+import WorkspaceIcon from './WorkspaceIcon.vue'
 defineProps({ side: String, title: String, width: Number, visible: Boolean, compact: Boolean })
-defineEmits(['close', 'resize-start', 'resize-key'])
+defineEmits(['toggle'])
 </script>
 
 <template>
   <aside v-show="visible" class="panel workspace-panel" :class="side === 'left' ? 'control-panel' : 'analysis-panel'"
-    :style="{ width: `${width}px` }" :aria-label="title">
-    <div class="panel-heading"><h1>{{ title }}</h1>
-      <button class="panel-close ghost" :aria-label="`收起${title}`" @click="$emit('close')">收起 <span aria-hidden="true">{{ side === 'left' ? '‹' : '›' }}</span></button>
-    </div>
+    :id="`workspace-panel-${side}`" :style="{ width: `${width}px` }" :aria-label="title">
+    <div class="panel-heading"><span class="panel-heading-icon"><WorkspaceIcon :name="side === 'left' ? 'planning' : 'decision'" /></span><h1>{{ title }}</h1><span class="panel-heading-detail" aria-hidden="true"><i></i><i></i><i></i></span></div>
     <slot />
-    <div v-if="!compact" class="panel-resizer" :class="side" role="separator" aria-orientation="vertical"
-      :aria-label="`调整${title}宽度`" :aria-valuenow="Math.round(width)" aria-valuemin="280" aria-valuemax="480" tabindex="0"
-      @pointerdown="$emit('resize-start', $event)" @keydown="$emit('resize-key', $event)"></div>
   </aside>
+  <button class="panel-toggle" :class="[side, { 'is-open': visible }]"
+    :style="{ [side]: `${visible ? width : 0}px` }"
+    :aria-label="`${visible ? '收起' : '展开'}${title}`" :title="`${visible ? '收起' : '展开'}${title}`"
+    :aria-expanded="visible" :aria-controls="`workspace-panel-${side}`" @click="$emit('toggle')">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path :d="(side === 'left') === visible ? 'M14 6l-6 6 6 6' : 'M10 6l6 6-6 6'" /></svg>
+  </button>
 </template>

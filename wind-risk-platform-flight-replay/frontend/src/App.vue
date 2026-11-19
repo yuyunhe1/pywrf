@@ -1,4 +1,5 @@
 <script setup>
+import WorkspaceIcon from './components/WorkspaceIcon.vue'
 import L from 'leaflet'
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch } from 'vue'
 import { analyzeRoute, deleteRoute, getDepartureWindows, getExportedRouteUrl, getExportedWaypointUrl, getGfsDownloadStatus, getWindField, getPoint, getTimes, getV3Status, listExportedRoutes, listRoutes, planRoute, saveRoute, recommendRoute, getRecommendationJob } from './api'
@@ -1668,28 +1669,24 @@ onBeforeUnmount(() => {
 <template>
   <div class="app-shell workspace" :class="{ 'compact-workspace': compact, 'is-resizing': resizing }" :style="layoutStyle">
     <header class="workspace-header">
-      <h1 title="御风智航-面向低空无人机通航决策的风场预报平台">御风智航<span class="brand-subtitle"> · 低空通航决策</span></h1>
-      <span v-if="planner.planning" class="header-planning" role="status">{{ planningStatus.label }}</span>
-      <nav aria-label="面板布局">
-        <button class="ghost" :aria-expanded="panels.leftOpen" @click="panels.leftOpen ? workspace.close('left') : workspace.open('left')">航线</button>
-        <button class="ghost" :aria-expanded="panels.rightOpen" @click="panels.rightOpen ? workspace.close('right') : workspace.open('right')">决策</button>
-        <button class="ghost reset-layout" aria-label="恢复默认布局" title="恢复默认布局" @click="workspace.reset()">↺</button>
-      </nav>
+      <span class="system-emblem"><WorkspaceIcon name="flight" /></span>
+      <h1><span class="system-brand">御风智航</span>-面向低空无人机通航决策的风场预报平台</h1>
     </header>
     <div v-if="compact && (panels.leftOpen || panels.rightOpen)" class="panel-backdrop" @click="workspace.showMap()"></div>
     <WorkspacePanel side="left" title="规划与航线" :width="panels.leftWidth" :visible="panels.leftOpen" :compact="compact"
-      @close="workspace.close('left')" @resize-start="workspace.start('left', $event)" @resize-key="workspace.keyResize('left', $event)">
+      @toggle="panels.leftOpen ? workspace.close('left') : workspace.open('left')">
       <ControlPanel ref="controlPanelRef" :native-level="fixedRouteSelection?.v3 ? fixedRouteSelection.level : ''" :replay-active="flightMode" :options="options" :selection="selection" :layers="layers" :thresholds="thresholds" :flight-settings="flightSettings" :planner="planner" :saved-routes="savedRoutes" :area-selection="areaSelection" :area-presets="areaPresets" :loading="windLoading" :picking="picking" :drawing-active="customDrawing.active" :drawing-saving="customDrawing.saving" :saved-current="Boolean(savedCurrent)" :saving-route="savingRoute" :save-error="saveError" :planning-status="planningStatus" :recommendation-baseline="recommendationBaseline" :recommendation-range="recommendationRange" :planning-entry="planningEntry" :detour-segment="detourSegment" :max-detour-percent="maxDetourPercent" :recommending="recommending" :previewing-recommendation="Boolean(recommendationPreview)" @detour-segment="detourSegment = $event" @detour-limit="maxDetourPercent = $event" @recommend-detour="runDetourRecommendation" @cancel-recommendation="stopRecommendation" @export-route="exportCurrentRoute" @notice="showTemporaryError" @draw-custom-route="beginCustomDrawing" @recommend-range="runRangeRecommendation" @reload="loadWindField" @clear-route="clearRoute" @pick-start="beginPicking('start')" @pick-end="beginPicking('end')" @plan-route="runPlan" @cancel-plan="stopPlanning" @save-route="persistRoute" @load-routes="refreshRoutes" @delete-route="removeRoute" @focus-area="focusArea" @import-route-file="importRouteFile" />
     </WorkspacePanel>
     <WorkspacePanel side="right" title="通航决策" :width="panels.rightWidth" :visible="panels.rightOpen" :compact="compact"
-      @close="workspace.close('right')" @resize-start="workspace.start('right', $event)" @resize-key="workspace.keyResize('right', $event)">
+      @toggle="panels.rightOpen ? workspace.close('right') : workspace.open('right')">
       <AnalysisPanel :route-active="planner.points.length > 1" :planning-status="planningStatus" :metadata="displayMetadata" :analysis="displayAnalysis" :thresholds="thresholds" :departure-windows="departureWindows" :replay="analysisReplay" :auto-replan="temporalPlanningEnabled" :recommendation="recommendation" :recommendation-preview="recommendationPreview?.id" :recommendation-selected="rangeSelection.selectedId" :recommendation-pending="rangeSelection.pendingId" :adopting-recommendation="adoptingRecommendation" :recommending="recommending || planner.planning" @recommendation-preview="previewRecommendation" @recommendation-select="selectRangeRecommendation" @recommendation-adopt="adoptRecommendation" @recommendation-close="closeRecommendationPreview" @recommendation-cancel="stopRecommendation" :playhead-sample-index="aircraftPosition?.sampleIndex" :selected-sample-index="selectedRouteSampleIndex" @sample-select="selectRouteSample" @departure-select="chooseDeparture" @depart-now="chooseCurrentDeparture" @window-cancel="departureEvaluator.stop()" />
     </WorkspacePanel>
-    <WindMap ref="mapRef" :recommendations="recommendation?.mode === 'departure_range' ? undefined : recommendation?.recommendations" :recommendation-preview="Boolean(recommendationPreview)" :detour-endpoints="detourEndpoints" :search-progress="null" :planning-points="planningDemo.active ? planningDemo.points : undefined" :layout-insets="insets" :dock-height="dockHeight" :replay-active="replayDockVisible" :wind="renderWind" :heatmap="renderHeatmap" :frame-key="mapFrameKey" @wind-frame-ready="windFrameReady" :metadata="displayMetadata" :layers="layers" :thresholds="thresholds" :analysis="displayAnalysis" :planner="planner" :flight-mode="flightMode" :flight-profile="planningDemo.active ? planningDemo.profile : flightReplay.result" :aircraft-position="aircraftPosition" :selected-sample-index="selectedRouteSampleIndex" :custom-drawing="customDrawing" @drawing-point-add="drawing.add($event)" @drawing-point-move="drawing.move($event.index, $event)" @point-click="handleMapClick" @route-created="runRouteAnalysis" @zoom-changed="useZoomDefaultLayer" />
-    <div ref="dockEl" class="map-dock" :class="{ 'with-replay-legend': replayDockVisible && (layers.heatmap || layers.velocity) }">
-      <div id="replay-wind-legend" class="replay-wind-legend"></div>
+    <WindMap ref="mapRef" :recommendations="recommendation?.mode === 'departure_range' ? undefined : recommendation?.recommendations" :recommendation-preview="Boolean(recommendationPreview)" :detour-endpoints="detourEndpoints" :search-progress="null" :planning-points="planningDemo.active ? planningDemo.points : undefined" :layout-insets="insets" :dock-height="dockHeight" :wind="renderWind" :heatmap="renderHeatmap" :frame-key="mapFrameKey" @wind-frame-ready="windFrameReady" :metadata="displayMetadata" :layers="layers" :thresholds="thresholds" :analysis="displayAnalysis" :planner="planner" :flight-mode="flightMode" :flight-profile="planningDemo.active ? planningDemo.profile : flightReplay.result" :aircraft-position="aircraftPosition" :selected-sample-index="selectedRouteSampleIndex" :custom-drawing="customDrawing" @drawing-point-add="drawing.add($event)" @drawing-point-move="drawing.move($event.index, $event)" @point-click="handleMapClick" @route-created="runRouteAnalysis" @zoom-changed="useZoomDefaultLayer" />
+    <div ref="dockEl" class="map-dock" :class="{ 'beside-wind-legend': layers.heatmap || layers.velocity, 'replay-dock': !customDrawing.active }">
       <CustomRouteDrawingControls :purpose="drawingPurpose" :draft="customDrawing" :selection="selection" :speed="flightSettings.averageGroundSpeedMps" @rename="drawing.rename($event)" @undo="drawing.undo()" @clear="drawing.clear()" @cancel="cancelCustomDrawing" @save="completeCustomDrawing" />
-      <FlightReplayControls v-if="!recommendationPreview && replayDockVisible" :replay="analysisReplay" @play="playFlight" @pause="replay.pause()" @seek="seekFlight($event)" @rate-change="replay.setRate($event)" @mode-change="setProfileMode" @retry="retryFlight()" />
+      <Transition name="replay-panel">
+        <FlightReplayControls v-if="!recommendationPreview && replayDockVisible" :replay="analysisReplay" @play="playFlight" @pause="replay.pause()" @seek="seekFlight($event)" @rate-change="replay.setRate($event)" @mode-change="setProfileMode" @retry="retryFlight()" />
+      </Transition>
     </div>
     <div v-if="error" class="error-toast" role="alert" @click="error = ''">{{ error }}</div>
     <div v-else-if="savedRouteNotice" class="error-toast route-saved-toast" role="status" @click="savedRouteNotice = ''">{{ savedRouteNotice }}</div>

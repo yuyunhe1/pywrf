@@ -1,8 +1,6 @@
 <script setup>
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import 'leaflet-draw'
-import 'leaflet-draw/dist/leaflet.draw.css'
 import 'leaflet-velocity'
 import 'leaflet-velocity/dist/leaflet-velocity.css'
 import { onBeforeUnmount, onMounted, watch, ref, computed } from 'vue'
@@ -32,7 +30,6 @@ const props = defineProps({
   customDrawing: Object,
   layoutInsets: { type: Object, default: () => ({ left: 12, right: 12 }) },
   dockHeight: { type: Number, default: 0 },
-  replayActive: Boolean,
   searchProgress: Object,
   recommendations: Array,
   recommendationPreview: Boolean,
@@ -52,7 +49,6 @@ let recommendationGroup
 let routeSelectionGroup
 let flightProgressGroup
 let drawnGroup
-let drawControl
 let customDraftGroup
 let draftMarkers = []
 let draftLine
@@ -309,19 +305,16 @@ const clearDrawnRoute = () => {
 }
 
 const synchronizeDrawingMode = () => {
-  if (!map || !drawControl) return
+  if (!map) return
   const active = Boolean(props.customDrawing?.active)
   if (active === drawingModeActive) return
   drawingModeActive = active
   if (active) {
     map.closePopup()
-    Object.values(drawControl._toolbars || {}).forEach((toolbar) => toolbar.disable())
-    map.removeControl(drawControl)
     drawnGroup.clearLayers()
     restoreDoubleClickZoom = map.doubleClickZoom.enabled()
     map.doubleClickZoom.disable()
   } else {
-    map.addControl(drawControl)
     if (restoreDoubleClickZoom) map.doubleClickZoom.enable()
   }
 }
@@ -403,7 +396,7 @@ watch(() => [props.aircraftPosition, props.flightMode, props.layers.route, props
 watch(() => [props.selectedSampleIndex, props.analysis?.samples, props.layers.route, props.customDrawing?.active], renderRouteSelection, { deep: true, flush: 'post' })
 
 onMounted(() => {
-  map = L.map('wind-map', { zoomControl: true, attributionControl: true }).fitBounds(CHINA_INITIAL_BOUNDS, { padding: [12, 12] })
+  map = L.map('wind-map', { zoomControl: false, attributionControl: true }).fitBounds(CHINA_INITIAL_BOUNDS, { padding: [12, 12] })
   map.createPane('windHeatPane')
   map.getPane('windHeatPane').style.zIndex = 350
   map.createPane('searchCorridorPane')
@@ -431,18 +424,6 @@ onMounted(() => {
   flightProgressGroup = L.layerGroup().addTo(map)
   drawnGroup = L.featureGroup().addTo(map)
   customDraftGroup = L.layerGroup().addTo(map)
-  drawControl = new L.Control.Draw({
-    edit: { featureGroup: drawnGroup },
-    draw: { polygon: false, rectangle: false, circle: false, circlemarker: false, marker: false, polyline: { shapeOptions: { color: '#00f3ff', weight: 4 } } },
-  })
-  map.addControl(drawControl)
-  map.on(L.Draw.Event.CREATED, (event) => {
-    if (props.customDrawing?.active) return
-    clearRoute()
-    drawnGroup.addLayer(event.layer)
-    const points = event.layer.getLatLngs().map(({ lng, lat }) => [lng, lat])
-    emit('route-created', points)
-  })
   map.on('click', ({ latlng }) => {
     if (props.customDrawing?.active) {
       if (!props.customDrawing.saving) {
@@ -476,19 +457,11 @@ onBeforeUnmount(() => {
     <div v-if="searchLines.length" class="search-corridor-status" role="status" :style="{ left: `${layoutInsets.left + 12}px` }">
       <span style="color: #00f3ff">候选航线 · 虚线</span>
     </div>
-    <div v-if="metadata" class="map-time-label">
-      <strong>底图风场：{{ formatReplayTime(metadata.valid_time) }} 北京时间</strong>
-      <span>{{ metadata.level }} · 起报 {{ formatReplayTime(metadata.cycle) }} 北京时间</span>
-      <span v-if="flightMode">蓝色粗线：规划航线 · 红点：水平风切变硬约束</span>
-      <span v-else>航线与曲线：底图所示时刻</span>
-      <span v-if="flightMode && !wind?.velocity?.length" style="color: #f4c95d;">该时刻数据不足，未显示底图风场。</span>
-    </div>
-    <div class="leaflet-bottom leaflet-left wind-legend-position" :style="{ bottom: `${dockHeight ? dockHeight + 12 : 0}px` }" style="pointer-events: none; z-index: 640; position: absolute; left: 0;">
-      <Teleport to="#replay-wind-legend" defer :disabled="!replayActive">
+    <div class="leaflet-bottom leaflet-left wind-legend-position" style="pointer-events: none; z-index: 640; position: absolute; left: 0; bottom: 0;">
       <div v-if="layers.heatmap || layers.velocity" class="leaflet-control wind-heat-legend" style="pointer-events: auto;">
         <strong>风速 m/s (点击分级)</strong>
         <div class="legend-blocks">
-          <ElTooltip v-for="(block, i) in heatBlocks" :key="i" :placement="replayActive ? 'top' : 'right'" effect="dark"
+          <ElTooltip v-for="(block, i) in heatBlocks" :key="i" placement="top" effect="dark"
             popper-class="wind-feel-tooltip" :show-after="180" :hide-after="100" :trigger-keys="[]">
             <template #content>
               <div class="wind-feel-content">
@@ -507,7 +480,6 @@ onBeforeUnmount(() => {
           </ElTooltip>
         </div>
       </div>
-      </Teleport>
     </div>
   </div>
 </template>
@@ -523,8 +495,4 @@ onBeforeUnmount(() => {
 .wind-feel-item b, .wind-feel-item span { display: block; color: #fff; }
 :deep(.custom-route-waypoint) { display: flex; align-items: center; justify-content: center; border: 2px solid #00f3ff; border-radius: 50%; color: #fff; background: #07121cf2; font-size: 12px; font-weight: 700; box-shadow: 0 2px 8px #0009; cursor: grab; }
 :deep(.custom-route-waypoint.leaflet-drag-target) { cursor: grabbing; }
-.map-time-label { position: absolute; top: 108px; left: 350px; right: 350px; z-index: 640; width: fit-content; max-width: calc(100% - 700px); margin: 0 auto; padding: 8px 12px; border-radius: 6px; border: 1px solid #44d7b644; background: #07121ce8; color: #eaf5ff; font-size: 12px; pointer-events: none; line-height: 1.6; }
-.map-time-label strong, .map-time-label span { display: block; }
-.map-time-label span { color: #a1b8cb; font-size: 10px; }
-@media (max-width: 1200px) { .map-time-label { left: 310px; right: 20px; max-width: calc(100% - 330px); } }
 </style>
