@@ -6,6 +6,7 @@ import { analyzeRoute, deleteRoute, getDepartureWindows, getExportedRouteUrl, ge
 import AnalysisPanel from './components/AnalysisPanel.vue'
 import WorkspacePanel from './components/WorkspacePanel.vue'
 import { useWorkspaceLayout } from './utils/useWorkspaceLayout'
+import { useAdaptiveReplayDock } from './utils/useAdaptiveReplayDock'
 import { routeSnapshotKey, exportForRoute, planningStageLabel } from './utils/routeRecords'
 import ControlPanel from './components/ControlPanel.vue'
 import WindMap from './components/WindMap.vue'
@@ -1630,6 +1631,11 @@ watch(() => [selection.validTime, selection.cycle, selection.level, flightSettin
 })
 watch(() => [detourSegment.value,maxDetourPercent.value], () => clearRecommendations())
 
+const replayDockStyle = useAdaptiveReplayDock(dockEl, () => [
+  insets.value.left, insets.value.right, layers.heatmap, layers.velocity,
+  customDrawing.value.active, replayDockVisible.value,
+])
+
 onMounted(async () => {
   dockObserver = new ResizeObserver(([entry]) => { dockHeight.value = Math.ceil(entry.target.getBoundingClientRect().height) })
   if (dockEl.value) dockObserver.observe(dockEl.value)
@@ -1682,7 +1688,7 @@ onBeforeUnmount(() => {
       <AnalysisPanel :route-active="planner.points.length > 1" :planning-status="planningStatus" :metadata="displayMetadata" :analysis="displayAnalysis" :thresholds="thresholds" :departure-windows="departureWindows" :replay="analysisReplay" :auto-replan="temporalPlanningEnabled" :recommendation="recommendation" :recommendation-preview="recommendationPreview?.id" :recommendation-selected="rangeSelection.selectedId" :recommendation-pending="rangeSelection.pendingId" :adopting-recommendation="adoptingRecommendation" :recommending="recommending || planner.planning" @recommendation-preview="previewRecommendation" @recommendation-select="selectRangeRecommendation" @recommendation-adopt="adoptRecommendation" @recommendation-close="closeRecommendationPreview" @recommendation-cancel="stopRecommendation" :playhead-sample-index="aircraftPosition?.sampleIndex" :selected-sample-index="selectedRouteSampleIndex" @sample-select="selectRouteSample" @departure-select="chooseDeparture" @depart-now="chooseCurrentDeparture" @window-cancel="departureEvaluator.stop()" />
     </WorkspacePanel>
     <WindMap ref="mapRef" :recommendations="recommendation?.mode === 'departure_range' ? undefined : recommendation?.recommendations" :recommendation-preview="Boolean(recommendationPreview)" :detour-endpoints="detourEndpoints" :search-progress="null" :planning-points="planningDemo.active ? planningDemo.points : undefined" :layout-insets="insets" :dock-height="dockHeight" :wind="renderWind" :heatmap="renderHeatmap" :frame-key="mapFrameKey" @wind-frame-ready="windFrameReady" :metadata="displayMetadata" :layers="layers" :thresholds="thresholds" :analysis="displayAnalysis" :planner="planner" :flight-mode="flightMode" :flight-profile="planningDemo.active ? planningDemo.profile : flightReplay.result" :aircraft-position="aircraftPosition" :selected-sample-index="selectedRouteSampleIndex" :custom-drawing="customDrawing" @drawing-point-add="drawing.add($event)" @drawing-point-move="drawing.move($event.index, $event)" @point-click="handleMapClick" @route-created="runRouteAnalysis" @zoom-changed="useZoomDefaultLayer" />
-    <div ref="dockEl" class="map-dock" :class="{ 'beside-wind-legend': layers.heatmap || layers.velocity, 'replay-dock': !customDrawing.active }">
+    <div ref="dockEl" class="map-dock" :style="replayDockStyle" :class="{ 'beside-wind-legend': layers.heatmap || layers.velocity, 'replay-dock': !customDrawing.active }">
       <CustomRouteDrawingControls :purpose="drawingPurpose" :draft="customDrawing" :selection="selection" :speed="flightSettings.averageGroundSpeedMps" @rename="drawing.rename($event)" @undo="drawing.undo()" @clear="drawing.clear()" @cancel="cancelCustomDrawing" @save="completeCustomDrawing" />
       <Transition name="replay-panel">
         <FlightReplayControls v-if="!recommendationPreview && replayDockVisible" :replay="analysisReplay" @play="playFlight" @pause="replay.pause()" @seek="seekFlight($event)" @rate-change="replay.setRate($event)" @mode-change="setProfileMode" @retry="retryFlight()" />

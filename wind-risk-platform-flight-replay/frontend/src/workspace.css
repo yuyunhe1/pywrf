@@ -236,13 +236,7 @@
 @media (max-width: 600px) {
   .workspace .map-dock.beside-wind-legend { left: var(--map-left); bottom: 216px; }
 }
-.workspace .map-dock.replay-dock { left: 0; right: 0; margin-inline: auto; transform: none; width: min(560px, calc(100vw - 24px)); bottom: 216px; }
-@media (min-width: 1201px) {
-  .workspace .map-dock.replay-dock { width: min(560px, calc(100vw - 720px)); }
-}
-@media (min-width: 1920px) {
-  .workspace .map-dock.replay-dock { bottom: 12px; }
-}
+.workspace .map-dock.replay-dock { left: var(--replay-left, 0px); right: auto; margin: 0; transform: none; width: var(--replay-width, min(560px, calc(100vw - 24px))); bottom: var(--replay-bottom, 12px); max-height: var(--replay-max-height, calc(100vh - 180px)); }
 @media (prefers-reduced-motion: reduce) {
   .replay-panel-enter-active, .replay-panel-leave-active { transition: none; }
 }
